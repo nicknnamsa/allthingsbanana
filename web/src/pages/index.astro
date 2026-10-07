@@ -23,6 +23,10 @@ import Base from '../layouts/Base.astro';
       <section class="lab">
         <h2 class="col-h">Explore</h2>
         <div class="lab-grid">
+          <a class="lab-card" href="/bananadle/">
+            <span class="lab-art cube" aria-hidden="true">🧠</span>
+            <span><span class="kicker">Daily puzzle</span><b>Bananadle</b><span class="lab-txt">Get from today's Wikipedia page to Banana, from memory.</span></span>
+          </a>
           <a class="lab-card" id="rotd" href="/recipes/">
             <span class="lab-art recipe" aria-hidden="true">🍳</span>
             <span><span class="kicker">Recipe of the day</span><b>Banacipes</b><span class="lab-txt">Banana recipes for every meal.</span></span>
@@ -35,11 +39,8 @@ import Base from '../layouts/Base.astro';
             <span class="lab-art clicker" aria-hidden="true">🍌</span>
             <span><span class="kicker">Game</span><b>Banana Clicker</b><span class="lab-txt">Peel bananas for your country and climb the world leaderboard.</span></span>
           </a>
-          <a class="lab-card" href="/more/banana-cube/">
-            <span class="lab-art cube" aria-hidden="true">🧩</span>
-            <span><span class="kicker">Puzzle</span><b>Banana Cube solver</b><span class="lab-txt">Twist a 3D banana and see exactly how many moves from solved you are.</span></span>
-          </a>
         </div>
+        <div class="more-links"><a href="/news/">All banana news →</a><a href="/topics/">Banana topics →</a><a href="/more/">Games and experiments →</a></div>
       </section>
     </div>
 
@@ -275,6 +276,9 @@ import Base from '../layouts/Base.astro';
 
   /* More Bananas row, under the news */
   .lab { grid-column: 1 / -1; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .more-links { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; }
+  .more-links a { color: var(--link); font-weight: 600; font-size: 13.5px; text-decoration: none; }
+  .more-links a:hover { text-decoration: underline; }
   .lab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
   .lab-card { display: flex; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-decoration: none; transition: border-color .15s; }
   .lab-card:hover { border-color: var(--brand); }

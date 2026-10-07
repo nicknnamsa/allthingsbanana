@@ -1,11 +1,11 @@
 ---
-import Base from '../../layouts/Base.astro';
-import degrees from '../../data/games/degrees.json';
+import Base from '../layouts/Base.astro';
+import degrees from '../data/games/degrees.json';
 // only what the game needs in the browser
 const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s.routes }));
 ---
-<Base wide section="degrees" title="Six Degrees of Banana · a daily Wikipedia puzzle · All Things Banana"
-      description="A daily word puzzle: start on a Wikipedia article and get to Banana by naming articles each page links to, from memory. New start page every day.">
+<Base wide section="bananadle" title="Bananadle · the daily Wikipedia puzzle · All Things Banana"
+      description="Bananadle, a daily word puzzle: start on a Wikipedia article and get to Banana by naming articles each page links to, from memory. New start page every day.">
   <script type="application/json" id="degData" set:html={JSON.stringify(starts)} />
 
   <div class="sd">
@@ -15,7 +15,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
           <div class="sd-brand">
             <span class="sd-logo" aria-hidden="true">🍌</span>
             <div>
-              <h1>Six Degrees of Banana</h1>
+              <h1>Bananadle</h1>
               <div class="sd-day" id="dayNo"></div>
             </div>
           </div>
@@ -106,7 +106,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     <div class="sd-overlay" id="intro" hidden>
       <div class="sd-modal" role="dialog" aria-modal="true" aria-labelledby="introTitle">
         <div class="sd-modalEmoji" aria-hidden="true">🍌</div>
-        <h2 id="introTitle">Six Degrees of Banana</h2>
+        <h2 id="introTitle">Bananadle</h2>
         <p class="sd-today" id="introToday"></p>
         <ol class="sd-rules">
           <li><span>🔗</span><div>Type the name of a page that <b>the page you're on links to</b>.</div></li>
@@ -445,10 +445,10 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
   }
 
   function shareText() {
-    const head = mode === 'daily' ? `🍌 Six Degrees of Banana #${today}` : '🍌 Six Degrees of Banana (practice)';
+    const head = mode === 'daily' ? `🍌 Bananadle #${today}` : '🍌 Bananadle (practice)';
     const line = s.gaveUp ? `${start.t} → ❌ gave up` : `${start.t} → Banana in ${plural(steps(), 'step')} (par ${start.p})`;
     const squares = s.gaveUp ? '' : '\n' + '🟨'.repeat(Math.max(0, steps() - 1)) + '🍌' + (s.misses ? ` ${'❌'.repeat(Math.min(s.misses, 8))}` : '') + (s.hints ? ` ${'💡'.repeat(Math.min(s.hints, 5))}` : '');
-    return `${head}\n${line}${squares}\n⏱ ${fmtTime(s.secs)}\nhttps://allthingsbanana.com/more/six-degrees/`;
+    return `${head}\n${line}${squares}\n⏱ ${fmtTime(s.secs)}\nhttps://allthingsbanana.com/bananadle/`;
   }
 
   async function share() {
@@ -513,7 +513,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
 </script>
 
 <style is:global>
-  /* Six Degrees has its own light, friendly look (everything is under .sd so nothing leaks) */
+  /* Bananadle has its own light, friendly look (everything is under .sd so nothing leaks) */
   .sd {
     --p-paper: #fffaf0; --p-card: #ffffff; --p-ink: #2a2118; --p-ink-2: #5f5446; --p-ink-3: #988b78; --p-line: #eadfca;
     --p-yellow: #ffd84d; --p-yellow-soft: #fff1b8; --p-mint: #d5f2e0; --p-mint-ink: #1d6b40; --p-coral: #ffe0d8; --p-coral-ink: #a63a26;

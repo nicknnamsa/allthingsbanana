@@ -7,11 +7,12 @@ export default defineConfig({
   redirects: {
     '/banana-cube': '/more/banana-cube/',
     '/markets': '/bananalytics/',
+    '/more/six-degrees': '/bananadle/',
   },
   // sitemap-index.xml for search engines: every page except redirects and the 404 page
   integrations: [
     sitemap({
-      filter: page => !['/banana-cube/', '/markets/'].includes(new URL(page).pathname) && !page.includes('/404'),
+      filter: page => !['/banana-cube/', '/markets/', '/more/six-degrees/'].includes(new URL(page).pathname) && !page.includes('/404'),
     }),
   ],
 });

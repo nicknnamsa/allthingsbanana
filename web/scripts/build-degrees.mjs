@@ -1,4 +1,4 @@
-// Builds the data for Six Degrees of Banana from live Wikipedia:
+// Builds the data for Bananadle from live Wikipedia:
 //   public/games/banana-links-in.json   every article that links to Banana (one step from winning; used for hints)
 //   src/data/games/degrees.json         the daily start pages, each with its par (fewest steps) and a shortest route
 //
@@ -9,7 +9,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 
 const API = 'https://en.wikipedia.org/w/api.php';
-const UA = { 'user-agent': 'AllThingsBananaBot/1.0 (https://allthingsbanana.com/about/; Six Degrees of Banana)' };
+const UA = { 'user-agent': 'AllThingsBananaBot/1.0 (https://allthingsbanana.com/about/; Bananadle)' };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const TARGET = 'Banana';
 

@@ -9,12 +9,10 @@ import { recipes } from '../data/recipes';
 const recipeIndex = recipes.map(r => ({ n: r.name, s: r.slug, e: r.emoji, b: r.blurb, t: `${r.name} ${r.origin} ${r.meals.join(' ')} ${r.diet.join(' ')}`.toLowerCase() }));
 const sections = [
   { id: 'home', href: '/', label: 'Home' },
+  { id: 'bananadle', href: '/bananadle/', label: 'Bananadle' },
+  { id: 'recipes', href: '/recipes/', label: 'Banacipes' },
   { id: 'bananalytics', href: '/bananalytics/', label: 'Bananalytics' },
   { id: 'world', href: '/bananalytics/world/', label: 'Banana World' },
-  { id: 'news', href: '/news/', label: 'Latest News' },
-  { id: 'recipes', href: '/recipes/', label: 'Banacipes' },
-  { id: 'topics', href: '/topics/', label: 'Topics' },
-  { id: 'degrees', href: '/more/six-degrees/', label: 'Six Degrees' },
   { id: 'more', href: '/more/', label: 'More Bananas' },
 ];
 ---

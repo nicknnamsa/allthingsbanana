@@ -1,4 +1,4 @@
-// Six Degrees of Banana: anonymous daily results (how many steps people took, how long),
+// Bananadle: anonymous daily results (how many steps people took, how long),
 // so players can see how they did against everyone else. Nothing about the visitor is stored.
 import { DurableObject } from 'cloudflare:workers';
 
