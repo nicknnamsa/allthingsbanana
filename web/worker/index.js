@@ -27,7 +27,11 @@ const NEWS_FEEDS = [
   { name: 'andnowuknow', source: 'AndNowUKnow', url: 'https://www.andnowuknow.com/rss.xml' },
   { name: 'hortidaily', source: 'Hortidaily', url: 'https://www.hortidaily.com/rss.xml' },
   { name: 'bananalink', source: 'Banana Link', url: 'https://www.bananalink.org.uk/feed/', allBanana: true },
+  // WordPress sites' own search feeds: their latest stories that mention bananas
+  { name: 'freshfruitportal-search', source: 'FreshFruitPortal', url: 'https://www.freshfruitportal.com/?s=banana&feed=rss2' },
+  { name: 'producebusiness-search', source: 'Produce Business', url: 'https://www.producebusiness.com/?s=banana&feed=rss2' },
 ];
+const IMAGES_PER_RUN = 6;   // article pages we open per run to find their preview picture
 
 export default {
   async fetch(request, env, ctx) {
@@ -64,7 +68,10 @@ async function updateMarket(env, old) {
   return market;
 }
 
-const publicView = ({ items, stocks, updated }) => ({ items, stocks, updated });
+const publicView = ({ items, stocks, updated }) => ({
+  items: items.map(({ imgTried, allBanana, ...it }) => it),
+  stocks, updated,
+});
 
 async function refresh(env) {
   const old = (await env.FEED.get('feed', 'json')) || { items: [], stocks: [], sources: {} };
@@ -102,6 +109,7 @@ async function refresh(env) {
       return true;
     })
     .slice(0, MAX_ITEMS);
+  await addImages(items);
 
   const data = { items, stocks, sources, updated: now };
   await env.FEED.put('feed', JSON.stringify(data));
@@ -147,6 +155,26 @@ function imageOf(it) {
   const img = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
   if (img) candidates.push(img[1]);
   return candidates.find(u => typeof u === 'string' && u.startsWith('https://')) || undefined;
+}
+
+// Most feeds don't include a picture, but article pages declare one for social sharing
+// (og:image). Open a few new articles per run and keep theirs. Google News links are
+// redirects without one, so they're skipped.
+async function addImages(items) {
+  const todo = items.filter(it => !it.thumb && !it.imgTried && !it.url.includes('news.google.com')).slice(0, IMAGES_PER_RUN);
+  await Promise.all(todo.map(async it => {
+    it.imgTried = true;
+    try {
+      const res = await fetch(it.url, { headers: { ...UA, accept: 'text/html' }, redirect: 'follow', signal: AbortSignal.timeout(6000) });
+      if (!res.ok) return;
+      const html = (await res.text()).slice(0, 400_000);
+      const tag = /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]*>/i.exec(html);
+      const content = tag && /content=["']([^"']+)["']/i.exec(tag[0]);
+      if (!content) return;
+      const src = new URL(decode(content[1]), res.url).href;
+      if (src.startsWith('https://')) it.thumb = src;
+    } catch {}
+  }));
 }
 
 async function youtube(key) {

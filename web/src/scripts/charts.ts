@@ -61,7 +61,7 @@ export function lineChart(el: HTMLElement, initial: Pt[], opts: LineOpts) {
     const x0 = pts[0].x, x1 = pts[pts.length - 1].x;
     const ys = pts.map(p => p.y);
     const lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * 0.08 || Math.abs(hi) * 0.05 || 1;
-    const ticks = niceTicks(lo - pad, hi + pad, H < 200 ? 3 : 4);
+    const ticks = niceTicks(lo - pad, hi + pad, H < 160 ? 2 : H < 200 ? 3 : 4);
     const y0 = ticks[0], y1 = ticks[ticks.length - 1];
     X = x => m.l + ((x - x0) / (x1 - x0 || 1)) * (W - m.l - m.r);
     Y = y => m.t + (1 - (y - y0) / (y1 - y0 || 1)) * (H - m.t - m.b);
