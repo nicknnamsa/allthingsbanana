@@ -10,6 +10,7 @@
     "crawl-recipes": "node scripts/crawl-recipes.mjs"
   },
   "devDependencies": {
+    "@astrojs/sitemap": "^3.7.4",
     "astro": "^7.3.6",
     "fast-xml-parser": "^5.11.2",
     "three": "^0.164.1",

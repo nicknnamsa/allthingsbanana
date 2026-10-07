@@ -27,8 +27,16 @@ const jsonLd = {
   author: { '@type': 'Organization', name: 'All Things Banana' },
 };
 ---
-<Base wide section="recipes" title={`${r.name} · Banacipes banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
+<Base image="/og/recipes.jpg" wide section="recipes" title={`${r.name} · Banacipes banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Banacipes', item: 'https://allthingsbanana.com/recipes/' },
+      { '@type': 'ListItem', position: 2, name: mealLabel(r.meals[0]), item: `https://allthingsbanana.com/recipes/?meal=${r.meals[0]}` },
+      { '@type': 'ListItem', position: 3, name: r.name, item: `https://allthingsbanana.com/recipes/${r.slug}/` },
+    ],
+  })} />
   <nav class="crumbs"><a href="/recipes/">Banacipes</a> › {mealLabel(r.meals[0])} › {r.name}</nav>
 
   <article class="recipe">

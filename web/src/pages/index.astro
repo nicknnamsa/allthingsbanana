@@ -3,6 +3,10 @@ import Base from '../layouts/Base.astro';
 ---
 <Base wide section="home" title="All Things Banana · banana news, prices and games"
       description="Everything banana in one place: banana news as it happens, the global banana price and fruit markets, and banana games like the Banana Clicker and the Banana Cube.">
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'WebSite', name: 'All Things Banana', alternateName: 'allthingsbanana',
+    url: 'https://allthingsbanana.com/', description: 'Banana news, banana prices, banana recipes and banana games.',
+  })} />
   <div class="home">
     <!-- news: lead story, headlines, latest (columns appear only when there's something to put in them) -->
     <div class="news" id="news">

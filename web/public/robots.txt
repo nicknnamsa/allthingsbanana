@@ -1,0 +1,6 @@
+# All Things Banana: everyone is welcome to read the site.
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://allthingsbanana.com/sitemap-index.xml
