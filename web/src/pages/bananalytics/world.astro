@@ -8,12 +8,11 @@ const year = fao.years[L];
 const banT = fao.world.banana.prod[L]!, plT = fao.world.plantain.prod[L]!;
 const fmtMt = (t: number) => (t / 1e6).toFixed(1);
 ---
-<Base wide section="bananalytics" image="/og/bananalytics.jpg"
+<Base wide section="world" image="/og/bananalytics.jpg"
       title="Banana World: where the world's bananas grow, on a map · All Things Banana"
       description={`An interactive map of banana and plantain farming in every country, 1961–${year}: production, area harvested and yield, from the UN's FAOSTAT data.`}>
   <header class="head">
     <div>
-      <a class="back" href="/bananalytics/">‹ Bananalytics</a>
       <h1>Banana World</h1>
       <p>Where the world's bananas grow. In {year}, farms harvested <b>{fmtMt(banT)} million tonnes of bananas</b> and <b>{fmtMt(plT)} million tonnes of plantains and cooking bananas</b>.</p>
     </div>
