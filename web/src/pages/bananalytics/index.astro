@@ -6,6 +6,7 @@ import Base from '../../layouts/Base.astro';
   <header class="page-head">
     <h1>Bananalytics</h1>
     <p>Banana prices, charts and statistics, plus the fruit and soft commodities around them.</p>
+    <a class="world-link" href="/bananalytics/world/">🌍 Banana World: the map of where bananas grow →</a>
   </header>
   <div class="layout">
     <div class="main-col">
@@ -241,6 +242,8 @@ import Base from '../../layouts/Base.astro';
   .page-head h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
   .page-head h1::first-letter { color: var(--brand); }
   .page-head p { margin: 0; color: var(--ink-3); font-size: 14px; }
+  .world-link { margin-left: auto; color: #1d1600; background: var(--brand); font-weight: 800; font-size: 13.5px; text-decoration: none; border-radius: 999px; padding: 7px 14px; }
+  .world-link:hover { filter: brightness(1.06); }
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; padding-top: 22px; }
   .main-col, .side-col { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
   .block-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 8px; }

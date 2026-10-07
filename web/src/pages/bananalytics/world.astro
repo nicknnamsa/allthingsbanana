@@ -1,0 +1,325 @@
+---
+import Base from '../../layouts/Base.astro';
+import fao from '../../data/world/fao-bananas.json';
+const L = fao.years.length - 1;
+const year = fao.years[L];
+const banT = fao.world.banana.prod[L]!, plT = fao.world.plantain.prod[L]!;
+const fmtMt = (t: number) => (t / 1e6).toFixed(1);
+---
+<Base wide section="bananalytics" image="/og/bananalytics.jpg"
+      title="Banana World: where the world's bananas grow, on a map · All Things Banana"
+      description={`An interactive map of banana and plantain farming in every country, 1961–${year}: production, area harvested and yield, from the UN's FAOSTAT data.`}>
+  <header class="head">
+    <div>
+      <a class="back" href="/bananalytics/">‹ Bananalytics</a>
+      <h1>Banana World</h1>
+      <p>Where the world's bananas grow. In {year}, farms harvested <b>{fmtMt(banT)} million tonnes of bananas</b> and <b>{fmtMt(plT)} million tonnes of plantains and cooking bananas</b>.</p>
+    </div>
+    <div class="counter" title="World banana production divided evenly over the year, at about 118 g per banana">
+      <span class="c-n num" id="counter">0</span>
+      <span class="c-l">bananas grown since you opened this page</span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="seg" id="crop" role="group" aria-label="Crop">
+      <button data-v="banana" class="on">Bananas</button><button data-v="plantain">Plantains &amp; cooking bananas</button><button data-v="both">Both</button>
+    </div>
+    <div class="seg" id="metric" role="group" aria-label="Measure">
+      <button data-v="prod" class="on">Production</button><button data-v="area">Area harvested</button><button data-v="yield">Yield</button>
+    </div>
+    <div class="years">
+      <button id="play" aria-label="Play through the years">▶</button>
+      <input id="year" type="range" min={fao.years[0]} max={year} value={year} step="1" aria-label="Year">
+      <b class="num" id="yearLbl">{year}</b>
+    </div>
+  </div>
+
+  <div class="layout">
+    <section class="mapbox">
+      <div id="map" class="map" aria-label="World map of banana farming"></div>
+      <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zreset" aria-label="Reset view">⟲</button></div>
+      <div class="legend" id="legend"></div>
+      <div class="tip" id="tip" hidden></div>
+    </section>
+
+    <aside class="panel">
+      <div class="card">
+        <div class="p-top"><h2 id="pName">World</h2><button id="pWorld" class="link" hidden>Show world</button></div>
+        <div class="p-sub" id="pSub"></div>
+        <dl class="stats">
+          <div><dt>Production</dt><dd class="num" id="sProd">—</dd></div>
+          <div><dt>Area harvested</dt><dd class="num" id="sArea">—</dd></div>
+          <div><dt>Yield</dt><dd class="num" id="sYield">—</dd></div>
+          <div><dt id="sRankL">World rank</dt><dd class="num" id="sRank">—</dd></div>
+        </dl>
+        <div id="pChart" class="chart-box" style="height:160px"></div>
+        <p class="p-note" id="pNote"></p>
+      </div>
+      <div class="card">
+        <h2 id="topTitle">Top producers</h2>
+        <ol class="top" id="top"></ol>
+      </div>
+    </aside>
+  </div>
+
+  <section class="about">
+    <h2>About this map</h2>
+    <p>Figures are the UN Food and Agriculture Organization's official statistics (FAOSTAT), reported by each country, for <b>bananas</b> (mostly dessert bananas like the Cavendish) and <b>plantains and cooking bananas</b> (like matoke). Yield is production per hectare harvested. Some small islands are shown as dots. The French overseas regions of Guadeloupe, Martinique, Réunion and French Guiana are reported separately from France.</p>
+    <p><b>Coming next:</b> a satellite-derived layer showing exactly where bananas grow inside each country, from IFPRI's MapSPAM 2020 crop maps, which combine satellite land-cover data with farm statistics on a roughly 10 km grid.</p>
+    <p class="src">Data: FAOSTAT, Crops and livestock products, © FAO, CC BY 4.0 (updated {fao.updated}). Country borders: Natural Earth via world-atlas (public domain). Bananas-per-second assumes a medium banana of about 118 g.</p>
+  </section>
+</Base>
+
+<script>
+  import { geoEqualEarth, geoPath, geoGraticule10 } from 'd3-geo';
+  import { feature } from 'topojson-client';
+  import { zoom as d3zoom, zoomIdentity } from 'd3-zoom';
+  import { select } from 'd3-selection';
+  import fao from '../../data/world/fao-bananas.json';
+  import worldTopo from 'world-atlas/countries-50m.json';
+  import { lineChart } from '../../scripts/charts';
+
+  type Series = { area?: (number | null)[]; yield?: (number | null)[]; prod?: (number | null)[] };
+  type Country = { name: string; banana?: Series; plantain?: Series };
+  const countries = fao.countries as Record<string, Country>;
+  const years = fao.years;
+  const $ = (s: string) => document.querySelector(s) as HTMLElement;
+
+  // places too small for the country outlines, or reported separately from the country they belong to
+  const DOTS: Record<string, [number, number]> = { '312': [-61.55, 16.25], '474': [-61.02, 14.64], '638': [55.53, -21.11], '254': [-53.13, 3.93], '798': [179.2, -8.52] };
+
+  let crop: 'banana' | 'plantain' | 'both' = 'banana', metric: 'prod' | 'area' | 'yield' = 'prod';
+  let yi = years.length - 1, selected: string | null = null, playing: number | null = null;
+
+  // ---------- numbers ----------
+  function value(c: Country | typeof fao.world, m: 'prod' | 'area' | 'yield', i: number): number | null {
+    const get = (s?: Series) => s?.[m]?.[i] ?? null;
+    if (crop !== 'both') return get((c as Country)[crop]);
+    if (m === 'yield') {   // combined yield = combined production / combined area
+      const p = value2(c, 'prod', i), a = value2(c, 'area', i);
+      return p != null && a ? Math.round((p / a) * 10) / 10 : null;
+    }
+    return value2(c, m, i);
+  }
+  function value2(c: any, m: 'prod' | 'area', i: number) {
+    const a = c.banana?.[m]?.[i], b = c.plantain?.[m]?.[i];
+    return a == null && b == null ? null : (a || 0) + (b || 0);
+  }
+  const fmt = (v: number | null, m: string) => v == null ? '—'
+    : m === 'yield' ? `${v.toFixed(1)} t/ha`
+    : m === 'area' ? (v >= 1e6 ? `${(v / 1e6).toFixed(2)}m ha` : v >= 1e3 ? `${Math.round(v / 1e3).toLocaleString('en-US')}k ha` : `${v} ha`)
+    : v >= 1e6 ? `${(v / 1e6).toFixed(1)}m t` : v >= 1e3 ? `${Math.round(v / 1e3).toLocaleString('en-US')}k t` : `${v} t`;
+  const LABEL = { prod: 'Production', area: 'Area harvested', yield: 'Yield' };
+
+  // colour: dark to bright banana yellow. Production and area span many orders of magnitude, so use a log scale.
+  const STOPS = ['#3a2f12', '#6b5312', '#a9800f', '#e0ad1a', '#ffe27a'].map(h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16)));
+  const colourAt = (t: number) => {
+    t = Math.max(0, Math.min(1, t)) * (STOPS.length - 1);
+    const i = Math.min(STOPS.length - 2, Math.floor(t)), f = t - i, a = STOPS[i], b = STOPS[i + 1];
+    return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`;
+  };
+  function scale() {
+    const vals = Object.values(countries).map(c => value(c, metric, yi)).filter((v): v is number => v != null && v > 0);
+    const max = Math.max(...vals, 1);
+    if (metric === 'yield') { const hi = Math.min(max, 70); return { t: (v: number) => v / hi, ticks: [0, hi / 2, hi].map(Math.round), log: false }; }
+    const lo = 1e3;   // 1,000 t or ha and below share the darkest colour
+    const t = (v: number) => Math.log10(Math.max(v, lo) / lo) / Math.log10(max / lo);
+    const ticks: number[] = []; for (let p = 3; 10 ** p <= max * 1.01; p++) ticks.push(10 ** p);
+    return { t, ticks, log: true };
+  }
+
+  // ---------- map ----------
+  const geo = feature(worldTopo as any, (worldTopo as any).objects.countries) as any;
+  const mapEl = $('#map');
+  const W = 960, H = 500;
+  const projection = geoEqualEarth().fitExtent([[6, 6], [W - 6, H - 6]], { type: 'Sphere' } as any);
+  const path = geoPath(projection);
+  mapEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"><g id="zoomLayer">
+    <path class="sphere" d="${path({ type: 'Sphere' } as any)}"/>
+    <path class="grat" d="${path(geoGraticule10())}"/>
+    ${geo.features.map((f: any) => `<path class="cty" data-id="${f.id}" d="${path(f) || ''}"><title>${f.properties.name}</title></path>`).join('')}
+    ${Object.entries(DOTS).map(([id, ll]) => { const [x, y] = projection(ll)!; return `<circle class="cty dot" data-id="${id}" cx="${x}" cy="${y}" r="3.5"/>`; }).join('')}
+  </g></svg>`;
+  const svg = select(mapEl.querySelector('svg')!), layer = svg.select('#zoomLayer');
+  const zoomer = d3zoom<SVGSVGElement, unknown>().scaleExtent([1, 12]).translateExtent([[0, 0], [W, H]])
+    .on('zoom', e => { layer.attr('transform', e.transform); layer.selectAll('.dot').attr('r', 3.5 / e.transform.k); layer.selectAll('.cty').style('stroke-width', `${0.5 / e.transform.k}px`); });
+  (svg as any).call(zoomer);
+  $('#zin').onclick = () => (svg as any).call(zoomer.scaleBy, 1.6);
+  $('#zout').onclick = () => (svg as any).call(zoomer.scaleBy, 1 / 1.6);
+  $('#zreset').onclick = () => (svg as any).call(zoomer.transform, zoomIdentity);
+
+  const shapes = [...mapEl.querySelectorAll<SVGElement>('.cty')];
+  function paint() {
+    const sc = scale();
+    for (const el of shapes) {
+      const c = countries[el.dataset.id!], v = c ? value(c, metric, yi) : null;
+      el.style.fill = v != null && v > 0 ? colourAt(sc.t(v)) : '';
+      el.classList.toggle('nodata', !(v != null && v > 0));
+      el.classList.toggle('sel', el.dataset.id === selected);
+    }
+    // legend
+    const grad = Array.from({ length: 11 }, (_, i) => colourAt(i / 10)).join(',');
+    const label = (v: number) => metric === 'yield' ? `${v}` : v >= 1e6 ? `${v / 1e6}m` : `${v / 1e3}k`;
+    $('#legend').innerHTML = `<span class="lg-t">${LABEL[metric]}${metric === 'yield' ? ' (t/ha)' : metric === 'area' ? ' (ha)' : ' (tonnes)'}</span>
+      <span class="lg-bar" style="background:linear-gradient(90deg,${grad})"></span>
+      <span class="lg-ticks">${sc.ticks.map(v => `<i style="left:${(sc.t(Math.max(v, 1)) * 100).toFixed(1)}%">${label(v)}</i>`).join('')}</span>
+      <span class="lg-nd"><i></i>No data</span>`;
+  }
+
+  // tooltip
+  const tip = $('#tip');
+  mapEl.addEventListener('pointermove', e => {
+    const el = (e.target as Element).closest('.cty') as SVGElement | null;
+    if (!el) { tip.hidden = true; return; }
+    const c = countries[el.dataset.id!], name = c?.name ?? el.querySelector('title')?.textContent ?? '';
+    const v = c ? value(c, metric, yi) : null;
+    tip.innerHTML = `<b>${name}</b><span>${LABEL[metric]} ${years[yi]}: ${fmt(v, metric)}</span>`;
+    const r = mapEl.getBoundingClientRect();
+    tip.hidden = false;
+    tip.style.left = `${Math.min(e.clientX - r.left + 14, r.width - tip.offsetWidth - 4)}px`;
+    tip.style.top = `${e.clientY - r.top + 14}px`;
+  });
+  mapEl.addEventListener('pointerleave', () => (tip.hidden = true));
+  mapEl.addEventListener('click', e => {
+    const el = (e.target as Element).closest('.cty') as SVGElement | null;
+    if (el && countries[el.dataset.id!]) { selected = el.dataset.id!; update(); }
+  });
+
+  // ---------- side panel ----------
+  let chart: ReturnType<typeof lineChart> | null = null;
+  function ranked(m: 'prod' | 'area' | 'yield') {
+    return Object.entries(countries).map(([id, c]) => [id, value(c, m, yi)] as const)
+      .filter((r): r is readonly [string, number] => r[1] != null && r[1] > 0 && (m !== 'yield' || (value(countries[r[0]], 'area', yi) ?? 0) >= 1000))
+      .sort((a, b) => b[1] - a[1]);
+  }
+  function panel() {
+    const c: any = selected ? countries[selected] : fao.world;
+    $('#pName').textContent = selected ? countries[selected].name : 'World';
+    $('#pWorld').hidden = !selected;
+    $('#pSub').textContent = `${crop === 'banana' ? 'Bananas' : crop === 'plantain' ? 'Plantains & cooking bananas' : 'Bananas and plantains'}, ${years[yi]}`;
+    $('#sProd').textContent = fmt(value(c, 'prod', yi), 'prod');
+    $('#sArea').textContent = fmt(value(c, 'area', yi), 'area');
+    $('#sYield').textContent = fmt(value(c, 'yield', yi), 'yield');
+    const r = ranked(metric), worldV = value(fao.world as any, metric, yi);
+    if (selected) {
+      const pos = r.findIndex(x => x[0] === selected);
+      $('#sRankL').textContent = `World rank (${LABEL[metric].toLowerCase()})`;
+      $('#sRank').textContent = pos >= 0 ? `#${pos + 1} of ${r.length}` : '—';
+      const v = value(c, metric, yi);
+      $('#pNote').textContent = metric !== 'yield' && v && worldV ? `${((v / worldV) * 100).toFixed(1)}% of the world's ${LABEL[metric].toLowerCase()} in ${years[yi]}.` : '';
+    } else {
+      $('#sRankL').textContent = 'Countries growing them';
+      $('#sRank').textContent = String(r.length);
+      $('#pNote').textContent = 'Click any country on the map.';
+    }
+    const pts = years.map((y, i) => ({ x: Date.UTC(y, 6, 1), y: value(c, metric, i) })).filter((p): p is { x: number; y: number } => p.y != null);
+    const opts = { height: 160, color: 'var(--brand)', label: `${LABEL[metric]} over time`, fmt: (v: number) => fmt(v, metric), axisFmt: (v: number) => fmt(v, metric).replace(/ (t|ha|t\/ha)$/, ''), dateFmt: (x: number) => String(new Date(x).getUTCFullYear()) };
+    if (pts.length > 1) { if (!chart) chart = lineChart($('#pChart'), pts, opts); else chart.update(pts, opts); }
+    $('#topTitle').textContent = metric === 'prod' ? 'Top producers' : metric === 'area' ? 'Largest growing areas' : 'Highest yields (1,000+ ha)';
+    $('#top').innerHTML = r.slice(0, 10).map(([id, v], i) => `<li class="${id === selected ? 'sel' : ''}"><button data-id="${id}"><span class="num">${i + 1}</span>${countries[id].name}<b class="num">${fmt(v, metric)}</b></button></li>`).join('');
+  }
+  $('#top').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { selected = b.dataset.id!; update(); } });
+  $('#pWorld').onclick = () => { selected = null; update(); };
+
+  function update() { paint(); panel(); $('#yearLbl').textContent = String(years[yi]); ($('#year') as HTMLInputElement).value = String(years[yi]); }
+
+  // ---------- controls ----------
+  const seg = (id: string, set: (v: string) => void) => $(id).addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    set(b.dataset.v!); update();
+  });
+  seg('#crop', v => (crop = v as typeof crop));
+  seg('#metric', v => (metric = v as typeof metric));
+  $('#year').addEventListener('input', e => { yi = +(e.target as HTMLInputElement).value - years[0]; stop(); update(); });
+  const stop = () => { if (playing) { clearInterval(playing); playing = null; $('#play').textContent = '▶'; } };
+  $('#play').onclick = () => {
+    if (playing) return stop();
+    if (yi === years.length - 1) yi = 0;
+    $('#play').textContent = '❚❚';
+    playing = window.setInterval(() => { if (yi >= years.length - 1) return stop(); yi++; update(); }, 180);
+  };
+
+  // ---------- bananas grown since you arrived ----------
+  const L = years.length - 1;
+  const perSecond = (fao.world.banana.prod[L]! * 1000) / (365.25 * 86400) / 0.118;
+  const t0 = performance.now(), counter = $('#counter');
+  const tick = () => { counter.textContent = Math.floor(((performance.now() - t0) / 1000) * perSecond).toLocaleString('en-US'); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+
+  update();
+</script>
+
+<style>
+  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding: 22px 0 12px; flex-wrap: wrap; }
+  .back { color: var(--link); text-decoration: none; font-size: 13px; font-weight: 600; }
+  .head h1 { margin: 4px 0 4px; font-size: 36px; font-weight: 900; letter-spacing: -0.03em; }
+  .head h1::first-letter { color: var(--brand); }
+  .head p { margin: 0; color: var(--ink-2); font-size: 15.5px; max-width: 720px; }
+  .counter { text-align: right; }
+  .c-n { display: block; font-size: 34px; font-weight: 900; color: var(--brand); letter-spacing: -0.02em; }
+  .c-l { font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .seg { display: inline-flex; background: var(--field); border-radius: 999px; padding: 3px; }
+  .seg button { font: 700 13px 'Inter', sans-serif; color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+  .seg button.on { background: var(--brand); color: #1d1600; }
+  .years { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px; }
+  .years input { flex: 1; accent-color: #f2b81f; }
+  #play { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--brand); color: #1d1600; font-size: 13px; font-weight: 800; cursor: pointer; flex: none; }
+  #yearLbl { font-size: 20px; font-weight: 900; min-width: 52px; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; margin-top: 16px; align-items: start; }
+  .mapbox { position: relative; background: #0b0e11; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .map :global(svg) { display: block; width: 100%; height: auto; cursor: grab; }
+  .map :global(.sphere) { fill: #0d1620; }
+  .map :global(.grat) { fill: none; stroke: rgba(255, 255, 255, .05); stroke-width: .5px; }
+  .map :global(.cty) { fill: #3a3f46; stroke: #0b0e11; stroke-width: .5px; transition: fill .25s; cursor: pointer; }
+  .map :global(.cty.nodata) { fill: #232830; cursor: default; }
+  .map :global(.cty:hover) { stroke: #fff; stroke-width: 1px; }
+  .map :global(.cty.sel) { stroke: #fff; stroke-width: 1.4px; }
+  .map :global(.dot) { stroke: #0b0e11; stroke-width: 1px; }
+  .zoom { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .zoom button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: rgba(22, 27, 32, .9); color: var(--ink); font-size: 16px; font-weight: 700; cursor: pointer; }
+  .legend { position: absolute; left: 12px; bottom: 10px; background: rgba(11, 14, 17, .85); border-radius: 10px; padding: 8px 12px 18px; width: 290px; font-size: 11.5px; color: var(--ink-2); }
+  .legend :global(.lg-t) { display: block; font-weight: 700; margin-bottom: 5px; }
+  .legend :global(.lg-bar) { display: block; height: 9px; border-radius: 5px; }
+  .legend :global(.lg-ticks) { position: relative; display: block; height: 12px; }
+  .legend :global(.lg-ticks i) { position: absolute; top: 2px; transform: translateX(-50%); font-style: normal; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .legend :global(.lg-nd) { position: absolute; right: 12px; top: 8px; display: flex; align-items: center; gap: 5px; color: var(--ink-3); }
+  .legend :global(.lg-nd i) { width: 10px; height: 10px; border-radius: 2px; background: #232830; display: inline-block; }
+  .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; display: flex; flex-direction: column; z-index: 3; white-space: nowrap; }
+  .tip[hidden] { display: none; }
+
+  .panel { display: flex; flex-direction: column; gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .card h2 { font-size: 17px; font-weight: 800; margin: 0; }
+  .p-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .link { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
+  .p-sub { color: var(--ink-3); font-size: 12.5px; margin: 2px 0 10px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
+  .stats div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .stats dt { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+  .stats dd { margin: 2px 0 0; font-weight: 800; font-size: 16px; }
+  .p-note { margin: 8px 0 0; color: var(--ink-2); font-size: 13px; }
+  .top { list-style: none; margin: 8px 0 0; padding: 0; }
+  .top :global(button) { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; width: 100%; text-align: left; font: 600 13.5px 'Inter', sans-serif; color: var(--ink); background: none; border: none; border-bottom: 1px solid var(--border); padding: 7px 2px; cursor: pointer; }
+  .top :global(button:hover) { color: var(--brand); }
+  .top :global(li.sel button) { color: var(--brand); }
+  .top :global(span) { color: var(--ink-3); font-size: 12px; }
+  .top :global(b) { font-weight: 700; }
+
+  .about { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); max-width: 900px; }
+  .about h2 { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
+  .about p { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin: 0 0 10px; }
+  .src { color: var(--ink-3) !important; font-size: 12.5px !important; }
+
+  @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) {
+    .head h1 { font-size: 28px; }
+    .counter { text-align: left; }
+    .legend { position: static; width: auto; border-radius: 0; }
+    .seg button { padding: 6px 9px; font-size: 12px; }
+  }
+</style>
