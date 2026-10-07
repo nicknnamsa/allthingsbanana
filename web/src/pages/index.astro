@@ -21,11 +21,15 @@ import Base from '../layouts/Base.astro';
         <a class="all-link" href="/news/">See all banana news →</a>
       </section>
       <section class="lab">
-        <h2 class="col-h">Cook &amp; play</h2>
+        <h2 class="col-h">Explore</h2>
         <div class="lab-grid">
           <a class="lab-card" id="rotd" href="/recipes/">
             <span class="lab-art recipe" aria-hidden="true">🍳</span>
             <span><span class="kicker">Recipe of the day</span><b>Banacipes</b><span class="lab-txt">Banana recipes for every meal.</span></span>
+          </a>
+          <a class="lab-card" href="/topics/banana-bread/">
+            <span class="lab-art bread" aria-hidden="true">🍞</span>
+            <span><span class="kicker">Topic</span><b>Everything banana bread</b><span class="lab-txt">History, the science of brown bananas and the internet's favourite recipes.</span></span>
           </a>
           <a class="lab-card" href="/more/banana-clicker/">
             <span class="lab-art clicker" aria-hidden="true">🍌</span>
@@ -276,6 +280,7 @@ import Base from '../layouts/Base.astro';
   .lab-card:hover { border-color: var(--brand); }
   .lab-art { flex: none; width: 64px; height: 64px; border-radius: 12px; display: grid; place-items: center; font-size: 34px; }
   .lab-art.clicker { background: radial-gradient(circle at 30% 30%, #5a4812, #1f190a); }
+  .lab-art.bread { background: radial-gradient(circle at 30% 30%, #6b4f12, #2a1f08); }
   .lab-art.recipe { background: radial-gradient(circle at 30% 30%, #6a2b54, #260f1f); }
   .lab-art.cube { background: radial-gradient(circle at 30% 30%, #24405e, #111a25); }
   .lab-card b { display: block; font-size: 15.5px; margin: 1px 0 2px; }

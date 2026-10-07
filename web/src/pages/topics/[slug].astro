@@ -1,0 +1,312 @@
+---
+import { readFileSync } from 'node:fs';
+import Base from '../../layouts/Base.astro';
+import RecipeCard from '../../components/RecipeCard.astro';
+import { topics, anyTopic, type Topic } from '../../data/topics';
+import { recipes } from '../../data/recipes';
+
+export function getStaticPaths() {
+  return topics.map(t => ({ params: { slug: t.slug }, props: { topic: t } }));
+}
+const { topic: t } = Astro.props as { topic: Topic };
+
+// [1] in the text becomes a small link to source 1
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// [1][3] becomes one superscript "1,3"
+const cite = (s: string) => esc(s).replace(/(?:\[\d+\])+/g, group =>
+  `<sup>${[...group.matchAll(/\d+/g)].map(([n]) => `<a href="#src-${n}" title="${esc(t.sources[+n - 1]?.publisher ?? '')}">${n}</a>`).join(',')}</sup>`);
+const plain = (s: string) => s.replace(/\[\d+\]/g, '');
+
+const ours = t.ourRecipes.map(s => recipes.find(r => r.slug === s)).filter(Boolean) as typeof recipes;
+
+// the best-loved matching recipes from other sites (found by scripts/crawl-recipes.mjs)
+type Web = { n: string; u: string; s: string; i?: string; m?: number; r?: number; c?: number };
+let web: Web[] = [];
+try { web = JSON.parse(readFileSync(new URL('../../../public/recipes/web.json', import.meta.url), 'utf8')); } catch {}
+const match = new RegExp(t.webRecipeMatch, 'i');
+const webMatches = web.filter(w => match.test(w.n));
+const score = (w: Web) => (w.r || 0) * Math.log10((w.c || 0) + 10);
+const webTop = [...webMatches].sort((a, b) => score(b) - score(a)).slice(0, 8);
+const webSites = new Set(webMatches.map(w => w.s)).size;
+const fmtMins = (m?: number) => !m ? '' : m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
+const related = t.related.map(anyTopic).filter(Boolean);
+const live = new Set(topics.map(x => x.slug));
+const updated = new Date(t.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org', '@type': 'FAQPage',
+    mainEntity: t.faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: plain(f.a) } })),
+  },
+  {
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Topics', item: 'https://allthingsbanana.com/topics/' },
+      { '@type': 'ListItem', position: 2, name: t.title, item: `https://allthingsbanana.com/topics/${t.slug}/` },
+    ],
+  },
+];
+---
+<Base wide section="topics" title={`${t.title}: everything in one place · All Things Banana`} description={plain(t.tagline)}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <nav class="crumbs"><a href="/topics/">Topics</a> › {t.title}</nav>
+
+  <header class="hero">
+    <div class="art" aria-hidden="true">{t.emoji}</div>
+    <div>
+      <div class="kicker">Banana topic</div>
+      <h1>{t.title}</h1>
+      <p class="tagline">{t.tagline}</p>
+      <nav class="jump" aria-label="On this page">
+        <a href="#answer">The short answer</a>
+        <a href="#recipes">Recipes{webMatches.length > 0 && ` (${ours.length + webMatches.length})`}</a>
+        <a href="#news">Latest news</a>
+        <a href="#questions">Questions</a>
+        <a href="#best">Best of the internet</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="main">
+      <section id="answer" class="answer">
+        <h2>The short answer</h2>
+        {t.intro.map(p => <p set:html={cite(p)} />)}
+        <p class="checked">Every fact here links to its source. Last checked {updated}.</p>
+      </section>
+
+      <section id="recipes">
+        <div class="sec-head"><h2>Our recipes</h2><a href="/recipes/">All Banacipes →</a></div>
+        <div class="grid">{ours.map(r => <RecipeCard recipe={r} />)}</div>
+
+        {webTop.length > 0 && (
+          <>
+            <div class="sec-head web-h">
+              <h2>The internet's favourites</h2>
+              <a href={`/recipes/?from=web&q=${encodeURIComponent(t.title.toLowerCase())}&sort=rated`}>All {webMatches.length} from {webSites} sites →</a>
+            </div>
+            <p class="sub">The highest-rated {t.title.toLowerCase()} recipes on other sites, by their readers' ratings.</p>
+            <div class="grid">
+              {webTop.map(w => (
+                <a class="wc" href={w.u} target="_blank" rel="noopener">
+                  <div class={`wc-art ${w.i ? '' : 'noimg'}`}>{w.i && <img src={w.i} alt="" loading="lazy" referrerpolicy="no-referrer" />}</div>
+                  <div class="wc-body">
+                    <h3>{w.n}</h3>
+                    <div class="wc-src">on {w.s} ↗</div>
+                    <div class="wc-foot">{w.r && <span>★ {w.r.toFixed(1)}{w.c ? <small> ({w.c.toLocaleString('en-US')})</small> : ''}</span>}<span>{fmtMins(w.m)}</span></div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      <section id="news" data-match={t.newsMatch}>
+        <div class="sec-head"><h2>Latest news</h2><a href="/news/">All banana news →</a></div>
+        <div id="newsList" class="news-list"><p class="muted">Loading the latest stories…</p></div>
+      </section>
+
+      <section id="questions">
+        <h2>Questions people ask</h2>
+        {t.faqs.map(f => (
+          <details class="faq">
+            <summary>{f.q}</summary>
+            <p set:html={cite(f.a)} />
+          </details>
+        ))}
+      </section>
+
+      <section id="best">
+        <h2>The best of the internet</h2>
+        <p class="sub">Hand-picked: the pages, videos and tools actually worth your time.</p>
+        <ol class="links">
+          {t.links.map(l => (
+            <li>
+              <a href={l.url} target="_blank" rel="noopener"><b>{l.title}</b> <span>{l.publisher} ↗</span></a>
+              <p>{l.why}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section id="sources" class="sources">
+        <h2>Sources</h2>
+        <ol>
+          {t.sources.map((s, i) => (
+            <li id={`src-${i + 1}`}><a href={s.url} target="_blank" rel="noopener">{s.title}</a>, {s.publisher}</li>
+          ))}
+        </ol>
+      </section>
+    </div>
+
+    <aside class="rail">
+      <section class="card">
+        <h2>Quick facts</h2>
+        <dl class="facts">
+          {t.facts.map(f => (
+            <div><dt>{f.label}</dt><dd>{f.value}{f.source && <sup><a href={`#src-${f.source}`}>{f.source}</a></sup>}</dd></div>
+          ))}
+        </dl>
+      </section>
+
+      {t.showLoafCost && (
+        <section class="card" id="loafCard" hidden>
+          <h2>The bananas for one loaf</h2>
+          <div class="big num" id="loafCost"></div>
+          <p class="small" id="loafNote"></p>
+        </section>
+      )}
+
+      {t.tip && (
+        <section class="card tip">
+          <h2>{t.tip.title}</h2>
+          <p set:html={cite(t.tip.text)} />
+        </section>
+      )}
+
+      {related.length > 0 && (
+        <section class="card">
+          <h2>Related topics</h2>
+          <ul class="related">
+            {related.map(r => (
+              <li>{live.has(r!.slug)
+                ? <a href={`/topics/${r!.slug}/`}><span>{r!.emoji}</span>{r!.title}</a>
+                : <span class="soon"><span>{r!.emoji}</span>{r!.title} <em>coming soon</em></span>}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </aside>
+  </div>
+</Base>
+
+<script>
+  import { getFeed, getMarket, lookup, esc, ago, num } from '../../scripts/market';
+
+  // live news on this topic, from the site's banana news feed
+  const box = document.getElementById('newsList')!;
+  const re = new RegExp(document.getElementById('news')!.dataset.match!, 'i');
+  getFeed().then(f => {
+    const items = f.items.filter(it => re.test(it.title)).slice(0, 6);
+    box.innerHTML = items.length
+      ? items.map(it => `<article class="n-item">${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy">` : ''}<div>
+          <a href="${esc(it.url)}" target="_blank" rel="noopener nofollow">${esc(it.title)}</a>
+          <div class="meta">${esc(it.source)} · ${ago(it.published)}</div></div></article>`).join('')
+      : `<p class="muted">No stories on this in the last month. We check for new ones every 10 minutes. <a href="/news/">See all banana news →</a></p>`;
+  }).catch(() => { box.innerHTML = '<p class="muted">The news feed is unavailable right now.</p>'; });
+
+  // what the bananas for one loaf cost in US shops right now (3 medium bananas ≈ 0.78 lb)
+  const card = document.getElementById('loafCard');
+  if (card) getMarket().then(m => {
+    const s = lookup(m, 'APU0000711211');
+    if (!s) return;
+    const last = s.pts[s.pts.length - 1], perLoaf = last.y * 3 * 0.26;
+    document.getElementById('loafCost')!.textContent = `$${num(perLoaf, 2)}`;
+    document.getElementById('loafNote')!.innerHTML = `Three medium bananas at the average US shop price of $${num(last.y, 3)}/lb (${new Date(last.x).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}). <a href="/bananalytics/#APU0000711211">See the price chart →</a>`;
+    card.hidden = false;
+  }).catch(() => {});
+</script>
+
+<style>
+  .crumbs { padding-top: 18px; font-size: 13px; color: var(--ink-3); }
+  .crumbs a { color: var(--link); text-decoration: none; }
+  .hero { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 26px; align-items: center; margin-top: 14px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .art { width: 140px; height: 140px; border-radius: 28px; display: grid; place-items: center; font-size: 76px; background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); }
+  .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--brand); }
+  h1 { font-size: 46px; font-weight: 900; letter-spacing: -0.035em; margin: 2px 0 6px; line-height: 1.05; }
+  .tagline { margin: 0; color: var(--ink-2); font-size: 17px; max-width: 720px; }
+  .jump { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+  .jump a { font-size: 13px; font-weight: 600; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+  .jump a:hover { color: var(--ink); border-color: var(--brand); }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; margin-top: 26px; align-items: start; }
+  .main { display: flex; flex-direction: column; gap: 40px; min-width: 0; }
+  h2 { font-size: 22px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.015em; }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .sec-head a { color: var(--link); font-weight: 600; font-size: 14px; text-decoration: none; white-space: nowrap; }
+  .web-h { margin-top: 28px; }
+  .sub { color: var(--ink-3); font-size: 13.5px; margin: -6px 0 12px; }
+  .muted { color: var(--ink-3); font-size: 14px; }
+  .muted :global(a) { color: var(--link); }
+
+  .answer p { font-size: 17.5px; line-height: 1.65; color: var(--ink); margin: 0 0 14px; max-width: 720px; }
+  .answer :global(sup), .facts sup, .tip :global(sup), .faq :global(sup) { font-size: 11px; margin-left: 1px; }
+  .answer :global(sup a), .facts sup a, .tip :global(sup a), .faq :global(sup a) { color: var(--brand); text-decoration: none; font-weight: 700; }
+  .checked { font-size: 13px !important; color: var(--ink-3) !important; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .wc { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; transition: border-color .15s, transform .15s; }
+  .wc:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .wc-art { height: 140px; background: var(--chip); }
+  .wc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .wc-art.noimg { display: grid; place-items: center; background: radial-gradient(circle at 30% 25%, #4a3c12, #1f190a); }
+  .wc-art.noimg::after { content: '🍌'; font-size: 44px; }
+  .wc-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .wc h3 { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.25; }
+  .wc-src { color: var(--link); font-size: 12.5px; font-weight: 600; }
+  .wc-foot { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .wc-foot small { font-weight: 500; }
+
+  .news-list :global(.n-item) { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .news-list :global(.n-item img) { width: 110px; height: 70px; object-fit: cover; border-radius: 8px; flex: none; }
+  .news-list :global(.n-item a) { font-weight: 700; font-size: 16px; text-decoration: none; line-height: 1.3; }
+  .news-list :global(.n-item a:hover) { text-decoration: underline; }
+  .news-list :global(.meta) { color: var(--ink-3); font-size: 12.5px; margin-top: 4px; }
+
+  .faq { border-bottom: 1px solid var(--border); }
+  .faq summary { cursor: pointer; padding: 14px 0; font-weight: 700; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: '+'; color: var(--brand); font-size: 20px; line-height: 1; }
+  .faq[open] summary::after { content: '−'; }
+  .faq p { margin: 0 0 14px; color: var(--ink-2); font-size: 15.5px; line-height: 1.55; }
+
+  .links { list-style: none; margin: 0; padding: 0; counter-reset: link; }
+  .links li { counter-increment: link; position: relative; padding: 12px 0 12px 44px; border-bottom: 1px solid var(--border); }
+  .links li::before { content: counter(link); position: absolute; left: 0; top: 13px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--chip); color: var(--brand); font-weight: 800; font-size: 13px; }
+  .links a { text-decoration: none; font-size: 16px; }
+  .links a b { font-weight: 700; }
+  .links a span { color: var(--link); font-size: 13px; font-weight: 600; margin-left: 6px; }
+  .links a:hover b { text-decoration: underline; }
+  .links p { margin: 3px 0 0; color: var(--ink-2); font-size: 14px; }
+
+  .sources ol { margin: 0; padding-left: 22px; color: var(--ink-3); font-size: 13.5px; }
+  .sources li { margin-bottom: 6px; scroll-margin-top: 20px; }
+  .sources li:target { color: var(--ink); }
+  .sources a { color: var(--link); }
+
+  .rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .card h2 { font-size: 15.5px; margin-bottom: 8px; }
+  .facts { margin: 0; }
+  .facts div { padding: 8px 0; border-top: 1px solid var(--border); }
+  .facts div:first-child { border-top: none; padding-top: 0; }
+  .facts dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+  .facts dd { margin: 2px 0 0; font-weight: 700; font-size: 14.5px; }
+  .big { font-size: 34px; font-weight: 900; color: var(--brand); letter-spacing: -0.02em; }
+  .small { font-size: 12.5px; color: var(--ink-2); margin: 4px 0 0; }
+  .small :global(a) { color: var(--link); }
+  .tip { border-left: 3px solid var(--brand); }
+  .tip p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+  .related { list-style: none; margin: 0; padding: 0; }
+  .related li { padding: 6px 0; font-size: 14px; font-weight: 600; }
+  .related a { text-decoration: none; color: var(--link); }
+  .related span span { margin-right: 8px; }
+  .related a span { margin-right: 8px; }
+  .soon { color: var(--ink-3); }
+  .soon em { font-style: normal; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin-left: 4px; }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    .rail { position: static; }
+  }
+  @media (max-width: 560px) {
+    .hero { grid-template-columns: 1fr; }
+    .art { width: 90px; height: 90px; font-size: 48px; border-radius: 20px; }
+    h1 { font-size: 34px; }
+    .answer p { font-size: 16px; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .wc-art { height: 96px; }
+    .wc h3 { font-size: 13.5px; }
+  }
+</style>

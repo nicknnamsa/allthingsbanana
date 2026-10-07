@@ -1,0 +1,49 @@
+---
+import Base from '../../layouts/Base.astro';
+import { topics, upcoming } from '../../data/topics';
+---
+<Base wide section="topics" title="Banana topics: everything about bananas, gathered in one place · All Things Banana"
+      description="Hubs for every banana subject: the short answer with sources, the best recipes, live news, the numbers and the best of the internet, all on one page.">
+  <header class="head">
+    <h1>Topics</h1>
+    <p>One page for each banana subject, with everything we can find about it gathered in one place: a short, sourced answer, our recipes and the internet's favourites, live news, the numbers, and hand-picked links to the best of the web.</p>
+  </header>
+
+  <div class="grid">
+    {topics.map(t => (
+      <a class="tile live" href={`/topics/${t.slug}/`}>
+        <span class="art" aria-hidden="true">{t.emoji}</span>
+        <span class="tag">Live</span>
+        <h2>{t.title}</h2>
+        <p>{t.tagline}</p>
+        <span class="go">Open the hub →</span>
+      </a>
+    ))}
+    {upcoming.map(t => (
+      <div class="tile">
+        <span class="art" aria-hidden="true">{t.emoji}</span>
+        <span class="tag soon">Coming soon</span>
+        <h2>{t.title}</h2>
+        <p>{t.tagline}</p>
+      </div>
+    ))}
+  </div>
+</Base>
+
+<style>
+  .head { padding: 28px 0 6px; }
+  .head h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -0.03em; }
+  .head h1::first-letter { color: var(--brand); }
+  .head p { color: var(--ink-2); font-size: 16px; max-width: 760px; margin: 8px 0 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 20px; }
+  .tile { position: relative; display: flex; flex-direction: column; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; text-decoration: none; }
+  .tile.live { transition: border-color .15s, transform .15s; }
+  .tile.live:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .tile:not(.live) { opacity: .6; }
+  .art { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; font-size: 34px; background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); margin-bottom: 6px; }
+  .tag { position: absolute; top: 18px; right: 18px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #1d1600; background: var(--brand); border-radius: 999px; padding: 2px 9px; }
+  .tag.soon { color: var(--ink-3); background: none; border: 1px solid var(--border); }
+  h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+  .go { margin-top: auto; padding-top: 8px; color: var(--brand); font-weight: 700; font-size: 14px; }
+</style>

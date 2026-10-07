@@ -83,6 +83,7 @@ const jsonLd = {
           {r.steps.map(s => <li><button>{s}</button></li>)}
         </ol>
         {r.tip && <aside class="tip"><b>Tip</b> {r.tip}</aside>}
+        {/banana-bread/.test(r.slug) && <a class="hub" href="/topics/banana-bread/">🍞 Everything about banana bread: history, the science of ripeness and the internet's favourite recipes →</a>}
         <p class="note">Tap a step to mark it done.</p>
       </section>
     </div>
@@ -163,6 +164,8 @@ const jsonLd = {
   .tip { margin-top: 16px; background: color-mix(in srgb, var(--brand) 12%, transparent); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 14.5px; }
   .tip b { color: var(--brand); margin-right: 6px; }
   .note { color: var(--ink-3); font-size: 12.5px; }
+  .hub { display: block; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; color: var(--link); font-weight: 600; text-decoration: none; font-size: 14.5px; }
+  .hub:hover { border-color: var(--brand); }
 
   .more { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
   .more-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
