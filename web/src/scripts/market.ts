@@ -89,4 +89,4 @@ export function allSeries(market: Market | null) {
 export const label = (s: Sel) => (s.kind === 'US shop price' ? `${s.name}, US shops` : s.name);
 export const tickerCode = (s: Sel) =>
   s.kind === 'Stock' ? s.code : s.kind === 'US shop price' ? `US:${s.name.split(' ').pop()!.slice(0, 6).toUpperCase()}` : s.name.slice(0, 6).toUpperCase();
-export const marketLink = (code: string) => `/markets/#${code}`;
+export const marketLink = (code: string) => `/bananalytics/#${code}`;

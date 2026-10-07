@@ -1,8 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base wide section="markets" title="Banana markets · prices, charts and statistics · All Things Banana"
+<Base wide section="bananalytics" title="Bananalytics · banana prices, charts and statistics · All Things Banana"
       description="Banana price charts and statistics: the global banana benchmark, US shop prices, fruit and soft commodities and banana company stocks.">
+  <header class="page-head">
+    <h1>Bananalytics</h1>
+    <p>Banana prices, charts and statistics, plus the fruit and soft commodities around them.</p>
+  </header>
   <div class="layout">
     <div class="main-col">
       <section class="quote">
@@ -100,7 +104,7 @@ import Base from '../../layouts/Base.astro';
     selected = s.code;
     const pts = s.pts, last = pts[pts.length - 1], prev = pts[pts.length - 2];
     const unit = s.per === 'share' ? '' : ` / ${s.per}`;
-    document.title = `${s.kind === 'US shop price' ? s.name + ' (US shops)' : s.name} price · All Things Banana`;
+    document.title = `${s.kind === 'US shop price' ? s.name + ' (US shops)' : s.name} price · Bananalytics · All Things Banana`;
     $('#qSrc').textContent = `${s.kind === 'Stock' ? 'NYSE' : s.source.replace(' Primary Commodity Prices', '').replace('US Bureau of Labor Statistics', 'US BLS')} · ${s.kind} · ${s.daily ? 'Daily' : 'Monthly'} · ${s.kind === 'Stock' ? 'USD' : `${s.cur === '¢' ? 'US cents' : s.cur === '€' ? 'EUR' : 'USD'} per ${s.per}`}`;
     $('#qName').textContent = s.kind === 'US shop price' ? `${s.name} (US shops)` : s.name;
     $('#qCode').textContent = `(${s.code})`;
@@ -233,7 +237,11 @@ import Base from '../../layouts/Base.astro';
 </script>
 
 <style>
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; padding-top: 24px; }
+  .page-head { padding: 24px 0 4px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+  .page-head h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+  .page-head h1::first-letter { color: var(--brand); }
+  .page-head p { margin: 0; color: var(--ink-3); font-size: 14px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; padding-top: 22px; }
   .main-col, .side-col { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
   .block-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
   .block h2, .sub-h { font-size: 18px; font-weight: 800; margin: 0; }

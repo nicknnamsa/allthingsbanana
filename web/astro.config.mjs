@@ -5,5 +5,6 @@ export default defineConfig({
   // old addresses keep working
   redirects: {
     '/banana-cube': '/more/banana-cube/',
+    '/markets': '/bananalytics/',
   },
 });
