@@ -1,0 +1,178 @@
+---
+import Base from '../../layouts/Base.astro';
+import RecipeCard from '../../components/RecipeCard.astro';
+import { recipes, formatTime, MEALS, RIPENESS, type Recipe } from '../../data/recipes';
+
+export function getStaticPaths() {
+  return recipes.map(r => ({ params: { slug: r.slug }, props: { recipe: r } }));
+}
+const { recipe: r } = Astro.props as { recipe: Recipe };
+const mealLabel = (id: string) => MEALS.find(m => m.id === id)?.label ?? id;
+const ripe = RIPENESS.filter(x => r.ripeness.includes(x.id));
+const dietLabel: Record<string, string> = { vegan: 'Vegan', vegetarian: 'Vegetarian', 'gluten-free': 'Gluten-free', 'dairy-free': 'Dairy-free', 'no-bake': 'No oven', alcohol: 'Contains alcohol' };
+// four recipes for the same kind of meal, picked so they differ from page to page
+const similar = recipes.filter(x => x.slug !== r.slug && x.meals.some(m => r.meals.includes(m)));
+const start = similar.length ? (r.slug.length * 7) % similar.length : 0;
+const more = [...similar.slice(start), ...similar.slice(0, start)].slice(0, 4);
+
+// structured data so search engines can show it as a recipe
+const jsonLd = {
+  '@context': 'https://schema.org', '@type': 'Recipe',
+  name: r.name, description: r.blurb, recipeYield: r.serves,
+  totalTime: `PT${r.mins}M`, recipeCategory: r.meals.map(mealLabel).join(', '), recipeCuisine: r.origin,
+  keywords: ['banana', ...r.meals, ...r.diet].join(', '),
+  recipeIngredient: r.ingredients,
+  recipeInstructions: r.steps.map(text => ({ '@type': 'HowToStep', text })),
+  ...(r.diet.includes('vegan') ? { suitableForDiet: 'https://schema.org/VeganDiet' } : r.diet.includes('gluten-free') ? { suitableForDiet: 'https://schema.org/GlutenFreeDiet' } : {}),
+  author: { '@type': 'Organization', name: 'All Things Banana' },
+};
+---
+<Base wide section="recipes" title={`${r.name} · Peelicious banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <nav class="crumbs"><a href="/recipes/">Peelicious</a> › {mealLabel(r.meals[0])} › {r.name}</nav>
+
+  <article class="recipe">
+    <header class="top">
+      <div class={`art m-${r.meals[0]}`} aria-hidden="true"><span>{r.emoji}</span></div>
+      <div class="intro">
+        <div class="tags">
+          {r.meals.map(m => <a href={`/recipes/?meal=${m}`}>{mealLabel(m)}</a>)}
+          <span>{r.origin}</span>
+        </div>
+        <h1>{r.name}</h1>
+        <p class="blurb">{r.blurb}</p>
+        <dl class="facts">
+          <div><dt>Time</dt><dd>{formatTime(r.mins)}</dd></div>
+          <div><dt>Serves</dt><dd>{r.serves}</dd></div>
+          <div><dt>Difficulty</dt><dd class="cap">{r.difficulty}</dd></div>
+          <div><dt>Bananas</dt><dd>{r.bananaNote ?? `${r.bananas} ${r.bananas === 1 ? 'banana' : 'bananas'}`}</dd></div>
+        </dl>
+        <div class="row">
+          <span class="meter" title={`Banana-o-meter: ${r.level} out of 5`}>
+            <b>Banana-o-meter</b> {[1, 2, 3, 4, 5].map(i => <i class={i <= r.level ? 'on' : ''}>🍌</i>)}
+          </span>
+          <span class="ripeness">
+            <b>Best with</b>
+            {ripe.map(x => <a href={`/recipes/?ripe=${x.id}`} class="ripe-chip"><i style={`background:${x.colour}`}></i>{x.label.toLowerCase()} bananas</a>)}
+          </span>
+        </div>
+        {r.diet.length > 0 && <div class="diet">{r.diet.map(d => <span>{dietLabel[d]}</span>)}</div>}
+      </div>
+    </header>
+
+    <div class="cols">
+      <section class="ings">
+        <div class="col-head"><h2>Ingredients</h2><button id="resetIngs" class="link">Untick all</button></div>
+        <ul id="ings">
+          {r.ingredients.map((x, i) => (
+            <li><label><input type="checkbox" data-i={i}> <span>{x}</span></label></li>
+          ))}
+        </ul>
+      </section>
+      <section class="method">
+        <div class="col-head"><h2>Method</h2><button class="link" onclick="window.print()">Print</button></div>
+        <ol id="steps">
+          {r.steps.map(s => <li><button>{s}</button></li>)}
+        </ol>
+        {r.tip && <aside class="tip"><b>Tip</b> {r.tip}</aside>}
+        <p class="note">Tap a step to mark it done.</p>
+      </section>
+    </div>
+  </article>
+
+  {more.length > 0 && (
+    <section class="more">
+      <div class="more-head"><h2>More {mealLabel(r.meals[0]).toLowerCase()} ideas</h2><a href={`/recipes/?meal=${r.meals[0]}`}>See them all →</a></div>
+      <div class="grid">{more.map(x => <RecipeCard recipe={x} />)}</div>
+    </section>
+  )}
+</Base>
+
+<script>
+  // ticked ingredients are remembered on this device, per recipe, while you cook
+  const key = `atb-ings:${location.pathname}`;
+  const boxes = [...document.querySelectorAll<HTMLInputElement>('#ings input')];
+  let ticked: number[] = [];
+  try { ticked = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
+  boxes.forEach((b, i) => { b.checked = ticked.includes(i); });
+  const save = () => { try { localStorage.setItem(key, JSON.stringify(boxes.flatMap((b, i) => (b.checked ? [i] : [])))); } catch {} };
+  boxes.forEach(b => b.addEventListener('change', save));
+  document.getElementById('resetIngs')!.addEventListener('click', () => { boxes.forEach(b => (b.checked = false)); save(); });
+  document.getElementById('steps')!.addEventListener('click', e => {
+    const li = (e.target as HTMLElement).closest('li');
+    li?.classList.toggle('done');
+  });
+</script>
+
+<style>
+  .crumbs { padding-top: 18px; font-size: 13px; color: var(--ink-3); }
+  .crumbs a { color: var(--link); text-decoration: none; }
+  .top { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; margin-top: 14px; align-items: start; }
+  .art { aspect-ratio: 1; border-radius: 16px; display: grid; place-items: center; font-size: 120px; }
+  .art span { filter: drop-shadow(0 12px 24px rgba(0, 0, 0, .4)); }
+  .m-breakfast { background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); }
+  .m-lunch { background: radial-gradient(circle at 30% 25%, #2f5a24, #12210d); }
+  .m-dinner { background: radial-gradient(circle at 30% 25%, #6a2a1e, #26100b); }
+  .m-snack { background: radial-gradient(circle at 30% 25%, #6e4a17, #2b1b07); }
+  .m-dessert { background: radial-gradient(circle at 30% 25%, #6a2b54, #260f1f); }
+  .m-drink { background: radial-gradient(circle at 30% 25%, #1f4b6e, #0c1c29); }
+  .tags { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .tags a { color: var(--brand); text-decoration: none; }
+  .tags span { color: var(--ink-3); }
+  h1 { font-size: 38px; font-weight: 900; letter-spacing: -0.03em; margin: 6px 0 6px; line-height: 1.1; }
+  .blurb { font-size: 17px; color: var(--ink-2); margin: 0; }
+  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 18px 0 0; }
+  .facts div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .facts dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+  .facts dd { margin: 2px 0 0; font-weight: 700; font-size: 14.5px; }
+  .cap { text-transform: capitalize; }
+  .row { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; margin-top: 14px; font-size: 13px; }
+  .row b { color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-right: 6px; }
+  .meter i { font-style: normal; font-size: 16px; opacity: .22; filter: grayscale(1); }
+  .meter i.on { opacity: 1; filter: none; }
+  .ripe-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px 3px 4px; margin-right: 6px; font-weight: 600; }
+  .ripe-chip:hover { border-color: var(--brand); }
+  .ripe-chip i { width: 16px; height: 16px; border-radius: 50%; }
+  .diet { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .diet span { font-size: 12px; font-weight: 700; color: var(--up); border: 1px solid color-mix(in srgb, var(--up) 45%, transparent); border-radius: 999px; padding: 2px 10px; }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 36px; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
+  .col-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .col-head h2 { font-size: 20px; font-weight: 800; margin: 0; }
+  .link { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
+  .ings ul { list-style: none; margin: 0; padding: 0; }
+  .ings li { border-bottom: 1px solid var(--border-2); }
+  .ings label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 2px; cursor: pointer; font-size: 15px; }
+  .ings input { width: 18px; height: 18px; margin-top: 2px; accent-color: #f2b81f; flex: none; }
+  .ings input:checked + span { color: var(--ink-3); text-decoration: line-through; }
+  .method ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  .method li { counter-increment: step; }
+  .method li button { display: grid; grid-template-columns: 34px 1fr; gap: 12px; width: 100%; text-align: left; font: 500 15.5px/1.55 'Inter', sans-serif; color: var(--ink);
+    background: none; border: none; border-bottom: 1px solid var(--border-2); padding: 12px 2px; cursor: pointer; }
+  .method li button::before { content: counter(step); display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #1d1600; font-weight: 800; font-size: 14px; }
+  .method li.done button { color: var(--ink-3); }
+  .method li.done button::before { content: '✓'; background: var(--chip); color: var(--up); }
+  .tip { margin-top: 16px; background: color-mix(in srgb, var(--brand) 12%, transparent); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 14.5px; }
+  .tip b { color: var(--brand); margin-right: 6px; }
+  .note { color: var(--ink-3); font-size: 12.5px; }
+
+  .more { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .more-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .more-head h2 { font-size: 20px; font-weight: 800; margin: 0; }
+  .more-head a { color: var(--link); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+
+  @media (max-width: 860px) {
+    .top { grid-template-columns: 1fr; }
+    .art { aspect-ratio: auto; height: 180px; font-size: 90px; }
+    .cols { grid-template-columns: 1fr; }
+    .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    h1 { font-size: 30px; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  }
+  @media print {
+    :global(.masthead), :global(.sections), :global(.tickers), :global(.foot), .crumbs, .art, .more, .link, .note { display: none !important; }
+    :global(:root) { --bg: #fff; --surface: #fff; --ink: #000; --ink-2: #222; --ink-3: #555; --border: #ccc; --border-2: #ddd; --brand: #000; }
+    :global(body) { background: #fff; color: #000; }
+  }
+</style>

@@ -3,10 +3,14 @@
 interface Props { title: string; description: string; wide?: boolean; section?: string; bare?: boolean }
 const { title, description, wide = false, section = '', bare = false } = Astro.props;
 const path = Astro.url.pathname;
+import { recipes } from '../data/recipes';
+// a small index of recipes for the header search and the home page's recipe of the day
+const recipeIndex = recipes.map(r => ({ n: r.name, s: r.slug, e: r.emoji, b: r.blurb, t: `${r.name} ${r.origin} ${r.meals.join(' ')} ${r.diet.join(' ')}`.toLowerCase() }));
 const sections = [
   { id: 'home', href: '/', label: 'Home' },
   { id: 'bananalytics', href: '/bananalytics/', label: 'Bananalytics' },
   { id: 'news', href: '/news/', label: 'Latest News' },
+  { id: 'recipes', href: '/recipes/', label: 'Peelicious' },
   { id: 'more', href: '/more/', label: 'More Bananas' },
 ];
 ---
@@ -33,7 +37,7 @@ const sections = [
     <div class="wrap wide mast-in">
       <a class="logo" href="/" aria-label="All Things Banana, home">allthings<span>banana</span></a>
       <div class="search" id="search">
-        <input id="q" type="search" placeholder="Search prices, fruit or banana news" autocomplete="off" aria-label="Search" aria-controls="qres">
+        <input id="q" type="search" placeholder="Search recipes, prices or banana news" autocomplete="off" aria-label="Search" aria-controls="qres">
         <button id="qgo" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
         <div class="qres" id="qres" hidden></div>
       </div>
@@ -51,11 +55,12 @@ const sections = [
   </div>
 
   <main class={bare ? 'bare' : wide ? 'wrap wide' : 'wrap'}><slot /></main>
+  <script type="application/json" id="recipe-index" set:html={JSON.stringify(recipeIndex)} />
 
   <footer class="foot">
     <div class="wrap wide foot-in">
       <span>© {new Date().getFullYear()} All Things Banana · Prices are delayed or monthly averages and are not financial advice.</span>
-      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/news/">News</a> · <a href="/more/">More Bananas</a></span>
+      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/news/">News</a> · <a href="/recipes/">Recipes</a> · <a href="/more/">More Bananas</a></span>
     </div>
   </footer>
 </body>
@@ -85,6 +90,9 @@ const sections = [
   // ---------- search ----------
   const input = document.getElementById('q') as HTMLInputElement, box = document.getElementById('qres')!;
   let series: Sel[] = [], feed: Feed | null = null, first: string | null = null;
+  type R = { n: string; s: string; e: string; b: string; t: string };
+  let recipeIdx: R[] = [];
+  try { recipeIdx = JSON.parse(document.getElementById('recipe-index')!.textContent || '[]'); } catch {}
   input.addEventListener('focus', () => {
     getMarket().then(m => (series = allSeries(m))).catch(() => {});
     getFeed().then(f => (feed = f)).catch(() => {});
@@ -94,8 +102,11 @@ const sections = [
     if (!q) { box.hidden = true; first = null; return; }
     const prices = series.filter(s => `${label(s)} ${s.code} ${s.desc} ${tickerCode(s)}`.toLowerCase().includes(q)).slice(0, 6);
     const news = (feed?.items || []).filter(it => it.title.toLowerCase().includes(q)).slice(0, 6);
-    first = prices[0] ? marketLink(prices[0].code) : news[0]?.url ?? null;
-    box.innerHTML = (prices.length ? `<div class="qh">Prices</div>` + prices.map(s => `<a href="${marketLink(s.code)}">
+    const recs = recipeIdx.filter(r => r.t.includes(q)).slice(0, 5);
+    first = recs[0] ? `/recipes/${recs[0].s}/` : prices[0] ? marketLink(prices[0].code) : news[0]?.url ?? null;
+    box.innerHTML = (recs.length ? `<div class="qh">Recipes</div>` + recs.map(r => `<a href="/recipes/${r.s}/">
+        <b>${r.e} ${esc(r.n)}</b><span>${esc(r.b)}</span></a>`).join('') + (recipeIdx.filter(r => r.t.includes(q)).length > 5 ? `<a href="/recipes/?q=${encodeURIComponent(input.value.trim())}"><b>See all matching recipes →</b></a>` : '') : '')
+      + (prices.length ? `<div class="qh">Prices</div>` + prices.map(s => `<a href="${marketLink(s.code)}">
         <b>${esc(label(s))}</b><span>${esc(s.desc)}</span><em class="num">${money(s, s.pts[s.pts.length - 1].y)}</em></a>`).join('') : '')
       + (news.length ? `<div class="qh">News</div>` + news.map(it => `<a href="${esc(it.url)}" target="_blank" rel="noopener nofollow">
         <b class="nt">${esc(it.title)}</b><span>${esc(it.source)} · ${ago(it.published)}</span></a>`).join('') : '')

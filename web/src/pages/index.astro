@@ -17,8 +17,12 @@ import Base from '../layouts/Base.astro';
         <a class="all-link" href="/news/">See all banana news →</a>
       </section>
       <section class="lab">
-        <h2 class="col-h"><a href="/more/">More Bananas</a></h2>
+        <h2 class="col-h">Cook &amp; play</h2>
         <div class="lab-grid">
+          <a class="lab-card" id="rotd" href="/recipes/">
+            <span class="lab-art recipe" aria-hidden="true">🍳</span>
+            <span><span class="kicker">Recipe of the day</span><b>Peelicious</b><span class="lab-txt">Banana recipes for every meal.</span></span>
+          </a>
           <a class="lab-card" href="/more/banana-clicker/">
             <span class="lab-art clicker" aria-hidden="true">🍌</span>
             <span><span class="kicker">Game</span><b>Banana Clicker</b><span class="lab-txt">Peel bananas for your country and climb the world leaderboard.</span></span>
@@ -182,6 +186,19 @@ import Base from '../layouts/Base.astro';
     }
   }
 
+  // recipe of the day: the same one all day for everyone, a new one tomorrow
+  try {
+    const idx = JSON.parse(document.getElementById('recipe-index')!.textContent || '[]');
+    if (idx.length) {
+      const d = new Date(), day = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+      const r = idx[(day * 7919) % idx.length], el = $('#rotd');
+      el.setAttribute('href', `/recipes/${r.s}/`);
+      el.querySelector('.lab-art')!.textContent = r.e;
+      el.querySelector('b')!.textContent = r.n;
+      el.querySelector('.lab-txt')!.textContent = r.b;
+    }
+  } catch {}
+
   getMarket().then(m => {
     market = m;
     renderMarkets();
@@ -255,6 +272,7 @@ import Base from '../layouts/Base.astro';
   .lab-card:hover { border-color: var(--brand); }
   .lab-art { flex: none; width: 64px; height: 64px; border-radius: 12px; display: grid; place-items: center; font-size: 34px; }
   .lab-art.clicker { background: radial-gradient(circle at 30% 30%, #5a4812, #1f190a); }
+  .lab-art.recipe { background: radial-gradient(circle at 30% 30%, #6a2b54, #260f1f); }
   .lab-art.cube { background: radial-gradient(circle at 30% 30%, #24405e, #111a25); }
   .lab-card b { display: block; font-size: 15.5px; margin: 1px 0 2px; }
   .lab-txt { display: block; font-size: 13px; color: var(--ink-2); }

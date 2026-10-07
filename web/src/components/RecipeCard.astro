@@ -1,0 +1,56 @@
+---
+import { formatTime, MEALS, type Recipe } from '../data/recipes';
+interface Props { recipe: Recipe }
+const { recipe: r } = Astro.props;
+const mealLabel = (id: string) => MEALS.find(m => m.id === id)?.label ?? id;
+// everything the filters on the Peelicious page need, as data attributes
+const search = [r.name, r.blurb, r.origin, ...r.ingredients].join(' ').toLowerCase();
+---
+<a class="rc" href={`/recipes/${r.slug}/`}
+   data-meals={r.meals.join(' ')} data-ripe={r.ripeness.join(' ')} data-diet={r.diet.join(' ')}
+   data-mins={r.mins} data-level={r.level} data-ings={r.ingredients.length} data-name={r.name.toLowerCase()} data-search={search}>
+  <div class={`rc-art m-${r.meals[0]}`} aria-hidden="true"><span>{r.emoji}</span></div>
+  <div class="rc-body">
+    <div class="rc-tags">{r.meals.slice(0, 2).map(m => <span>{mealLabel(m)}</span>)}<span class="rc-origin">{r.origin}</span></div>
+    <h3>{r.name}</h3>
+    <p>{r.blurb}</p>
+    <div class="rc-foot">
+      <span class="meter" title={`Banana-o-meter: ${r.level} out of 5`} aria-label={`Banana-o-meter ${r.level} out of 5`}>
+        {[1, 2, 3, 4, 5].map(i => <i class={i <= r.level ? 'on' : ''}>🍌</i>)}
+      </span>
+      <span>⏱ {formatTime(r.mins)}</span>
+    </div>
+  </div>
+</a>
+
+<style>
+  .rc { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    text-decoration: none; transition: border-color .15s, transform .15s; }
+  .rc:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .rc-art { height: 128px; display: grid; place-items: center; font-size: 60px; }
+  .rc-art span { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .35)); transition: transform .2s; }
+  .rc:hover .rc-art span { transform: scale(1.1) rotate(-5deg); }
+  .m-breakfast { background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); }
+  .m-lunch { background: radial-gradient(circle at 30% 25%, #2f5a24, #12210d); }
+  .m-dinner { background: radial-gradient(circle at 30% 25%, #6a2a1e, #26100b); }
+  .m-snack { background: radial-gradient(circle at 30% 25%, #6e4a17, #2b1b07); }
+  .m-dessert { background: radial-gradient(circle at 30% 25%, #6a2b54, #260f1f); }
+  .m-drink { background: radial-gradient(circle at 30% 25%, #1f4b6e, #0c1c29); }
+  .rc-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .rc-tags { display: flex; gap: 6px; flex-wrap: wrap; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--brand); }
+  .rc-origin { color: var(--ink-3); }
+  .rc h3 { margin: 2px 0 0; font-size: 16.5px; font-weight: 800; line-height: 1.25; }
+  .rc p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+  .rc-foot { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+  .meter i { font-style: normal; font-size: 13px; opacity: .22; filter: grayscale(1); }
+  .meter i.on { opacity: 1; filter: none; }
+  /* phones: two compact cards per row */
+  @media (max-width: 560px) {
+    .rc-art { height: 84px; font-size: 42px; }
+    .rc-body { padding: 9px 10px 10px; }
+    .rc-tags .rc-origin, .rc-tags span:nth-child(2), .rc p { display: none; }
+    .rc h3 { font-size: 14px; }
+    .rc-foot { font-size: 11px; flex-wrap: wrap; gap: 2px; }
+    .meter i { font-size: 10px; }
+  }
+</style>
