@@ -1,7 +1,8 @@
 ---
-import { formatTime, MEALS, type Recipe } from '../data/recipes';
+import { formatTime, MEALS, recipePhoto, type Recipe } from '../data/recipes';
 interface Props { recipe: Recipe }
 const { recipe: r } = Astro.props;
+const photo = recipePhoto(r.slug);
 const mealLabel = (id: string) => MEALS.find(m => m.id === id)?.label ?? id;
 // everything the filters on the Banacipes page need, as data attributes
 const search = [r.name, r.blurb, r.origin, ...r.ingredients].join(' ').toLowerCase();
@@ -9,7 +10,9 @@ const search = [r.name, r.blurb, r.origin, ...r.ingredients].join(' ').toLowerCa
 <a class="rc" href={`/recipes/${r.slug}/`}
    data-meals={r.meals.join(' ')} data-ripe={r.ripeness.join(' ')} data-diet={r.diet.join(' ')}
    data-mins={r.mins} data-level={r.level} data-ings={r.ingredients.length} data-name={r.name.toLowerCase()} data-search={search}>
-  <div class={`rc-art m-${r.meals[0]}`} aria-hidden="true"><span>{r.emoji}</span></div>
+  {photo
+    ? <div class="rc-art rc-photo"><img src={photo.thumb} alt="" loading="lazy" decoding="async" width="480" height="320"></div>
+    : <div class={`rc-art m-${r.meals[0]}`} aria-hidden="true"><span>{r.emoji}</span></div>}
   <div class="rc-body">
     <div class="rc-tags">{r.meals.slice(0, 2).map(m => <span>{mealLabel(m)}</span>)}<span class="rc-origin">{r.origin}</span></div>
     <h3>{r.name}</h3>
@@ -27,9 +30,12 @@ const search = [r.name, r.blurb, r.origin, ...r.ingredients].join(' ').toLowerCa
   .rc { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
     text-decoration: none; transition: border-color .15s, transform .15s; }
   .rc:hover { border-color: var(--brand); transform: translateY(-2px); }
-  .rc-art { height: 128px; display: grid; place-items: center; font-size: 60px; }
+  .rc-art { height: 150px; display: grid; place-items: center; font-size: 60px; }
   .rc-art span { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .35)); transition: transform .2s; }
   .rc:hover .rc-art span { transform: scale(1.1) rotate(-5deg); }
+  .rc-photo { overflow: hidden; background: var(--chip); }
+  .rc-photo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
+  .rc:hover .rc-photo img { transform: scale(1.05); }
   .m-breakfast { background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); }
   .m-lunch { background: radial-gradient(circle at 30% 25%, #2f5a24, #12210d); }
   .m-dinner { background: radial-gradient(circle at 30% 25%, #6a2a1e, #26100b); }
@@ -46,7 +52,7 @@ const search = [r.name, r.blurb, r.origin, ...r.ingredients].join(' ').toLowerCa
   .meter i.on { opacity: 1; filter: none; }
   /* phones: two compact cards per row */
   @media (max-width: 560px) {
-    .rc-art { height: 84px; font-size: 42px; }
+    .rc-art { height: 96px; font-size: 42px; }
     .rc-body { padding: 9px 10px 10px; }
     .rc-tags .rc-origin, .rc-tags span:nth-child(2), .rc p { display: none; }
     .rc h3 { font-size: 14px; }

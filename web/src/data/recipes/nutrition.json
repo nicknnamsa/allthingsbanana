@@ -1,0 +1,1281 @@
+{
+ "aborrajados": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 353,
+  "protein": 14.6,
+  "carbs": 51.2,
+  "sugars": 18.3,
+  "fat": 11,
+  "sat": 6.2,
+  "fibre": 2.2,
+  "salt": 0.79,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat."
+  ]
+ },
+ "arroz-a-la-cubana": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 681,
+  "protein": 17,
+  "carbs": 143.2,
+  "sugars": 35.2,
+  "fat": 6.3,
+  "sat": 1.8,
+  "fibre": 5.9,
+  "salt": 1.39,
+  "notes": [
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "bacon-wrapped-bananas": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 262,
+  "protein": 7.5,
+  "carbs": 16.9,
+  "sugars": 10.7,
+  "fat": 18.8,
+  "sat": 6.4,
+  "fibre": 1.5,
+  "salt": 0.94,
+  "notes": []
+ },
+ "baked-banana-oatmeal": {
+  "per": "serving",
+  "servings": 6,
+  "kcal": 299,
+  "protein": 9.2,
+  "carbs": 44.7,
+  "sugars": 14.8,
+  "fat": 10.5,
+  "sat": 2.3,
+  "fibre": 5.5,
+  "salt": 0.37,
+  "notes": []
+ },
+ "banana-and-chickpea-coconut-curry": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 443,
+  "protein": 10.9,
+  "carbs": 44.2,
+  "sugars": 13.7,
+  "fat": 27.9,
+  "sat": 19.5,
+  "fibre": 9.7,
+  "salt": 0.83,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-and-date-energy-balls": {
+  "per": "ball",
+  "servings": 16,
+  "kcal": 73,
+  "protein": 1.6,
+  "carbs": 11.6,
+  "sugars": 5.4,
+  "fat": 2.8,
+  "sat": 1.3,
+  "fibre": 1.9,
+  "salt": 0.01,
+  "notes": []
+ },
+ "banana-and-nutella-crepes": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 435,
+  "protein": 11,
+  "carbs": 59.8,
+  "sugars": 27.4,
+  "fat": 17.1,
+  "sat": 12.6,
+  "fibre": 4,
+  "salt": 0.36,
+  "notes": []
+ },
+ "banana-blossom-fish-and-chips": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 254,
+  "protein": 11.5,
+  "carbs": 50.5,
+  "sugars": 0.3,
+  "fat": 2.1,
+  "sat": 0.4,
+  "fibre": 7.4,
+  "salt": 3.16,
+  "notes": [
+   "Banana blossom is counted as hearts of palm, the closest food in the USDA database.",
+   "Doesn't include oil absorbed during frying, which adds calories and fat.",
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-bread-pudding": {
+  "per": "serving",
+  "servings": 6,
+  "kcal": 405,
+  "protein": 10.8,
+  "carbs": 55.1,
+  "sugars": 26.9,
+  "fat": 16.5,
+  "sat": 8.8,
+  "fibre": 2.9,
+  "salt": 0.88,
+  "notes": []
+ },
+ "banana-cake-with-cream-cheese-frosting": {
+  "per": "serving",
+  "servings": 12,
+  "kcal": 445,
+  "protein": 5.3,
+  "carbs": 62,
+  "sugars": 42.4,
+  "fat": 20.6,
+  "sat": 12.4,
+  "fibre": 1.3,
+  "salt": 1.01,
+  "notes": []
+ },
+ "banana-cheesecake": {
+  "per": "serving",
+  "servings": 10,
+  "kcal": 530,
+  "protein": 7.7,
+  "carbs": 43.5,
+  "sugars": 25.6,
+  "fat": 37.3,
+  "sat": 21.3,
+  "fibre": 1.2,
+  "salt": 1.03,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-chia-pudding": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 200,
+  "protein": 5.2,
+  "carbs": 27.8,
+  "sugars": 10.4,
+  "fat": 9,
+  "sat": 1,
+  "fibre": 10.1,
+  "salt": 0.28,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-chocolate-chip-cookies": {
+  "per": "cookie",
+  "servings": 20,
+  "kcal": 155,
+  "protein": 1.9,
+  "carbs": 22,
+  "sugars": 12.2,
+  "fat": 7.3,
+  "sat": 4.4,
+  "fibre": 0.9,
+  "salt": 0.33,
+  "notes": []
+ },
+ "banana-chutney": {
+  "per": "tablespoon",
+  "servings": 95.6,
+  "kcal": 17,
+  "protein": 0.1,
+  "carbs": 4.3,
+  "sugars": 3.2,
+  "fat": 0,
+  "sat": 0,
+  "fibre": 0.3,
+  "salt": 0.06,
+  "notes": []
+ },
+ "banana-cream-pie": {
+  "per": "serving",
+  "servings": 8,
+  "kcal": 486,
+  "protein": 5.8,
+  "carbs": 84.9,
+  "sugars": 66,
+  "fat": 14.9,
+  "sat": 5.4,
+  "fibre": 1.4,
+  "salt": 0.67,
+  "notes": []
+ },
+ "banana-cue": {
+  "per": "skewer",
+  "servings": 3,
+  "kcal": 497,
+  "protein": 2.7,
+  "carbs": 129.2,
+  "sugars": 99.7,
+  "fat": 0.7,
+  "sat": 0,
+  "fibre": 3.4,
+  "salt": 0.07,
+  "notes": [
+   "Saba bananas are counted as ripe plantains (about 100 g each).",
+   "Doesn't include oil absorbed during frying, which adds calories and fat."
+  ]
+ },
+ "banana-cupcakes": {
+  "per": "cupcake",
+  "servings": 12,
+  "kcal": 330,
+  "protein": 3.1,
+  "carbs": 45.7,
+  "sugars": 31.5,
+  "fat": 15.7,
+  "sat": 9.6,
+  "fibre": 0.9,
+  "salt": 0.93,
+  "notes": []
+ },
+ "banana-dutch-baby": {
+  "per": "serving",
+  "servings": 2.5,
+  "kcal": 449,
+  "protein": 12.9,
+  "carbs": 54.6,
+  "sugars": 24.6,
+  "fat": 20.8,
+  "sat": 11.1,
+  "fibre": 3.2,
+  "salt": 0.68,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-french-toast": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 399,
+  "protein": 15.7,
+  "carbs": 64.8,
+  "sugars": 21.6,
+  "fat": 9.4,
+  "sat": 3.3,
+  "fibre": 5,
+  "salt": 1.1,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-granola": {
+  "per": "serving",
+  "servings": 8,
+  "kcal": 337,
+  "protein": 8.4,
+  "carbs": 37.3,
+  "sugars": 9.6,
+  "fat": 18.8,
+  "sat": 6.3,
+  "fibre": 5.6,
+  "salt": 0.06,
+  "notes": []
+ },
+ "banana-hot-chocolate": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 301,
+  "protein": 8.5,
+  "carbs": 40.6,
+  "sugars": 31,
+  "fat": 14.6,
+  "sat": 8.5,
+  "fibre": 4,
+  "salt": 0.22,
+  "notes": []
+ },
+ "banana-jam": {
+  "per": "tablespoon",
+  "servings": 66.9,
+  "kcal": 21,
+  "protein": 0.1,
+  "carbs": 5.5,
+  "sugars": 4.3,
+  "fat": 0,
+  "sat": 0,
+  "fibre": 0.3,
+  "salt": 0,
+  "notes": []
+ },
+ "banana-lassi": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 153,
+  "protein": 5,
+  "carbs": 25.5,
+  "sugars": 19.3,
+  "fat": 4.3,
+  "sat": 2.7,
+  "fibre": 1.5,
+  "salt": 0.15,
+  "notes": []
+ },
+ "banana-milkshake": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 197,
+  "protein": 6,
+  "carbs": 34.2,
+  "sugars": 22,
+  "fat": 5.3,
+  "sat": 2.9,
+  "fibre": 3.1,
+  "salt": 0.16,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-nice-cream": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 158,
+  "protein": 1.9,
+  "carbs": 40.4,
+  "sugars": 21.6,
+  "fat": 0.6,
+  "sat": 0.2,
+  "fibre": 4.6,
+  "salt": 0,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-nut-quinoa-porridge": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 391,
+  "protein": 10.8,
+  "carbs": 56.9,
+  "sugars": 15.3,
+  "fat": 14.9,
+  "sat": 1.5,
+  "fibre": 6.4,
+  "salt": 0.37,
+  "notes": []
+ },
+ "banana-oat-breakfast-muffins": {
+  "per": "muffin",
+  "servings": 12,
+  "kcal": 199,
+  "protein": 4.7,
+  "carbs": 27.9,
+  "sugars": 8.3,
+  "fat": 8.4,
+  "sat": 1.1,
+  "fibre": 3.1,
+  "salt": 0.25,
+  "notes": []
+ },
+ "banana-overnight-oats": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 355,
+  "protein": 10.2,
+  "carbs": 65.8,
+  "sugars": 17.5,
+  "fat": 7.3,
+  "sat": 1.6,
+  "fibre": 9.8,
+  "salt": 0.32,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-peel-pulled-pork": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 193,
+  "protein": 1.6,
+  "carbs": 31.1,
+  "sugars": 24.2,
+  "fat": 7.1,
+  "sat": 0.5,
+  "fibre": 1.3,
+  "salt": 2.25,
+  "notes": [
+   "Banana peel is not in the USDA database, so it is left out.",
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-raita": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 112,
+  "protein": 3.2,
+  "carbs": 18,
+  "sugars": 11.8,
+  "fat": 3.8,
+  "sat": 1.7,
+  "fibre": 1.5,
+  "salt": 0.18,
+  "notes": []
+ },
+ "banana-scones": {
+  "per": "scone",
+  "servings": 8,
+  "kcal": 189,
+  "protein": 3.6,
+  "carbs": 31,
+  "sugars": 6.1,
+  "fat": 5.7,
+  "sat": 3.5,
+  "fibre": 1.2,
+  "salt": 1.2,
+  "notes": []
+ },
+ "banana-smoothie-bowl": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 559,
+  "protein": 11.4,
+  "carbs": 101.2,
+  "sugars": 53.1,
+  "fat": 16.8,
+  "sat": 5.2,
+  "fibre": 14.2,
+  "salt": 0.14,
+  "notes": []
+ },
+ "banana-souffle": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 129,
+  "protein": 4.3,
+  "carbs": 29,
+  "sugars": 22.5,
+  "fat": 0.3,
+  "sat": 0.1,
+  "fibre": 1.5,
+  "salt": 0.14,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-sushi": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 380,
+  "protein": 10.1,
+  "carbs": 50.2,
+  "sugars": 24.1,
+  "fat": 18.4,
+  "sat": 3.7,
+  "fibre": 5.2,
+  "salt": 0.73,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-tarte-tatin": {
+  "per": "serving",
+  "servings": 6,
+  "kcal": 488,
+  "protein": 4.8,
+  "carbs": 58.7,
+  "sugars": 26.7,
+  "fat": 27.3,
+  "sat": 9.5,
+  "fibre": 2.8,
+  "salt": 0.53,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banana-upside-down-cake": {
+  "per": "serving",
+  "servings": 8,
+  "kcal": 430,
+  "protein": 5.2,
+  "carbs": 60.3,
+  "sugars": 37.1,
+  "fat": 19.8,
+  "sat": 12,
+  "fibre": 1.8,
+  "salt": 0.65,
+  "notes": []
+ },
+ "banana-waffles": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 530,
+  "protein": 13.4,
+  "carbs": 69.9,
+  "sugars": 15.3,
+  "fat": 22.5,
+  "sat": 13,
+  "fibre": 3.2,
+  "salt": 2.16,
+  "notes": []
+ },
+ "banana-yogurt-parfait": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 500,
+  "protein": 23.2,
+  "carbs": 67.3,
+  "sugars": 45.2,
+  "fat": 17.2,
+  "sat": 6,
+  "fibre": 5.6,
+  "salt": 0.2,
+  "notes": []
+ },
+ "bananas-and-custard": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 305,
+  "protein": 8.8,
+  "carbs": 48.4,
+  "sugars": 34.6,
+  "fat": 9.8,
+  "sat": 4.6,
+  "fibre": 3.1,
+  "salt": 0.18,
+  "notes": []
+ },
+ "bananas-foster": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 342,
+  "protein": 1.4,
+  "carbs": 51.5,
+  "sugars": 38.7,
+  "fat": 12.6,
+  "sat": 7.8,
+  "fibre": 3.1,
+  "salt": 0.26,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "banoffee-pie": {
+  "per": "serving",
+  "servings": 8,
+  "kcal": 563,
+  "protein": 7.2,
+  "carbs": 65.5,
+  "sugars": 41.3,
+  "fat": 31.5,
+  "sat": 18.3,
+  "fibre": 2.4,
+  "salt": 0.79,
+  "notes": []
+ },
+ "brazilian-banana-farofa": {
+  "per": "serving",
+  "servings": 6,
+  "kcal": 180,
+  "protein": 0.7,
+  "carbs": 32.3,
+  "sugars": 6.1,
+  "fat": 5.9,
+  "sat": 3.7,
+  "fibre": 1.4,
+  "salt": 0.12,
+  "notes": [
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "campfire-banana-boats": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 197,
+  "protein": 2,
+  "carbs": 41.6,
+  "sugars": 26.2,
+  "fat": 4.9,
+  "sat": 2.8,
+  "fibre": 4,
+  "salt": 0.02,
+  "notes": []
+ },
+ "caramelised-bananas-with-ice-cream": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 229,
+  "protein": 1.4,
+  "carbs": 40.5,
+  "sugars": 27.8,
+  "fat": 8.5,
+  "sat": 5.3,
+  "fibre": 3.1,
+  "salt": 0.37,
+  "notes": []
+ },
+ "chewy-banana-oat-bars": {
+  "per": "bar",
+  "servings": 12,
+  "kcal": 177,
+  "protein": 3.9,
+  "carbs": 23.9,
+  "sugars": 9.7,
+  "fat": 8.3,
+  "sat": 3.8,
+  "fibre": 2.6,
+  "salt": 0.11,
+  "notes": []
+ },
+ "chocolate-chip-banana-bread": {
+  "per": "slice",
+  "servings": 10,
+  "kcal": 315,
+  "protein": 4.5,
+  "carbs": 45.4,
+  "sugars": 23.6,
+  "fat": 14.2,
+  "sat": 8.4,
+  "fibre": 2.2,
+  "salt": 0.84,
+  "notes": []
+ },
+ "chocolate-dipped-frozen-banana-pops": {
+  "per": "serving",
+  "servings": 6,
+  "kcal": 193,
+  "protein": 2.6,
+  "carbs": 28.3,
+  "sugars": 20.1,
+  "fat": 8.4,
+  "sat": 5.3,
+  "fibre": 2.4,
+  "salt": 0.05,
+  "notes": []
+ },
+ "cinnamon-banana-porridge": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 295,
+  "protein": 7.9,
+  "carbs": 60.8,
+  "sugars": 14.9,
+  "fat": 3.6,
+  "sat": 0.7,
+  "fibre": 8.1,
+  "salt": 0.01,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "classic-banana-bread": {
+  "per": "slice",
+  "servings": 10,
+  "kcal": 219,
+  "protein": 3.1,
+  "carbs": 37.3,
+  "sugars": 19,
+  "fat": 6.9,
+  "sat": 4.1,
+  "fibre": 1.4,
+  "salt": 0.5,
+  "notes": []
+ },
+ "classic-banana-smoothie": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 229,
+  "protein": 7.3,
+  "carbs": 38.6,
+  "sugars": 26.4,
+  "fat": 6.4,
+  "sat": 3.7,
+  "fibre": 3.1,
+  "salt": 0.21,
+  "notes": []
+ },
+ "classic-banana-split": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 546,
+  "protein": 6.3,
+  "carbs": 64.9,
+  "sugars": 46,
+  "fat": 34.5,
+  "sat": 16,
+  "fibre": 7.2,
+  "salt": 0.04,
+  "notes": []
+ },
+ "crispy-baked-banana-chips": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 80,
+  "protein": 1,
+  "carbs": 20.5,
+  "sugars": 10.9,
+  "fat": 0.3,
+  "sat": 0.1,
+  "fibre": 2.3,
+  "salt": 0,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "curried-banana-and-coconut-soup": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 248,
+  "protein": 2.8,
+  "carbs": 31,
+  "sugars": 13.4,
+  "fat": 14.4,
+  "sat": 12.4,
+  "fibre": 3.8,
+  "salt": 0.07,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "filipino-banana-ketchup": {
+  "per": "tablespoon",
+  "servings": 53.2,
+  "kcal": 16,
+  "protein": 0.2,
+  "carbs": 3.5,
+  "sugars": 2.3,
+  "fat": 0.3,
+  "sat": 0,
+  "fibre": 0.3,
+  "salt": 0.15,
+  "notes": []
+ },
+ "fish-tacos-with-banana-salsa": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 351,
+  "protein": 26.6,
+  "carbs": 37,
+  "sugars": 9.4,
+  "fat": 11.1,
+  "sat": 1.3,
+  "fibre": 2.9,
+  "salt": 0.95,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "fluffy-banana-pancakes": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 355,
+  "protein": 9.4,
+  "carbs": 58.5,
+  "sugars": 13.7,
+  "fat": 9.7,
+  "sat": 5.3,
+  "fibre": 2.9,
+  "salt": 0.94,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "flying-jacob-flygande-jacob": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 912,
+  "protein": 55.5,
+  "carbs": 39.4,
+  "sugars": 25.4,
+  "fat": 60,
+  "sat": 26.3,
+  "fibre": 4,
+  "salt": 1.81,
+  "notes": [
+   "Sweet chilli sauce is counted like barbecue sauce.",
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "frozen-banana-bites": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 244,
+  "protein": 4.4,
+  "carbs": 32.1,
+  "sugars": 22.1,
+  "fat": 13.9,
+  "sat": 5.7,
+  "fibre": 3.6,
+  "salt": 0.14,
+  "notes": []
+ },
+ "frozen-banana-daiquiri": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 197,
+  "protein": 0.7,
+  "carbs": 21.2,
+  "sugars": 14,
+  "fat": 0.2,
+  "sat": 0.1,
+  "fibre": 1.6,
+  "salt": 0,
+  "notes": [
+   "Sugar syrup is counted as half sugar, half water."
+  ]
+ },
+ "fudgy-banana-brownies": {
+  "per": "square",
+  "servings": 16,
+  "kcal": 176,
+  "protein": 2.3,
+  "carbs": 23.4,
+  "sugars": 16.3,
+  "fat": 9.6,
+  "sat": 5.7,
+  "fibre": 1.8,
+  "salt": 0.17,
+  "notes": []
+ },
+ "ginataang-saging": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 501,
+  "protein": 4,
+  "carbs": 81.3,
+  "sugars": 46.1,
+  "fat": 21.9,
+  "sat": 18.9,
+  "fibre": 2.7,
+  "salt": 0.16,
+  "notes": [
+   "Saba bananas are counted as ripe plantains (about 100 g each).",
+   "Tapioca pearls are counted dry."
+  ]
+ },
+ "green-banana-smoothie": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 275,
+  "protein": 6.8,
+  "carbs": 52.4,
+  "sugars": 30.4,
+  "fat": 7.1,
+  "sat": 0.9,
+  "fibre": 10.6,
+  "salt": 0.58,
+  "notes": [
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "homemade-banana-ice-cream": {
+  "per": "serving",
+  "servings": 6,
+  "kcal": 370,
+  "protein": 5.7,
+  "carbs": 38.5,
+  "sugars": 29.8,
+  "fat": 22.9,
+  "sat": 13.6,
+  "fibre": 2,
+  "salt": 0.18,
+  "notes": []
+ },
+ "hummingbird-cake": {
+  "per": "serving",
+  "servings": 12,
+  "kcal": 830,
+  "protein": 7.5,
+  "carbs": 98.1,
+  "sugars": 73.4,
+  "fat": 47.6,
+  "sat": 15.5,
+  "fibre": 2.4,
+  "salt": 1.02,
+  "notes": []
+ },
+ "jamaican-banana-fritters": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 227,
+  "protein": 4.6,
+  "carbs": 51.6,
+  "sugars": 18.3,
+  "fat": 1,
+  "sat": 0.4,
+  "fibre": 3.1,
+  "salt": 0.18,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat."
+  ]
+ },
+ "jamaican-fried-plantain": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 169,
+  "protein": 1.2,
+  "carbs": 28.5,
+  "sugars": 15.7,
+  "fat": 7.1,
+  "sat": 0.5,
+  "fibre": 1.5,
+  "salt": 0.11,
+  "notes": []
+ },
+ "kerala-banana-chips": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 204,
+  "protein": 1.7,
+  "carbs": 49.2,
+  "sugars": 3.1,
+  "fat": 0.1,
+  "sat": 0.2,
+  "fibre": 3,
+  "salt": 0.01,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat.",
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "korean-banana-milk": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 211,
+  "protein": 6.9,
+  "carbs": 32.4,
+  "sugars": 26.7,
+  "fat": 6.7,
+  "sat": 3.8,
+  "fibre": 1.5,
+  "salt": 0.41,
+  "notes": []
+ },
+ "maduros": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 199,
+  "protein": 1.2,
+  "carbs": 28.5,
+  "sugars": 15.7,
+  "fat": 10.5,
+  "sat": 0.8,
+  "fibre": 1.5,
+  "salt": 0.11,
+  "notes": []
+ },
+ "mangu-with-the-three-hits": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 776,
+  "protein": 31,
+  "carbs": 71.1,
+  "sugars": 6,
+  "fat": 40.4,
+  "sat": 20.7,
+  "fibre": 4.4,
+  "salt": 4.65,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat."
+  ]
+ },
+ "matoke": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 400,
+  "protein": 4,
+  "carbs": 81.4,
+  "sugars": 8.9,
+  "fat": 7.2,
+  "sat": 0.8,
+  "fibre": 6.5,
+  "salt": 0.03,
+  "notes": [
+   "Green cooking bananas are counted as green plantains, about 100 g each.",
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "mofongo": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 404,
+  "protein": 17.2,
+  "carbs": 50.2,
+  "sugars": 3.1,
+  "fat": 14.7,
+  "sat": 3.9,
+  "fibre": 3,
+  "salt": 2.6,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat."
+  ]
+ },
+ "mtori": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 516,
+  "protein": 21.4,
+  "carbs": 60,
+  "sugars": 6.2,
+  "fat": 21,
+  "sat": 9.6,
+  "fibre": 4.5,
+  "salt": 0.3,
+  "notes": [
+   "Green cooking bananas are counted as green plantains, about 100 g each.",
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "pastelon": {
+  "per": "serving",
+  "servings": 6,
+  "kcal": 483,
+  "protein": 28.5,
+  "carbs": 44.2,
+  "sugars": 23.6,
+  "fat": 22.8,
+  "sat": 10.2,
+  "fibre": 3.3,
+  "salt": 1.04,
+  "notes": [
+   "Olives are a small amount and counted roughly.",
+   "Doesn't include oil absorbed during frying, which adds calories and fat.",
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "pazham-pori-kerala-banana-fritters": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 292,
+  "protein": 4.7,
+  "carbs": 66.9,
+  "sugars": 8.4,
+  "fat": 0.4,
+  "sat": 0.2,
+  "fibre": 2.9,
+  "salt": 0.17,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat."
+  ]
+ },
+ "peanut-butter-banana-smoothie": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 372,
+  "protein": 10.7,
+  "carbs": 44.1,
+  "sugars": 19.9,
+  "fat": 19.9,
+  "sat": 3.7,
+  "fibre": 6.2,
+  "salt": 0.8,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "peanut-butter-banana-toast": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 523,
+  "protein": 15.3,
+  "carbs": 76.1,
+  "sugars": 27.5,
+  "fat": 20.4,
+  "sat": 4.1,
+  "fibre": 7.9,
+  "salt": 1.2,
+  "notes": []
+ },
+ "peruvian-tacacho-with-cecina": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 738,
+  "protein": 26.4,
+  "carbs": 68,
+  "sugars": 5.1,
+  "fat": 39.3,
+  "sat": 14.4,
+  "fibre": 3.9,
+  "salt": 5.83,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat."
+  ]
+ },
+ "plantain-and-black-bean-bowls": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 403,
+  "protein": 9.7,
+  "carbs": 66.1,
+  "sugars": 16.2,
+  "fat": 13.1,
+  "sat": 1.4,
+  "fibre": 11.2,
+  "salt": 0.36,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included.",
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "raw-banana-stir-fry-vazhakkai-poriyal": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 223,
+  "protein": 1.4,
+  "carbs": 34,
+  "sugars": 2.5,
+  "fat": 9.2,
+  "sat": 7.9,
+  "fibre": 2.6,
+  "salt": 0.01,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included.",
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "southern-banana-pudding": {
+  "per": "serving",
+  "servings": 8,
+  "kcal": 334,
+  "protein": 5.3,
+  "carbs": 34,
+  "sugars": 24.6,
+  "fat": 20.8,
+  "sat": 12.5,
+  "fibre": 1.6,
+  "salt": 0.22,
+  "notes": []
+ },
+ "strawberry-banana-smoothie": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 187,
+  "protein": 6.2,
+  "carbs": 31.2,
+  "sugars": 22.4,
+  "fat": 5.4,
+  "sat": 3,
+  "fibre": 3.5,
+  "salt": 0.17,
+  "notes": []
+ },
+ "swedish-banana-curry-pizza": {
+  "per": "serving",
+  "servings": 2,
+  "kcal": 669,
+  "protein": 32.7,
+  "carbs": 86.1,
+  "sugars": 21.6,
+  "fat": 21.8,
+  "sat": 9.8,
+  "fibre": 6.2,
+  "salt": 3.46,
+  "notes": [
+   "The pizza base is counted as white bread dough (about 250 g)."
+  ]
+ },
+ "thai-banana-roti": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 346,
+  "protein": 11.8,
+  "carbs": 64.6,
+  "sugars": 10.6,
+  "fat": 4.4,
+  "sat": 1.3,
+  "fibre": 3.2,
+  "salt": 0.86,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included.",
+   "Seasoning and cooking fat without a set amount aren't included."
+  ]
+ },
+ "the-elvis-sandwich": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 781,
+  "protein": 21.5,
+  "carbs": 68.7,
+  "sugars": 21.9,
+  "fat": 49.2,
+  "sat": 17.5,
+  "fibre": 6.6,
+  "salt": 2.37,
+  "notes": []
+ },
+ "tostones": {
+  "per": "serving",
+  "servings": 4,
+  "kcal": 136,
+  "protein": 1.1,
+  "carbs": 32.8,
+  "sugars": 2,
+  "fat": 0.1,
+  "sat": 0.1,
+  "fibre": 2,
+  "salt": 0,
+  "notes": [
+   "Doesn't include oil absorbed during frying, which adds calories and fat.",
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "turon-banana-lumpia": {
+  "per": "roll",
+  "servings": 8,
+  "kcal": 202,
+  "protein": 3.8,
+  "carbs": 46.7,
+  "sugars": 20.9,
+  "fat": 0.7,
+  "sat": 0.1,
+  "fibre": 1.4,
+  "salt": 0.47,
+  "notes": [
+   "Saba bananas are counted as ripe plantains (about 100 g each).",
+   "Doesn't include oil absorbed during frying, which adds calories and fat.",
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "two-ingredient-banana-oat-cookies": {
+  "per": "cookie",
+  "servings": 12,
+  "kcal": 49,
+  "protein": 1.3,
+  "carbs": 10.1,
+  "sugars": 2.5,
+  "fat": 0.6,
+  "sat": 0.1,
+  "fibre": 1.4,
+  "salt": 0,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "two-ingredient-banana-pancakes": {
+  "per": "serving",
+  "servings": 1,
+  "kcal": 248,
+  "protein": 13.8,
+  "carbs": 27.7,
+  "sugars": 14.8,
+  "fat": 9.9,
+  "sat": 3.3,
+  "fibre": 3.1,
+  "salt": 0.36,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ },
+ "vegan-banana-bread": {
+  "per": "slice",
+  "servings": 10,
+  "kcal": 228,
+  "protein": 2.9,
+  "carbs": 38.1,
+  "sugars": 15.6,
+  "fat": 7.8,
+  "sat": 1.1,
+  "fibre": 1.8,
+  "salt": 0.3,
+  "notes": [
+   "Optional extras and toppings \"to serve\" aren't included."
+  ]
+ }
+}

@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
-import { recipes, formatTime, MEALS, RIPENESS, type Recipe } from '../../data/recipes';
+import { recipes, formatTime, MEALS, RIPENESS, recipePhoto, recipeNutrition, type Recipe } from '../../data/recipes';
 
 export function getStaticPaths() {
   return recipes.map(r => ({ params: { slug: r.slug }, props: { recipe: r } }));
@@ -15,6 +15,15 @@ const similar = recipes.filter(x => x.slug !== r.slug && x.meals.some(m => r.mea
 const start = similar.length ? (r.slug.length * 7) % similar.length : 0;
 const more = [...similar.slice(start), ...similar.slice(0, start)].slice(0, 4);
 
+const photo = recipePhoto(r.slug);
+const nut = recipeNutrition(r.slug);
+const g = (x: number) => (x < 10 ? x.toFixed(1).replace(/\.0$/, '') : Math.round(x).toString());
+const nutRows = nut ? [
+  ['Energy', `${nut.kcal} kcal`], ['Protein', `${g(nut.protein)} g`], ['Carbohydrate', `${g(nut.carbs)} g`], ['of which sugars', `${g(nut.sugars)} g`, 'sub'],
+  ['Fat', `${g(nut.fat)} g`], ['of which saturates', `${g(nut.sat)} g`, 'sub'], ['Fibre', `${g(nut.fibre)} g`], ['Salt', `${nut.salt.toFixed(1)} g`],
+] : [];
+const perLabel = nut ? (nut.per === 'serving' ? `per serving (serves ${nut.servings})` : `per ${nut.per} (makes about ${nut.servings})`) : '';
+
 // structured data so search engines can show it as a recipe
 const jsonLd = {
   '@context': 'https://schema.org', '@type': 'Recipe',
@@ -25,9 +34,15 @@ const jsonLd = {
   recipeInstructions: r.steps.map(text => ({ '@type': 'HowToStep', text })),
   ...(r.diet.includes('vegan') ? { suitableForDiet: 'https://schema.org/VeganDiet' } : r.diet.includes('gluten-free') ? { suitableForDiet: 'https://schema.org/GlutenFreeDiet' } : {}),
   author: { '@type': 'Organization', name: 'All Things Banana' },
+  ...(photo ? { image: new URL(photo.src, Astro.site).href } : {}),
+  ...(nut ? { nutrition: {
+    '@type': 'NutritionInformation', servingSize: nut.per === 'serving' ? `1 serving (of ${nut.servings})` : `1 ${nut.per}`,
+    calories: `${nut.kcal} calories`, proteinContent: `${g(nut.protein)} g`, carbohydrateContent: `${g(nut.carbs)} g`, sugarContent: `${g(nut.sugars)} g`,
+    fatContent: `${g(nut.fat)} g`, saturatedFatContent: `${g(nut.sat)} g`, fiberContent: `${g(nut.fibre)} g`, sodiumContent: `${Math.round(nut.salt * 400)} mg`,
+  } } : {}),
 };
 ---
-<Base image="/og/recipes.jpg" wide section="recipes" title={`${r.name} · Banacipes banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
+<Base image={photo ? `/recipes/img/og/${r.slug}.jpg` : '/og/recipes.jpg'} wide section="recipes" title={`${r.name} · Banacipes banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <script type="application/ld+json" set:html={JSON.stringify({
     '@context': 'https://schema.org', '@type': 'BreadcrumbList',
@@ -41,7 +56,12 @@ const jsonLd = {
 
   <article class="recipe">
     <header class="top">
-      <div class={`art m-${r.meals[0]}`} aria-hidden="true"><span>{r.emoji}</span></div>
+      {photo
+        ? <figure class="photo">
+            <img src={photo.src} alt={r.name} width={photo.w} height={photo.h} fetchpriority="high">
+            <figcaption>Illustrative photo, not made from this recipe: <a href={photo.page} rel="nofollow noopener" target="_blank">{photo.author}</a>, <a href={photo.licenseUrl} rel="license nofollow noopener" target="_blank">{photo.license}</a>, via {photo.source}.</figcaption>
+          </figure>
+        : <div class={`art m-${r.meals[0]}`} aria-hidden="true"><span>{r.emoji}</span></div>}
       <div class="intro">
         <div class="tags">
           {r.meals.map(m => <a href={`/recipes/?meal=${m}`}>{mealLabel(m)}</a>)}
@@ -76,6 +96,19 @@ const jsonLd = {
             <li><label><input type="checkbox" data-i={i}> <span>{x}</span></label></li>
           ))}
         </ul>
+        {nut && (
+          <section class="nutrition" aria-labelledby="nut-h">
+            <div class="col-head"><h2 id="nut-h">Nutrition</h2><span class="per">{perLabel}</span></div>
+            <div class="kcal"><b>{nut.kcal}</b> kcal</div>
+            <table>
+              {nutRows.map(([k, v, cls]) => <tr class={cls}><th scope="row">{k}</th><td>{v}</td></tr>)}
+            </table>
+            <p class="nut-note">
+              An estimate, worked out from the ingredient amounts above using <a href="https://fdc.nal.usda.gov/" rel="noopener" target="_blank">USDA FoodData Central</a>.
+              {nut.notes.map(n => <> {n}</>)}
+            </p>
+          </section>
+        )}
       </section>
       <section class="method">
         <div class="col-head"><h2>Method</h2><button class="link" onclick="window.print()">Print</button></div>
@@ -119,6 +152,22 @@ const jsonLd = {
   .top { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; margin-top: 14px; align-items: start; }
   .art { aspect-ratio: 1; border-radius: 16px; display: grid; place-items: center; font-size: 120px; }
   .art span { filter: drop-shadow(0 12px 24px rgba(0, 0, 0, .4)); }
+  .photo { margin: 0; }
+  .photo img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 16px; background: var(--chip); }
+  .photo figcaption { margin-top: 6px; font-size: 11px; line-height: 1.4; color: var(--ink-3); }
+  .photo figcaption a { color: var(--ink-3); }
+  .nutrition { margin-top: 26px; }
+  .nutrition .per { font-size: 12.5px; color: var(--ink-3); }
+  .kcal { font-size: 14px; color: var(--ink-2); margin: 2px 0 8px; }
+  .kcal b { font-size: 30px; font-weight: 900; color: var(--ink); letter-spacing: -0.02em; margin-right: 2px; }
+  .nutrition table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .nutrition th, .nutrition td { padding: 7px 2px; border-bottom: 1px solid var(--border-2); }
+  .nutrition th { text-align: left; font-weight: 600; }
+  .nutrition td { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .nutrition tr.sub th { font-weight: 500; color: var(--ink-3); padding-left: 14px; }
+  .nutrition tr.sub td { font-weight: 500; color: var(--ink-2); }
+  .nut-note { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; margin: 10px 0 0; }
+  .nut-note a { color: var(--link); }
   .m-breakfast { background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); }
   .m-lunch { background: radial-gradient(circle at 30% 25%, #2f5a24, #12210d); }
   .m-dinner { background: radial-gradient(circle at 30% 25%, #6a2a1e, #26100b); }
@@ -176,13 +225,14 @@ const jsonLd = {
   @media (max-width: 860px) {
     .top { grid-template-columns: 1fr; }
     .art { aspect-ratio: auto; height: 180px; font-size: 90px; }
+    .photo img { aspect-ratio: 3 / 2; }
     .cols { grid-template-columns: 1fr; }
     .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     h1 { font-size: 30px; }
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   }
   @media print {
-    :global(.masthead), :global(.sections), :global(.tickers), :global(.foot), .crumbs, .art, .more, .link, .note { display: none !important; }
+    :global(.masthead), :global(.sections), :global(.tickers), :global(.foot), .crumbs, .art, .photo, .more, .link, .note { display: none !important; }
     :global(:root) { --bg: #fff; --surface: #fff; --ink: #000; --ink-2: #222; --ink-3: #555; --border: #ccc; --border-2: #ddd; --brand: #000; }
     :global(body) { background: #fff; color: #000; }
   }

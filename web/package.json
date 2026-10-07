@@ -9,7 +9,8 @@
     "deploy": "npm run build && wrangler deploy",
     "crawl-recipes": "node scripts/crawl-recipes.mjs",
     "build-fao": "node scripts/build-fao.mjs",
-    "build-spam": "node scripts/build-spam.mjs"
+    "build-spam": "node scripts/build-spam.mjs",
+    "build-nutrition": "node scripts/build-nutrition.mjs"
   },
   "devDependencies": {
     "@astrojs/sitemap": "^3.7.4",
