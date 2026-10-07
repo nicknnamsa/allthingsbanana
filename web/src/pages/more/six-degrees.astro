@@ -80,7 +80,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
           <li>You start on a Wikipedia article.</li>
           <li>Type the title of <b>another article that page links to</b>. If it does, you move there.</li>
           <li>Keep going until you reach <b>Banana</b>. Fewest steps wins; par is the shortest possible route.</li>
-          <li>Guessing a real article that isn't linked is a <b>miss</b>. Typos aren't: we'll ask "did you mean…?"</li>
+          <li>Guessing a real article that isn't linked is a <b>miss</b>. Typos and words with several meanings (like "Greek") aren't: we'll ask "did you mean…?"</li>
         </ol>
         <p class="eg">Example: <b>Napoleon</b> → <b>Haiti</b> → <b>Banana</b>. Haiti's article mentions bananas as a crop, and Napoleon's article links to Haiti.</p>
       </div>
@@ -162,6 +162,15 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
     }
     return d[a.length][b.length];
+  }
+
+  // the meanings of an ambiguous word that the current page links to: the articles listed on its
+  // disambiguation page, plus titles that only add a qualifier ("Mercury" -> "Mercury (planet)")
+  async function meaningsOf(g: string, real: string | null, ambiguous: boolean, links: Map<string, string>) {
+    const k = key(g), linked = new Set(links.values()), out = new Set<string>();
+    for (const t of linked) if (key(t.replace(/\s*\([^)]*\)$/, '')) === k) out.add(t);
+    if (real && ambiguous) for (const t of (await linksOf(real)).values()) if (linked.has(t)) out.add(t);
+    return [...out].slice(0, 6);
   }
 
   // ---------- game state ----------
@@ -260,19 +269,29 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       // 1. one of this page's links, however it's capitalised or spelled with accents
       let hit = links.get(k);
       // 2. another name for an article (a redirect, like "Dubya")
-      let real: string | null = null;
+      let real: string | null = null, ambiguous = false;
       if (!hit) {
-        const d = await api({ action: 'query', titles: g, redirects: '1' });
+        const d = await api({ action: 'query', titles: g, redirects: '1', prop: 'pageprops', ppprop: 'disambiguation' });
         const p = d.query?.pages?.[0];
-        if (p && !p.missing && !p.invalid) { real = p.title; hit = links.get(key(p.title)); }
+        if (p && !p.missing && !p.invalid) { real = p.title; ambiguous = p.pageprops?.disambiguation !== undefined; hit = links.get(key(p.title)); }
       }
       if (hit) { (document.getElementById('guess') as HTMLInputElement).value = ''; await move(hit); return; }
+      // 3. a word with several meanings ("Greek", "Mercury"): offer the meanings this page does link to (not a miss)
+      const meanings = await meaningsOf(g, real, ambiguous, links);
+      if (meanings.length) {
+        say(`${ambiguous ? `“${esc(g)}” could mean several things.` : `Close!`} Did you mean ${meanings.map(t => `<button class="sugg" data-t="${esc(t)}">${esc(t)}</button>`).join(meanings.length === 2 ? ' or ' : ', ')}? <span class="free">(not counted)</span>`);
+        return;
+      }
+      if (real && ambiguous) {
+        say(`“${esc(g)}” could mean several different articles, and <b>${esc(from)}</b> doesn't link to any of them. Try something more specific. <span class="free">(not counted)</span>`);
+        return;
+      }
       if (real) {
         s.misses++; save(); render();
         say(`✗ <b>${esc(real)}</b> is on Wikipedia, but <b>${esc(from)}</b> doesn't link to it. That's a miss.`, 'miss');
         return;
       }
-      // 3. not an article: suggest the nearest spelling (a typo isn't a miss)
+      // 4. not an article: suggest the nearest spelling (a typo isn't a miss)
       let near = '', best = 99;
       for (const [lk, title] of links) {
         if (Math.abs(lk.length - k.length) > 2) continue;
