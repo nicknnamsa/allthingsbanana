@@ -1,7 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
 import fao from '../../data/world/fao-bananas.json';
+import hotspots from '../../data/world/hotspots.json';
 const L = fao.years.length - 1;
+const sat = (h: { lat: number; lon: number }) => `https://www.google.com/maps/@${h.lat},${h.lon},9000m/data=!3m1!1e3`;
 const year = fao.years[L];
 const banT = fao.world.banana.prod[L]!, plT = fao.world.plantain.prod[L]!;
 const fmtMt = (t: number) => (t / 1e6).toFixed(1);
@@ -28,6 +30,7 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
     <div class="seg" id="metric" role="group" aria-label="Measure">
       <button data-v="prod" class="on">Production</button><button data-v="area">Area harvested</button><button data-v="yield">Yield</button>
     </div>
+    <button class="layer-btn" id="layerBtn" aria-pressed="false" title="Where bananas grow inside each country, from satellite-derived crop maps (MapSPAM 2020)">🛰 Where exactly?</button>
     <div class="years">
       <button id="play" aria-label="Play through the years">▶</button>
       <input id="year" type="range" min={fao.years[0]} max={year} value={year} step="1" aria-label="Year">
@@ -63,11 +66,35 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
     </aside>
   </div>
 
+  <section class="spots">
+    <div class="spots-head">
+      <h2>Zoom into the plantations</h2>
+      <p>The most densely planted spots in MapSPAM's satellite-derived map. Click a place to fly there on the map, or open the real satellite view.</p>
+    </div>
+    <div class="spot-grid">
+      {hotspots.bananas.map(h => (
+        <div class="spot">
+          <button class="spot-go" data-lon={h.lon} data-lat={h.lat} data-crop="banana"><b>{h.region}</b><span>{h.country}</span></button>
+          <div class="spot-meta"><span class="dotb"></span>Bananas · {h.ha.toLocaleString('en-US')} ha in one ~10 km square</div>
+          <a href={sat(h)} target="_blank" rel="noopener">Satellite view ↗</a>
+        </div>
+      ))}
+      {hotspots.plantains.slice(0, 4).map(h => (
+        <div class="spot">
+          <button class="spot-go" data-lon={h.lon} data-lat={h.lat} data-crop="plantain"><b>{h.region}</b><span>{h.country}</span></button>
+          <div class="spot-meta"><span class="dotp"></span>Plantains · {h.ha.toLocaleString('en-US')} ha in one ~10 km square</div>
+          <a href={sat(h)} target="_blank" rel="noopener">Satellite view ↗</a>
+        </div>
+      ))}
+    </div>
+    <p class="spot-note">These are model estimates, so at the level of a single square they can be off. Satellite links open Google Maps.</p>
+  </section>
+
   <section class="about">
     <h2>About this map</h2>
     <p>Figures are the UN Food and Agriculture Organization's official statistics (FAOSTAT), reported by each country, for <b>bananas</b> (mostly dessert bananas like the Cavendish) and <b>plantains and cooking bananas</b> (like matoke). Yield is production per hectare harvested. Some small islands are shown as dots. The French overseas regions of Guadeloupe, Martinique, Réunion and French Guiana are reported separately from France.</p>
-    <p><b>Coming next:</b> a satellite-derived layer showing exactly where bananas grow inside each country, from IFPRI's MapSPAM 2020 crop maps, which combine satellite land-cover data with farm statistics on a roughly 10 km grid.</p>
-    <p class="src">Data: FAOSTAT, Crops and livestock products, © FAO, CC BY 4.0 (updated {fao.updated}). Country borders: Natural Earth via world-atlas (public domain). Bananas-per-second assumes a medium banana of about 118 g.</p>
+    <p><b>🛰 Where exactly?</b> switches to a map of where bananas and plantains grow <i>inside</i> each country, for 2020. It comes from IFPRI's MapSPAM, which spreads each country's official farm statistics across the land using satellite maps of cropland, terrain and growing conditions, on a roughly 10 km grid. Its totals (5.2 million hectares of bananas, 6.9 million of plantains) closely match FAO's figures for 2020.</p>
+    <p class="src">Data: FAOSTAT, Crops and livestock products, © FAO, CC BY 4.0 (updated {fao.updated}). MapSPAM 2020 v2.0 r2, © IFPRI, CC BY 4.0 (adapted: we merged its 10 km cells into 20 km cells for the web). Country borders: Natural Earth via world-atlas (public domain). Bananas-per-second assumes a medium banana of about 118 g.</p>
   </section>
 </Base>
 
@@ -91,6 +118,7 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
 
   let crop: 'banana' | 'plantain' | 'both' = 'banana', metric: 'prod' | 'area' | 'yield' = 'prod';
   let yi = years.length - 1, selected: string | null = null, playing: number | null = null;
+  let layerOn = false;
 
   // ---------- numbers ----------
   function value(c: Country | typeof fao.world, m: 'prod' | 'area' | 'yield', i: number): number | null {
@@ -158,6 +186,13 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
       el.classList.toggle('nodata', !(v != null && v > 0));
       el.classList.toggle('sel', el.dataset.id === selected);
     }
+    mapEl.classList.toggle('dim', layerOn);
+    if (layerOn) {
+      $('#legend').innerHTML = `<span class="lg-t">Where they grow, 2020 (MapSPAM)</span>
+        ${crop !== 'plantain' ? '<span class="lg-row"><i class="sw b"></i>Bananas</span>' : ''}${crop !== 'banana' ? '<span class="lg-row"><i class="sw p"></i>Plantains &amp; cooking bananas</span>' : ''}
+        <span class="lg-small">Brighter = more hectares per ~20 km square</span>`;
+      return;
+    }
     // legend
     const grad = Array.from({ length: 11 }, (_, i) => colourAt(i / 10)).join(',');
     const label = (v: number) => metric === 'yield' ? `${v}` : v >= 1e6 ? `${v / 1e6}m` : `${v / 1e3}k`;
@@ -222,7 +257,63 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
   $('#top').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { selected = b.dataset.id!; update(); } });
   $('#pWorld').onclick = () => { selected = null; update(); };
 
-  function update() { paint(); panel(); $('#yearLbl').textContent = String(years[yi]); ($('#year') as HTMLInputElement).value = String(years[yi]); }
+  // ---------- the satellite-derived layer (MapSPAM 2020) ----------
+  let cells: Uint16Array | null = null, n = 0;
+  const layerImg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+  layerImg.setAttribute('width', String(W)); layerImg.setAttribute('height', String(H));
+  layerImg.setAttribute('class', 'layer');
+  layer.node()!.appendChild(layerImg);
+  const drawn: Record<string, string> = {};
+  async function drawLayer() {
+    if (!cells) {
+      const buf = await (await fetch('/world/spam-bananas.bin')).arrayBuffer();
+      cells = new Uint16Array(buf); n = cells.length / 4;
+    }
+    if (!drawn[crop]) {
+      const S = 3, cv = document.createElement('canvas');
+      cv.width = W * S; cv.height = H * S;
+      const g = cv.getContext('2d')!;
+      const draw = (col: number, rgb: string) => {
+        for (let i = 0; i < n; i++) {
+          const ha = cells![col * n + i];
+          if (!ha) continue;
+          const lon = cells![i] / 6 - 180 + 1 / 12, lat = cells![n + i] / 6 - 90 + 1 / 12;
+          const pt = projection([lon, lat]); if (!pt) continue;
+          // 10 ha is faint, 10,000+ ha is solid
+          const a = Math.max(0.08, Math.min(0.95, (Math.log10(ha) - 1) / 3));
+          g.fillStyle = `rgba(${rgb},${a.toFixed(2)})`;
+          g.fillRect(pt[0] * S - 1.3, pt[1] * S - 1.3, 2.6, 2.6);
+        }
+      };
+      if (crop !== 'banana') draw(3, '120,220,110');
+      if (crop !== 'plantain') draw(2, '255,214,60');
+      drawn[crop] = cv.toDataURL('image/png');
+    }
+    layerImg.setAttribute('href', drawn[crop]);
+  }
+  function showLayer(on: boolean) {
+    layerOn = on;
+    $('#layerBtn').classList.toggle('on', on);
+    $('#layerBtn').setAttribute('aria-pressed', String(on));
+    layerImg.style.display = on ? '' : 'none';
+    if (on) { stop(); drawLayer(); }
+    paint();
+  }
+  $('#layerBtn').onclick = () => showLayer(!layerOn);
+  layerImg.style.display = 'none';
+
+  // fly to a hotspot
+  document.querySelectorAll<HTMLButtonElement>('.spot-go').forEach(b => b.onclick = () => {
+    crop = b.dataset.crop as typeof crop;
+    $('#crop').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.v === crop));
+    showLayer(true);
+    const pt = projection([+b.dataset.lon!, +b.dataset.lat!])!, k = 7;
+    (svg as any).call(zoomer.transform, zoomIdentity.translate(W / 2 - pt[0] * k, H / 2 - pt[1] * k).scale(k));
+    mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    update();
+  });
+
+  function update() { paint(); panel(); if (layerOn) drawLayer(); $('#yearLbl').textContent = String(years[yi]); ($('#year') as HTMLInputElement).value = String(years[yi]); }
 
   // ---------- controls ----------
   const seg = (id: string, set: (v: string) => void) => $(id).addEventListener('click', e => {
@@ -265,6 +356,17 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
   .seg { display: inline-flex; background: var(--field); border-radius: 999px; padding: 3px; }
   .seg button { font: 700 13px 'Inter', sans-serif; color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
   .seg button.on { background: var(--brand); color: #1d1600; }
+  .layer-btn { font: 700 13px 'Inter', sans-serif; color: var(--ink); background: var(--field); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  .layer-btn:hover { border-color: var(--brand); }
+  .layer-btn.on { background: #1f3b2a; border-color: #5cc46e; color: #c9f5cf; }
+  .map.dim :global(.cty) { fill: #262b33 !important; }
+  .map.dim :global(.cty.sel) { fill: #343b45 !important; }
+  .map :global(.layer) { pointer-events: none; }
+  .legend :global(.lg-row) { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: var(--ink); }
+  .legend :global(.sw) { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .legend :global(.sw.b) { background: rgb(255, 214, 60); box-shadow: 0 0 8px rgba(255, 214, 60, .8); }
+  .legend :global(.sw.p) { background: rgb(120, 220, 110); box-shadow: 0 0 8px rgba(120, 220, 110, .8); }
+  .legend :global(.lg-small) { display: block; margin-top: 4px; color: var(--ink-3); }
   .years { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px; }
   .years input { flex: 1; accent-color: #f2b81f; }
   #play { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--brand); color: #1d1600; font-size: 13px; font-weight: 800; cursor: pointer; flex: none; }
@@ -310,6 +412,20 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
   .top :global(span) { color: var(--ink-3); font-size: 12px; }
   .top :global(b) { font-weight: 700; }
 
+  .spots { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .spots-head h2 { font-size: 20px; font-weight: 800; margin: 0; }
+  .spots-head p { color: var(--ink-2); font-size: 14px; margin: 4px 0 14px; }
+  .spot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .spot { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .spot-go { text-align: left; background: none; border: none; padding: 0; cursor: pointer; color: var(--ink); font: inherit; }
+  .spot-go b { display: block; font-size: 15px; }
+  .spot-go span { color: var(--ink-3); font-size: 13px; }
+  .spot-go:hover b { color: var(--brand); }
+  .spot-meta { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+  .dotb, .dotp { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dotb { background: rgb(255, 214, 60); } .dotp { background: rgb(120, 220, 110); }
+  .spot a { color: var(--link); font-size: 13px; font-weight: 600; text-decoration: none; }
+  .spot-note { color: var(--ink-3); font-size: 12.5px; margin: 10px 0 0; }
   .about { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); max-width: 900px; }
   .about h2 { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
   .about p { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin: 0 0 10px; }

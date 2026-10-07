@@ -1,0 +1,118 @@
+{
+ "bananas": [
+  {
+   "lon": 29.375,
+   "lat": -2.042,
+   "ha": 7735,
+   "country": "Rwanda",
+   "region": "Western Province"
+  },
+  {
+   "lon": 13.458,
+   "lat": 10.125,
+   "ha": 7196,
+   "country": "Cameroon",
+   "region": "Extrême-Nord"
+  },
+  {
+   "lon": 38.542,
+   "lat": 6.958,
+   "ha": 4723,
+   "country": "Ethiopia",
+   "region": "Southern Nations (SNNPR)"
+  },
+  {
+   "lon": 77.542,
+   "lat": 8.375,
+   "ha": 4494,
+   "country": "India",
+   "region": "Tamil Nadu"
+  },
+  {
+   "lon": -89.625,
+   "lat": 14.542,
+   "ha": 4485,
+   "country": "Guatemala",
+   "region": "Jutiapa"
+  },
+  {
+   "lon": -79.875,
+   "lat": -3.208,
+   "ha": 4426,
+   "country": "Ecuador",
+   "region": "El Oro"
+  },
+  {
+   "lon": -76.792,
+   "lat": 7.792,
+   "ha": 4137,
+   "country": "Colombia",
+   "region": "Antioquia"
+  },
+  {
+   "lon": 84.625,
+   "lat": 27.208,
+   "ha": 3913,
+   "country": "India",
+   "region": "Bihar"
+  },
+  {
+   "lon": 121.375,
+   "lat": 12.292,
+   "ha": 3779,
+   "country": "Philippines",
+   "region": "Southern Tagalog"
+  },
+  {
+   "lon": -35.458,
+   "lat": -7.708,
+   "ha": 3599,
+   "country": "Brazil",
+   "region": "Pernambuco"
+  }
+ ],
+ "plantains": [
+  {
+   "lon": 30.125,
+   "lat": -0.792,
+   "ha": 9055,
+   "country": "Uganda",
+   "region": "Ankole"
+  },
+  {
+   "lon": 34.292,
+   "lat": 0.875,
+   "ha": 8415,
+   "country": "Uganda",
+   "region": "Elgon"
+  },
+  {
+   "lon": 120.958,
+   "lat": 17.042,
+   "ha": 8111,
+   "country": "Philippines",
+   "region": "Cordillera"
+  },
+  {
+   "lon": 15.792,
+   "lat": -4.292,
+   "ha": 6864,
+   "country": "Democratic Republic of the Congo",
+   "region": "Kinshasa"
+  },
+  {
+   "lon": 30.875,
+   "lat": 3.375,
+   "ha": 6565,
+   "country": "Democratic Republic of the Congo",
+   "region": "Province Orientale"
+  },
+  {
+   "lon": 25.208,
+   "lat": 0.375,
+   "ha": 3744,
+   "country": "Democratic Republic of the Congo",
+   "region": "Province Orientale"
+  }
+ ]
+}
