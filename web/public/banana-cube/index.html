@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banana Cube Solver · All Things Banana</title>
+<meta name="description" content="Solve the banana Rubik's-style puzzle in 3D. Enter your position and see exactly how many moves you are from a solved banana, with the shortest solution.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-1: #fff8e6;
+    --bg-2: #fde9b8;
+    --card: rgba(255, 255, 255, 0.82);
+    --card-solid: #ffffff;
+    --border: rgba(92, 70, 20, 0.10);
+    --ink: #2d2614;
+    --ink-2: #6b5f45;
+    --ink-3: #a3977c;
+    --accent: #f2b81f;
+    --accent-ink: #5a4100;
+    --accent-soft: #fff1c4;
+    --good: #2fa56b;
+    --same: #e3a21a;
+    --bad: #e2626b;
+    --band: rgba(242, 184, 31, 0.13);
+    --band-cur: rgba(242, 184, 31, 0.38);
+    --btn: #fff;
+    --btn-hover: #fff6dc;
+    --shadow: 0 1px 2px rgba(80, 60, 10, .06), 0 8px 28px rgba(80, 60, 10, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-1: #1d1a12; --bg-2: #2a2414;
+      --card: rgba(38, 34, 24, 0.86); --card-solid: #262218;
+      --border: rgba(255, 230, 160, 0.10);
+      --ink: #f6eedb; --ink-2: #c9bc9b; --ink-3: #8c8166;
+      --accent-soft: #3d3317; --accent-ink: #ffe08a;
+      --band: rgba(242, 184, 31, 0.10); --band-cur: rgba(242, 184, 31, 0.30);
+      --btn: #2f2a1d; --btn-hover: #3a3322;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: 'Nunito', system-ui, sans-serif;
+    color: var(--ink);
+    background: radial-gradient(1200px 800px at 30% 20%, var(--bg-1), var(--bg-2));
+    overflow: hidden;
+  }
+  #app { display: grid; grid-template-columns: 1fr 380px; height: 100vh; }
+  #stage { position: relative; min-height: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; outline: none; }
+  .brand {
+    position: absolute; top: 20px; left: 24px; display: flex; align-items: center; gap: 10px;
+    font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 22px; color: inherit; text-decoration: none; z-index: 2;
+  }
+  .brand small { font-family: 'Nunito'; font-weight: 700; font-size: 13px; color: var(--ink-2);
+    background: var(--card); border: 1px solid var(--border); padding: 3px 10px; border-radius: 99px; }
+  .hint-chip {
+    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    background: var(--card-solid); border: 1px solid var(--border); box-shadow: var(--shadow);
+    padding: 10px 16px; border-radius: 99px; font-weight: 700; font-size: 14px; color: var(--ink-2);
+    display: flex; gap: 10px; align-items: center; white-space: nowrap; transition: opacity .25s;
+  }
+  .hint-chip.hidden { opacity: 0; pointer-events: none; }
+  .hint-chip b { color: var(--ink); }
+  .toast {
+    position: absolute; left: 50%; top: 22px; transform: translate(-50%, -10px); opacity: 0;
+    background: var(--ink); color: var(--card-solid); padding: 9px 16px; border-radius: 12px;
+    font-weight: 700; font-size: 14px; transition: all .25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .loading {
+    position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; color: var(--ink-2);
+    background: inherit; z-index: 5; transition: opacity .4s;
+  }
+
+  #panel { overflow-y: auto; padding: 18px 18px 28px; display: flex; flex-direction: column; gap: 14px;
+    border-left: 1px solid var(--border); background: rgba(255,255,255,0.18); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 16px;
+    box-shadow: var(--shadow); backdrop-filter: blur(8px); }
+  .card h2 { margin: 0 0 12px; font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 16px;
+    display: flex; align-items: center; justify-content: space-between; }
+  .card h2 .sub { font-family: 'Nunito'; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+
+  /* distance */
+  .dist { display: flex; align-items: center; gap: 16px; }
+  .ring { position: relative; width: 104px; height: 104px; flex: none; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .num { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ring .num b { font-family: 'Fredoka'; font-size: 40px; font-weight: 700; line-height: 1; display: block; }
+  .ring .num span { font-size: 11px; font-weight: 800; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+  .dist-text .headline { font-family: 'Fredoka'; font-size: 19px; font-weight: 600; line-height: 1.2; }
+  .dist-text .meta { color: var(--ink-2); font-size: 13px; margin-top: 4px; }
+  .next { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; font-size: 12px; color: var(--ink-3); font-weight: 700; }
+  .pill { background: var(--accent-soft); color: var(--accent-ink); border-radius: 8px; padding: 2px 8px; font-weight: 800; font-size: 13px; font-family: 'Fredoka'; }
+  .solved-pop { animation: pop .6s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
+
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  button {
+    font: inherit; font-weight: 800; font-size: 14px; color: var(--ink); cursor: pointer;
+    background: var(--btn); border: 1px solid var(--border); border-radius: 12px; padding: 9px 10px;
+    transition: background .15s, transform .08s, box-shadow .15s; box-shadow: 0 1px 0 rgba(0,0,0,.04);
+  }
+  button:hover { background: var(--btn-hover); }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: transparent; color: #3d2c00; }
+  button.primary:hover { filter: brightness(1.05); background: var(--accent); }
+  .actions { margin-top: 14px; }
+
+  /* tabs */
+  .tabs { display: flex; background: var(--accent-soft); padding: 4px; border-radius: 12px; gap: 4px; margin-bottom: 12px; }
+  .tabs button { flex: 1; background: transparent; border: none; box-shadow: none; padding: 7px 4px; font-size: 13px; color: var(--ink-2); border-radius: 9px; }
+  .tabs button.on { background: var(--card-solid); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .tabpane { display: none; }
+  .tabpane.on { display: block; }
+  .help { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; line-height: 1.45; }
+
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .pad.four { grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
+  .pad button { font-family: 'Fredoka'; font-weight: 600; font-size: 15px; padding: 8px 0; }
+  .pad .lbl { grid-column: 1 / -1; font-size: 11px; font-weight: 800; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
+  textarea {
+    width: 100%; font: 600 15px 'Fredoka', sans-serif; color: var(--ink); background: var(--card-solid);
+    border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; resize: vertical; min-height: 64px;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); margin: 8px 0; }
+  .err { color: var(--bad); font-size: 12px; font-weight: 700; min-height: 16px; }
+  .switch { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--ink-2); margin-top: 10px; }
+  .switch input { width: 38px; height: 22px; appearance: none; background: var(--border); border-radius: 99px; position: relative; cursor: pointer; transition: background .2s; }
+  .switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .switch input:checked { background: var(--accent); }
+  .switch input:checked::after { left: 19px; }
+
+  /* tree */
+  #tree { width: 100%; display: block; }
+  #tree text { font-family: 'Nunito'; }
+  #tree .band { fill: var(--band); }
+  #tree .band.cur { fill: var(--band-cur); }
+  #tree .lab { fill: var(--ink-3); font-size: 10px; font-weight: 700; }
+  #tree .lab.cur { fill: var(--ink); font-weight: 800; }
+  #tree .twig { stroke: var(--ink-3); stroke-width: 1; opacity: .35; fill: none; }
+  #tree .twigdot { fill: var(--ink-3); opacity: .4; }
+  #tree .path { stroke: var(--accent); stroke-width: 3.5; fill: none; stroke-linecap: round; }
+  #tree .pnode { fill: var(--accent); stroke: var(--card-solid); stroke-width: 2; }
+  #tree .mvlab { fill: var(--ink-2); font-size: 10px; font-weight: 800; }
+  #tree .child { cursor: pointer; }
+  #tree .child circle { stroke: var(--card-solid); stroke-width: 2; transition: r .15s; }
+  #tree .child:hover circle { r: 13; }
+  #tree .child text { fill: #fff; font: 700 9px 'Fredoka'; pointer-events: none; }
+  #tree .cedge { fill: none; stroke-width: 1.6; opacity: .55; }
+  #tree .you circle { fill: var(--ink); stroke: var(--accent); stroke-width: 3; }
+  #tree .you text { fill: var(--card-solid); font: 700 9px 'Fredoka'; }
+  .legend { display: flex; gap: 14px; font-size: 12px; font-weight: 700; color: var(--ink-2); margin-top: 8px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+  .spark-wrap { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 10px; }
+  .spark-wrap .t { font-size: 11px; font-weight: 800; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+  #spark { width: 100%; height: 54px; display: block; margin-top: 4px; }
+  details { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+  details summary { cursor: pointer; font-weight: 800; color: var(--ink); }
+  kbd { font: 700 11px 'Nunito'; background: var(--accent-soft); border-radius: 5px; padding: 1px 5px; }
+
+  @media (max-width: 860px) {
+    body { overflow: auto; }
+    #app { grid-template-columns: 1fr; height: auto; }
+    #stage { height: 58vh; }
+    #panel { border-left: none; padding: 14px 16px 28px; overflow: visible; }
+    .brand { top: 14px; left: 16px; font-size: 19px; }
+    .hint-chip { font-size: 12px; bottom: 12px; white-space: normal; text-align: center; width: max-content; max-width: calc(100% - 32px); justify-content: center; flex-wrap: wrap; gap: 4px 8px; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three/three.module.js",
+  "three/addons/": "/vendor/three/addons/"
+} }
+</script>
+</head>
+<body>
+<div id="app">
+  <main id="stage">
+    <a class="brand" href="/" title="Back to All Things Banana">🍌 Banana Cube <small>2×2×3 solver</small></a>
+    <div class="toast" id="toast"></div>
+    <div class="hint-chip" id="chip">Drag to look around · <b>U</b> stem end (left) · <b>D</b> tip end · <b>E</b> middle</div>
+    <div class="loading" id="loading">Mapping all 241,920 banana positions…</div>
+  </main>
+
+  <aside id="panel">
+    <section class="card" id="distCard">
+      <div class="dist">
+        <div class="ring">
+          <svg width="104" height="104" viewBox="0 0 104 104">
+            <circle cx="52" cy="52" r="44" fill="none" stroke="var(--band)" stroke-width="10"/>
+            <circle id="ringArc" cx="52" cy="52" r="44" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 999"/>
+          </svg>
+          <div class="num"><div><b id="distNum">0</b><span>moves</span></div></div>
+        </div>
+        <div class="dist-text">
+          <div class="headline" id="headline">Solved!</div>
+          <div class="meta" id="meta">Scramble it, or enter the position you have.</div>
+          <div class="next" id="next"></div>
+        </div>
+      </div>
+      <div class="row actions">
+        <button id="btnStep" class="primary" title="Make the next best move (Space)">Next move ▸</button>
+        <button id="btnSolve" title="Animate the full shortest solution">Solve it</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Your position <span class="sub">match it to your banana</span></h2>
+      <div class="tabs" id="tabs">
+        <button data-tab="twist" class="on">Twist</button>
+        <button data-tab="type">Type moves</button>
+        <button data-tab="swap">Swap pieces</button>
+      </div>
+
+      <div class="tabpane on" data-pane="twist">
+        <p class="help">Turn the 3D banana until it looks like yours. Keys: <kbd>u</kbd> <kbd>e</kbd> <kbd>d</kbd> (hold <kbd>shift</kbd> for ′), <kbd>r</kbd> <kbd>l</kbd> <kbd>f</kbd> <kbd>b</kbd>.</p>
+        <div class="pad" id="pad"></div>
+      </div>
+
+      <div class="tabpane" data-pane="type">
+        <p class="help">Paste the moves you did, e.g. <b>U R2 E' F2 D2</b>. Side turns are always half turns, so <b>R</b> means <b>R2</b>.</p>
+        <textarea id="seq" placeholder="U R2 E' F2 D2 B2 U'"></textarea>
+        <label class="check"><input type="checkbox" id="fromSolved" checked> Start from solved</label>
+        <div class="err" id="seqErr"></div>
+        <button class="primary" id="btnApply" style="width:100%">Apply moves</button>
+      </div>
+
+      <div class="tabpane" data-pane="swap">
+        <p class="help">Click a piece on the banana, then click where it should be. The two pieces trade places. Corners trade with corners, middle pieces with middle pieces.</p>
+        <button id="btnFlip" style="width:100%">Turn middle pieces a quarter</button>
+        <div class="switch"><span>Colour and number the pieces</span><input type="checkbox" id="hints"></div>
+      </div>
+
+      <div class="row actions">
+        <button id="btnScramble">Scramble</button>
+        <button id="btnUndo" title="Undo (⌘Z)">Undo</button>
+        <button id="btnReset">Reset</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Solution tree <span class="sub" id="treeSub"></span></h2>
+      <svg id="tree" role="img" aria-label="Tree of positions by distance from solved"></svg>
+      <div class="legend">
+        <span><i style="background:var(--good)"></i>Closer</span>
+        <span><i style="background:var(--same)"></i>Same</span>
+        <span><i style="background:var(--bad)"></i>Further</span>
+        <span><i style="background:var(--accent)"></i>Shortest path</span>
+      </div>
+      <div class="spark-wrap">
+        <div class="t">Your journey</div>
+        <svg id="spark" viewBox="0 0 320 54" preserveAspectRatio="none"></svg>
+      </div>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary>How does this work?</summary>
+        <p>The banana cube is a 2×2×3 puzzle with a banana shape. The stem end (<b>U</b>), the middle (<b>E</b>) and the tip end (<b>D</b>) each turn by quarter turns. The long sides (<b>R L F B</b>) only turn by half turns.</p>
+        <p>When the page opens, it checks every possible position with a breadth-first search: 241,920 of them, or 1,935,360 if you also count which way you hold it. That makes the move count exact. It is the fewest moves possible, so it is not a guess.</p>
+        <p>In the tree, each row is a distance from solved, and the shaded band shows how many positions are at that distance. The yellow branch is your shortest way home. The coloured dots are all the moves you can make from here. Click one to try it.</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<!-- SOLVER-START -->
+<script>
+function createSolver() {
+  const CORNER_HOME = [[-1,2,-1],[1,2,-1],[1,2,1],[-1,2,1],[-1,-2,-1],[1,-2,-1],[1,-2,1],[-1,-2,1]];
+  const EDGE_HOME = [[-1,0,-1],[1,0,-1],[1,0,1],[-1,0,1]];
+  const HOME = CORNER_HOME.concat(EDGE_HOME);
+  const I3 = [1,0,0, 0,1,0, 0,0,1];
+  const key = p => p.join(',');
+  const CSLOT = {}, ESLOT = {};
+  CORNER_HOME.forEach((p, i) => CSLOT[key(p)] = i);
+  EDGE_HOME.forEach((p, i) => ESLOT[key(p)] = i);
+
+  function mmul(A, B) {
+    const C = new Array(9);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
+      C[i*3+j] = A[i*3]*B[j] + A[i*3+1]*B[3+j] + A[i*3+2]*B[6+j];
+    return C;
+  }
+  const mvec = (A, v) => [A[0]*v[0]+A[1]*v[1]+A[2]*v[2], A[3]*v[0]+A[4]*v[1]+A[5]*v[2], A[6]*v[0]+A[7]*v[1]+A[8]*v[2]];
+  function rotMat(axis, q) {
+    q = ((q % 4) + 4) % 4;
+    const step = axis === 'x' ? [1,0,0, 0,0,-1, 0,1,0] : axis === 'y' ? [0,0,1, 0,1,0, -1,0,0] : [0,-1,0, 1,0,0, 0,0,1];
+    let M = I3;
+    for (let k = 0; k < q; k++) M = mmul(step, M);
+    return M;
+  }
+
+  // U is clockwise seen from the stem end; E and D follow D's direction (standard notation).
+  const LAYER = { U: p => p[1] === 2, E: p => p[1] === 0, D: p => p[1] === -2,
+                  R: p => p[0] === 1, L: p => p[0] === -1, F: p => p[2] === 1, B: p => p[2] === -1 };
+  const MOVES = [];
+  for (const [f, base] of [['U', -1], ['E', 1], ['D', 1]]) {
+    MOVES.push({ name: f, face: f, axis: 'y', q: base });
+    MOVES.push({ name: f + "'", face: f, axis: 'y', q: -base });
+    MOVES.push({ name: f + '2', face: f, axis: 'y', q: 2 });
+  }
+  for (const [f, axis] of [['R', 'x'], ['L', 'x'], ['F', 'z'], ['B', 'z']])
+    MOVES.push({ name: f + '2', face: f, axis, q: 2 });
+  MOVES.forEach((m, i) => { m.i = i; m.M = rotMat(m.axis, m.q); m.sel = LAYER[m.face]; });
+  const NM = MOVES.length;
+
+  // The 8 symmetries of the cuboid (ways to hold it).
+  const D4 = [I3];
+  for (let i = 0; i < D4.length; i++)
+    for (const g of [rotMat('y', 1), rotMat('x', 2)]) {
+      const h = mmul(g, D4[i]);
+      if (!D4.some(x => key(x) === key(h))) D4.push(h);
+    }
+
+  const flipOf = R => (R[0] === 0 ? 1 : 0);
+  const posOf = (state, i) => mvec(state[i], HOME[i]);
+  const solvedState = () => HOME.map(() => I3.slice());
+  const applyMove = (state, m) => state.map((R, i) => (m.sel(mvec(R, HOME[i])) ? mmul(m.M, R) : R));
+  function findG(home, target, flip) {
+    return D4.find(g => key(mvec(g, home)) === key(target) && (flip == null || flipOf(g) === flip)).slice();
+  }
+
+  function rank(p) {
+    const n = p.length; let r = 0;
+    for (let i = 0; i < n; i++) {
+      let c = 0;
+      for (let j = i + 1; j < n; j++) if (p[j] < p[i]) c++;
+      r = r * (n - i) + c;
+    }
+    return r;
+  }
+  function unrank(r, n) {
+    const code = new Array(n);
+    for (let i = n - 1; i >= 0; i--) { code[i] = r % (n - i); r = Math.floor(r / (n - i)); }
+    const avail = []; for (let i = 0; i < n; i++) avail.push(i);
+    return code.map(c => avail.splice(c, 1)[0]);
+  }
+
+  function toIndex(state) {
+    const cp = new Array(8), ep = new Array(4);
+    for (let i = 0; i < 8; i++) cp[CSLOT[key(posOf(state, i))]] = i;
+    for (let i = 0; i < 4; i++) ep[ESLOT[key(posOf(state, 8 + i))]] = i;
+    return rank(cp) * 48 + rank(ep) * 2 + flipOf(state[8]);
+  }
+  function fromIndex(idx) {
+    const c = Math.floor(idx / 48), e = idx % 48;
+    const cp = unrank(c, 8), ep = unrank(e >> 1, 4), flip = e & 1;
+    const st = new Array(12);
+    for (let s = 0; s < 8; s++) st[cp[s]] = findG(HOME[cp[s]], CORNER_HOME[s], null);
+    for (let s = 0; s < 4; s++) st[8 + ep[s]] = findG(HOME[8 + ep[s]], EDGE_HOME[s], flip);
+    return st;
+  }
+
+  // Move tables: corners and middle pieces move independently.
+  const slotDest = (slots, m) => slots.map(p => {
+    const q = m.sel(p) ? mvec(m.M, p) : p;
+    return slots.findIndex(s => key(s) === key(q));
+  });
+  const NC = 40320, NE = 48, N = NC * NE;
+  const cTab = new Int32Array(NC * NM), eTab = new Int32Array(NE * NM);
+  const cDest = MOVES.map(m => slotDest(CORNER_HOME, m));
+  const eDest = MOVES.map(m => slotDest(EDGE_HOME, m));
+  const eToggle = MOVES.map(m => (m.face === 'E' && Math.abs(m.q) === 1 ? 1 : 0));
+  for (let c = 0; c < NC; c++) {
+    const p = unrank(c, 8);
+    for (let m = 0; m < NM; m++) {
+      const np = new Array(8), d = cDest[m];
+      for (let s = 0; s < 8; s++) np[d[s]] = p[s];
+      cTab[c * NM + m] = rank(np);
+    }
+  }
+  for (let e = 0; e < NE; e++) {
+    const p = unrank(e >> 1, 4), f = e & 1;
+    for (let m = 0; m < NM; m++) {
+      const np = new Array(4), d = eDest[m];
+      for (let s = 0; s < 4; s++) np[d[s]] = p[s];
+      eTab[e * NM + m] = rank(np) * 2 + (f ^ eToggle[m]);
+    }
+  }
+  const next = (idx, m) => cTab[Math.floor(idx / NE) * NM + m] * NE + eTab[(idx % NE) * NM + m];
+
+  // Breadth-first search outward from "solved", however you hold it.
+  const dist = new Uint8Array(N).fill(255);
+  const queue = new Int32Array(N);
+  let head = 0, tail = 0;
+  for (const g of D4) {
+    const s = toIndex(HOME.map(() => g));
+    if (dist[s] === 255) { dist[s] = 0; queue[tail++] = s; }
+  }
+  while (head < tail) {
+    const s = queue[head++], d = dist[s] + 1;
+    const cb = Math.floor(s / NE) * NM, eb = (s % NE) * NM;
+    for (let m = 0; m < NM; m++) {
+      const t = cTab[cb + m] * NE + eTab[eb + m];
+      if (dist[t] === 255) { dist[t] = d; queue[tail++] = t; }
+    }
+  }
+  let maxD = 0; const counts = [];
+  for (let i = 0; i < N; i++) { const d = dist[i]; counts[d] = (counts[d] || 0) + 1; if (d > maxD) maxD = d; }
+  // Positions that differ only by how you hold the banana count once.
+  const counts8 = counts.map(c => c / D4.length);
+
+  const neighbors = idx => MOVES.map(m => { const t = next(idx, m.i); return { m, idx: t, d: dist[t] }; });
+  function solution(idx) {
+    const path = [];
+    while (dist[idx] > 0) {
+      const n = neighbors(idx).find(n => n.d === dist[idx] - 1);
+      path.push(n.m); idx = n.idx;
+    }
+    return path;
+  }
+
+  return { MOVES, HOME, CORNER_HOME, EDGE_HOME, D4, N, dist, counts: counts8, total: N / D4.length, reached: tail, maxD,
+           solvedState, applyMove, toIndex, fromIndex, next, neighbors, solution, findG, flipOf, posOf, mvec, key };
+}
+</script>
+<!-- SOLVER-END -->
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const $ = s => document.querySelector(s);
+const stage = $('#stage');
+
+// ---------- solver ----------
+await new Promise(r => setTimeout(r, 60)); // let the loading message paint
+const S = createSolver();
+$('#loading').style.opacity = 0;
+setTimeout(() => $('#loading').remove(), 400);
+
+// ---------- scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+camera.position.set(0.6, 2.4, 9.5);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.45, 0);
+controls.enableDamping = true;
+controls.minDistance = 6; controls.maxDistance = 22;
+controls.enablePan = false;
+
+scene.add(new THREE.HemisphereLight(0xfff6dd, 0xc8a978, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+sun.position.set(4, 9, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 25 });
+sun.shadow.radius = 6;
+scene.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: 0.13 }));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -1.9; ground.receiveShadow = true;
+scene.add(ground);
+
+const root = new THREE.Group();
+scene.add(root);
+
+// ---------- banana geometry ----------
+// Like the real puzzle: a curved banana around a straight axis (puzzle y), cut by
+// flat planes x = 0, z = 0 and y = ±SLAB. Each piece is the part of the banana inside
+// its cell. Moves only swap whole cells, so pieces can never overlap, whatever the scramble.
+root.rotation.z = Math.PI / 2;          // lie the banana down: stem (U) on the left, curve up
+const SLAB = 0.8, GAP = 0.012;
+const Y_TIP = -2.4, Y_NECK = 2.3, Y_STEM = 2.62;
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+function center(y) {                     // the banana's curve, as an offset from the axis
+  if (y > Y_NECK) return center(Y_NECK) + 0.85 * (y - Y_NECK);
+  const s = y / 2.4;
+  return 0.05 + (y < 0 ? 1.05 : 1.25) * s * s;
+}
+const slope = y => (center(y + 1e-3) - center(y - 1e-3)) / 2e-3;
+function radius(y) {
+  if (y < 0) return 0.24 + 0.34 * Math.sqrt(Math.max(0, 1 - Math.pow(Math.min(1, -y / 2.4), 2.6)));
+  if (y <= Y_NECK) return 0.13 + 0.45 * Math.pow(Math.max(0, 1 - (y / Y_NECK) ** 2), 0.6);
+  return 0.13;
+}
+// cross-section: a rounded square (gives the banana its ridges), widened where the curve is steep
+const NA = 72, SQUARE = [];
+for (let k = 0; k < NA; k++) {
+  const a = (k / NA) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a), p = 2 / 2.8;
+  SQUARE.push([Math.sign(c) * Math.abs(c) ** p, Math.sign(s) * Math.abs(s) ** p]);
+}
+function section(y) {
+  const r = radius(y), rx = r * Math.sqrt(1 + slope(y) ** 2), c = center(y);
+  return SQUARE.map(([a, b]) => [c + rx * a, b * r]);   // [x, z]
+}
+
+const YELLOW = new THREE.Color(0xf4d23e), GREEN = new THREE.Color(0xa9bd3a), BROWN = new THREE.Color(0x8a5a1c);
+const STEM = new THREE.Color(0x8b4a22), CAP = new THREE.Color(0x5b3519);
+const FLESH = new THREE.Color(0xfbf1cf), STEM_IN = new THREE.Color(0xb98a5a);
+function skinColor(x, y, z) {
+  if (y > Y_NECK + 0.02) return STEM.clone();
+  if (y < Y_TIP + 0.13) return STEM.clone().lerp(CAP, 0.3);   // the brown flower tip
+  const out = YELLOW.clone();
+  out.lerp(GREEN, 0.6 * smooth(1.3, Y_NECK, y));
+  out.lerp(BROWN, 0.5 * smooth(-1.9, Y_TIP, y));
+  const s = Math.sin(9.3 * x + 1.3) * Math.sin(5.1 * y + 2.1) * Math.sin(8.7 * z + 0.4) + 0.6 * Math.sin(17 * x + 11 * y - 7 * z);
+  return out.lerp(BROWN, 0.4 * smooth(0.95, 1.35, s));
+}
+const fleshColor = y => (y > Y_NECK ? STEM_IN : FLESH);
+
+// polygon clipping against half-spaces f(p) >= 0, carrying normals and colours along
+const lerpV = (a, b, t) => ({
+  p: a.p.map((v, i) => v + (b.p[i] - v) * t), n: a.n.map((v, i) => v + (b.n[i] - v) * t),
+  c: a.c.clone().lerp(b.c, t), skin: a.skin,
+});
+function clip(poly, f) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length], fa = f(a.p), fb = f(b.p);
+    if (fa >= 0) out.push(a);
+    if ((fa >= 0) !== (fb >= 0)) out.push(lerpV(a, b, fa / (fa - fb)));
+  }
+  return out;
+}
+// where a line (x = v, or z = v) crosses a convex cross-section
+function chord(poly, k, v) {
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    if ((a[k] - v) * (b[k] - v) > 0 || a[k] === b[k]) continue;
+    const w = a[1 - k] + ((v - a[k]) / (b[k] - a[k])) * (b[1 - k] - a[1 - k]);
+    lo = Math.min(lo, w); hi = Math.max(hi, w);
+  }
+  return lo < hi ? [lo, hi] : null;
+}
+
+// the full skin as a grid of rings
+const ROWS = [];
+for (let y = Y_TIP; y < Y_STEM; y += 0.025) ROWS.push(y);
+ROWS.push(Y_STEM);
+const skinGrid = ROWS.map(y => {
+  const sec = section(y), c = center(y);
+  return sec.map(([x, z], k) => {
+    const [xa, za] = sec[(k + NA - 1) % NA], [xb, zb] = sec[(k + 1) % NA];
+    const t1 = [xb - xa, 0, zb - za], t2 = [slope(y), 1, 0];      // around, along
+    let n = [t1[1] * t2[2] - t1[2] * t2[1], t1[2] * t2[0] - t1[0] * t2[2], t1[0] * t2[1] - t1[1] * t2[0]];
+    if (n[0] * (x - c) + n[2] * z < 0) n = n.map(v => -v);
+    const l = Math.hypot(...n);
+    return { p: [x, y, z], n: n.map(v => v / l), c: skinColor(x, y, z), skin: true };
+  });
+});
+
+function buildPieceGeometry(home) {
+  const sx = Math.sign(home[0]), sz = Math.sign(home[2]);
+  const ylo = home[1] === 2 ? SLAB : home[1] === 0 ? -SLAB : -Infinity;
+  const yhi = home[1] === 2 ? Infinity : home[1] === 0 ? SLAB : -SLAB;
+  const quad = [p => sx * p[0] - GAP, p => sz * p[2] - GAP];
+  const planes = quad.slice();
+  if (ylo > -Infinity) planes.push(p => p[1] - (ylo + GAP));
+  if (yhi < Infinity) planes.push(p => yhi - GAP - p[1]);
+  const tris = [];
+  const fan = poly => { for (let k = 1; k + 1 < poly.length; k++) tris.push([poly[0], poly[k], poly[k + 1]]); };
+  const clipAll = (poly, fs) => { for (const f of fs) { if (poly.length < 3) break; poly = clip(poly, f); } return poly; };
+
+  // skin
+  for (let i = 0; i + 1 < ROWS.length; i++) {
+    if (ROWS[i + 1] < ylo || ROWS[i] > yhi) continue;
+    for (let k = 0; k < NA; k++) {
+      const poly = [skinGrid[i][k], skinGrid[i][(k + 1) % NA], skinGrid[i + 1][(k + 1) % NA], skinGrid[i + 1][k]];
+      fan(clipAll(poly, planes));
+    }
+  }
+  // flat faces: end caps and the cuts between slabs
+  const flat = (y, ny, color, skin) => {
+    const poly = section(y).map(([x, z]) => ({ p: [x, y, z], n: [0, ny, 0], c: color, skin }));
+    fan(clipAll(poly, quad));
+  };
+  if (ylo === -Infinity) flat(Y_TIP, -1, CAP, false);
+  if (yhi === Infinity) flat(Y_STEM, 1, CAP, false);
+  if (ylo > -Infinity) flat(ylo + GAP, -1, fleshColor(ylo), false);
+  if (yhi < Infinity) flat(yhi - GAP, 1, fleshColor(yhi), false);
+
+  // cuts along the axis: plane x = sx·GAP (k = 0) and plane z = sz·GAP (k = 1)
+  for (const k of [0, 1]) {
+    const v = (k === 0 ? sx : sz) * GAP, side = k === 0 ? sz : sx;
+    const normal = k === 0 ? [-sx, 0, 0] : [0, 0, -sz];
+    const span = y => {
+      const ch = chord(section(y), k, v);
+      if (!ch) return null;
+      const lo = side > 0 ? Math.max(ch[0], GAP) : ch[0], hi = side > 0 ? ch[1] : Math.min(ch[1], -GAP);
+      return lo < hi ? [lo, hi] : null;
+    };
+    const y0 = Math.max(ylo + GAP, Y_TIP), y1 = Math.min(yhi - GAP, Y_STEM);
+    const ys = [];
+    for (let y = y0; y < y1; y += 0.02) ys.push(y);
+    ys.push(y1);
+    // add the exact y where the cut face starts or ends, so it meets the skin cleanly
+    const samples = [];
+    ys.forEach((y, i) => {
+      const s = span(y);
+      if (i > 0 && !!s !== !!samples[samples.length - 1].s) {
+        let a = ys[i - 1], b = y;
+        const aIn = !!samples[samples.length - 1].s;
+        for (let it = 0; it < 20; it++) { const m = (a + b) / 2; if (!!span(m) === aIn) a = m; else b = m; }
+        const yIn = aIn ? a : b;
+        samples.push({ y: yIn, s: span(yIn) });
+      }
+      samples.push({ y, s });
+    });
+    const pt = (y, w) => ({ p: k === 0 ? [v, y, w] : [w, y, v], n: normal, c: fleshColor(y), skin: false });
+    for (let i = 0; i + 1 < samples.length; i++) {
+      const A = samples[i], Bs = samples[i + 1], a = A.s, b = Bs.s;
+      if (!a || !b || A.y === Bs.y) continue;
+      tris.push([pt(A.y, a[0]), pt(A.y, a[1]), pt(Bs.y, b[1])], [pt(A.y, a[0]), pt(Bs.y, b[1]), pt(Bs.y, b[0])]);
+    }
+  }
+
+  // pack, with every triangle wound to face along its normal
+  const pos = [], nor = [], col = [], isSkin = [];
+  let cx = 0, cy = 0, cz = 0, cn = 0;
+  for (let [a, b, c] of tris) {
+    const u = b.p.map((x, i) => x - a.p[i]), w = c.p.map((x, i) => x - a.p[i]);
+    const g = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+    const want = [0, 1, 2].map(i => a.n[i] + b.n[i] + c.n[i]);
+    if (g[0] * want[0] + g[1] * want[1] + g[2] * want[2] < 0) [b, c] = [c, b];
+    for (const q of [a, b, c]) {
+      pos.push(...q.p); nor.push(...q.n); col.push(q.c.r, q.c.g, q.c.b); isSkin.push(q.skin && q.p[1] <= Y_NECK);
+      if (q.skin) { cx += q.p[0]; cy += q.p[1]; cz += q.p[2]; cn++; }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  return { geo, isSkin, centroid: [cx / cn, cy / cn, cz / cn] };
+}
+
+const HINT_HUES = [0, 30, 55, 95, 140, 175, 200, 225, 260, 290, 320, 345];
+const pieces = [];
+S.HOME.forEach((h, i) => {
+  const { geo, isSkin, centroid } = buildPieceGeometry(h);
+  const real = geo.attributes.color;
+  const hint = real.clone(), hc = new THREE.Color(`hsl(${HINT_HUES[i]}, 70%, 62%)`);
+  isSkin.forEach((s, v) => s && hint.setXYZ(v, hc.r, hc.g, hc.b));
+  const skin = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.5, sheen: 0.3 });
+  const mesh = new THREE.Mesh(geo, skin);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  const group = new THREE.Group();
+  group.add(mesh);
+  // number label for hint mode, just outside the piece
+  const [x, y, z] = centroid, out = new THREE.Vector3(x - center(y), 0, z).normalize();
+  const label = makeLabel(String(i + 1), HINT_HUES[i]);
+  label.position.set(x + out.x * 0.32, y, z + out.z * 0.32);
+  label.visible = false;
+  group.add(label);
+  root.add(group);
+  pieces.push({ i, group, skin, label, mesh, colors: { real, hint }, kind: i < 8 ? 'corner' : 'middle' });
+});
+
+function makeLabel(text, hue) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = `hsl(${hue} 70% 45%)`; x.beginPath(); x.arc(64, 64, 54, 0, Math.PI * 2); x.fill();
+  x.lineWidth = 8; x.strokeStyle = '#fff'; x.stroke();
+  x.fillStyle = '#fff'; x.font = '700 64px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(text, 64, 68);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  sp.scale.setScalar(0.34); sp.renderOrder = 10;
+  return sp;
+}
+function faceLabel(text, pos) {   // pos in puzzle coordinates
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = 'rgba(90,70,20,0.38)'; x.font = '600 80px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(text, 64, 68);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  sp.scale.setScalar(0.45); sp.position.set(...pos);
+  root.add(sp);
+}
+document.fonts.ready.then(() => {
+  faceLabel('U', [0.9, 3.25, 0]); faceLabel('D', [0.9, -3.0, 0]);
+  faceLabel('R', [2.0, 0, 0]); faceLabel('F', [-0.9, 0, 0.9]);
+});
+
+// ---------- state + animation ----------
+let logical = S.solvedState();
+let undoStack = [];
+const queue = [];
+let anim = null;
+let journey = [0];
+
+const qFromMat = R => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().set(
+  R[0], R[1], R[2], 0, R[3], R[4], R[5], 0, R[6], R[7], R[8], 0, 0, 0, 0, 1));
+function snapTo(st) { pieces.forEach(p => p.group.quaternion.copy(qFromMat(st[p.i]))); }
+snapTo(logical);
+
+const AXIS = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+function doMove(m, dur = 260, record = true) {
+  const from = logical, to = S.applyMove(from, m);
+  if (record) undoStack.push(from);
+  logical = to;
+  queue.push({ type: 'move', m, from, to, dur });
+}
+function doSet(to, dur = 520, record = true) {
+  if (record) undoStack.push(logical);
+  const from = logical;
+  logical = to;
+  queue.push({ type: 'set', from, to, dur });
+}
+function startAnim(a) {
+  a.t0 = performance.now();
+  a.q0 = pieces.map(p => p.group.quaternion.clone());
+  if (a.type === 'move') {
+    a.moving = pieces.filter(p => a.m.sel(S.posOf(a.from, p.i)));
+    a.axis = AXIS[a.m.axis];
+    a.angle = a.m.q * Math.PI / 2;
+  } else {
+    a.q1 = a.to.map(qFromMat);
+  }
+  anim = a;
+}
+function stepAnim(now) {
+  if (!anim && queue.length) startAnim(queue.shift());
+  if (!anim) return;
+  const k = Math.min(1, (now - anim.t0) / anim.dur), e = ease(k);
+  if (anim.type === 'move') {
+    const rq = new THREE.Quaternion().setFromAxisAngle(anim.axis, anim.angle * e);
+    anim.moving.forEach(p => p.group.quaternion.copy(rq).multiply(anim.q0[p.i]));
+  } else {
+    pieces.forEach(p => p.group.quaternion.copy(anim.q0[p.i]).slerp(anim.q1[p.i], e));
+  }
+  if (k >= 1) {
+    snapTo(anim.to);
+    const done = anim; anim = null;
+    onSettled(done.to);
+  }
+}
+
+// ---------- UI ----------
+const fmt = n => n.toLocaleString();
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+const pad = $('#pad');
+const addLbl = (txt, el) => { const d = document.createElement('div'); d.className = 'lbl'; d.textContent = txt; el.appendChild(d); };
+const TIPS = { U: 'Stem end', E: 'Middle layer', D: 'Tip end', R: 'Right half', L: 'Left half', F: 'Front half', B: 'Back half' };
+[['U', 'Stem end · U'], ['E', 'Middle · E'], ['D', 'Tip end · D']].forEach(([f, l]) => {
+  addLbl(l, pad);
+  S.MOVES.filter(m => m.face === f).forEach(m => pad.appendChild(moveBtn(m)));
+});
+const four = document.createElement('div'); four.className = 'pad four';
+addLbl('Halves · always 180°', four);
+S.MOVES.filter(m => 'RLFB'.includes(m.face)).forEach(m => four.appendChild(moveBtn(m)));
+pad.after(four);
+function moveBtn(m) {
+  const b = document.createElement('button');
+  b.textContent = m.name.replace("'", '′');
+  b.title = `${TIPS[m.face]}: ${m.q === 2 ? 'half turn' : m.name.includes("'") ? 'quarter turn back' : 'quarter turn'}`;
+  b.onclick = () => doMove(m);
+  return b;
+}
+
+$('#tabs').addEventListener('click', e => {
+  const tab = e.target.dataset.tab; if (!tab) return;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelectorAll('.tabpane').forEach(p => p.classList.toggle('on', p.dataset.pane === tab));
+  setEditMode(tab === 'swap');
+});
+
+$('#btnStep').onclick = () => {
+  const path = S.solution(S.toIndex(logical));
+  if (path.length) doMove(path[0], 320);
+};
+$('#btnSolve').onclick = () => {
+  S.solution(S.toIndex(logical)).forEach(m => doMove(m, 340));
+};
+$('#btnScramble').onclick = () => {
+  undoStack.push(logical);
+  let last = '';
+  for (let i = 0; i < 22; i++) {
+    const opts = S.MOVES.filter(m => m.face !== last);
+    const m = opts[Math.floor(Math.random() * opts.length)];
+    last = m.face;
+    doMove(m, 85, false);
+  }
+};
+$('#btnReset').onclick = () => doSet(S.solvedState());
+$('#btnUndo').onclick = undo;
+function undo() {
+  if (!undoStack.length) return;
+  doSet(undoStack.pop(), 380, false);
+}
+
+const MOVE_BY_NAME = Object.fromEntries(S.MOVES.map(m => [m.name, m]));
+function parseMoves(text) {
+  const raw = text.replace(/[’`´]/g, "'").replace(/[,;()\[\]]/g, ' ').trim();
+  const out = [], bad = [];
+  for (const t of raw ? raw.split(/\s+/) : []) {
+    const mt = /^([UEDRLFBuedrlfb])(2'?|'2?|')?$/.exec(t);
+    if (!mt) { bad.push(t); continue; }
+    const f = mt[1].toUpperCase(), suf = mt[2] || '';
+    if ('RLFB'.includes(f)) out.push(MOVE_BY_NAME[f + '2']);
+    else out.push(MOVE_BY_NAME[f + (suf.includes('2') ? '2' : suf)]);
+  }
+  return { out, bad };
+}
+$('#btnApply').onclick = () => {
+  const { out, bad } = parseMoves($('#seq').value);
+  if (bad.length) { $('#seqErr').textContent = `Didn't understand: ${bad.join(' ')}`; return; }
+  $('#seqErr').textContent = '';
+  if (!out.length) return;
+  if ($('#fromSolved').checked) doSet(S.solvedState(), 300);
+  else undoStack.push(logical);
+  out.forEach(m => doMove(m, 160, false));
+};
+$('#btnFlip').onclick = () => {
+  const flip = S.flipOf(logical[8]) ^ 1;
+  const st = logical.map((R, i) => (i < 8 ? R : S.findG(S.HOME[i], S.posOf(logical, i), flip)));
+  doSet(st, 500);
+};
+$('#hints').onchange = e => setHints(e.target.checked);
+function setHints(on) {
+  pieces.forEach(p => {
+    p.mesh.geometry.setAttribute('color', on ? p.colors.hint : p.colors.real);
+    p.label.visible = on;
+  });
+}
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.code === 'Space') { e.preventDefault(); $('#btnStep').click(); return; }
+  const k = e.key.toUpperCase();
+  if ('UED'.includes(k) && k.length === 1) doMove(MOVE_BY_NAME[k + (e.shiftKey ? "'" : '')]);
+  else if ('RLFB'.includes(k) && k.length === 1) doMove(MOVE_BY_NAME[k + '2']);
+});
+
+// ---------- swap (edit) mode ----------
+let editMode = false, selected = null, hovered = null;
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+function setEditMode(on) {
+  editMode = on; selected = null; setHover(null); refreshGlow();
+  $('#chip').innerHTML = on
+    ? '<b>Swap mode:</b> click a piece, then click where it belongs'
+    : 'Drag to look around · <b>U</b> stem end (left) · <b>D</b> tip end · <b>E</b> middle';
+}
+function pick(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const hit = ray.intersectObjects(pieces.map(p => p.group), true)[0];
+  if (!hit) return null;
+  let o = hit.object; while (o && !pieces.some(p => p.group === o)) o = o.parent;
+  return pieces.find(p => p.group === o) || null;
+}
+function setHover(p) { hovered = p; refreshGlow(); renderer.domElement.style.cursor = p && editMode ? 'pointer' : ''; }
+function refreshGlow() {
+  pieces.forEach(p => {
+    const e = p === selected ? 0x7a4d00 : p === hovered && editMode ? 0x3a2600 : 0x000000;
+    p.skin.emissive.setHex(e);
+  });
+}
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', e => (downAt = [e.clientX, e.clientY]));
+renderer.domElement.addEventListener('pointermove', e => { if (editMode && !downAt) { const p = pick(e); if (p !== hovered) setHover(p); } });
+renderer.domElement.addEventListener('pointerup', e => {
+  const moved = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5;
+  downAt = null;
+  if (!editMode || moved || anim || queue.length) return;
+  const p = pick(e);
+  if (!p) { selected = null; refreshGlow(); return; }
+  if (!selected) { selected = p; refreshGlow(); return; }
+  if (selected === p) { selected = null; refreshGlow(); return; }
+  if (selected.kind !== p.kind) { toast('Corners swap with corners, middle pieces with middle pieces'); selected = p; refreshGlow(); return; }
+  const a = selected.i, b = p.i, flip = S.flipOf(logical[8]);
+  const pa = S.posOf(logical, a), pb = S.posOf(logical, b);
+  const st = logical.slice();
+  st[a] = S.findG(S.HOME[a], pb, a < 8 ? null : flip);
+  st[b] = S.findG(S.HOME[b], pa, b < 8 ? null : flip);
+  selected = null; refreshGlow();
+  doSet(st, 480);
+});
+
+// ---------- distance + tree ----------
+const COL = { good: 'var(--good)', same: 'var(--same)', bad: 'var(--bad)' };
+function onSettled(st) {
+  if (queue.length) return; // update once the queue drains
+  const idx = S.toIndex(st), d = S.dist[idx];
+  journey.push(d); if (journey.length > 80) journey.shift();
+  renderStatus(idx, d);
+  renderTree(idx, d);
+  renderSpark();
+  if (d === 0 && journey.length > 1 && journey[journey.length - 2] > 0) celebrate();
+}
+function renderStatus(idx, d) {
+  $('#distNum').textContent = d;
+  const C = 2 * Math.PI * 44, frac = d / S.maxD;
+  $('#ringArc').setAttribute('stroke-dasharray', `${Math.max(0.001, frac * C)} ${C}`);
+  $('#ringArc').setAttribute('stroke', d === 0 ? 'var(--good)' : d <= 4 ? 'var(--good)' : d <= 9 ? 'var(--accent)' : 'var(--bad)');
+  let below = 0; for (let i = 0; i < d; i++) below += S.counts[i];
+  const pct = (below / S.total) * 100;
+  $('#headline').textContent = d === 0 ? 'Solved! 🍌' : d === 1 ? '1 move from solved' : `${d} moves from solved`;
+  $('#meta').textContent = d === 0
+    ? 'A perfect banana. Scramble it or enter your position.'
+    : `Harder than ${pct < 1 ? pct.toFixed(2) : Math.round(pct)}% of all positions. The worst case is ${S.maxD}.`;
+  const best = S.neighbors(idx).filter(n => n.d === d - 1).map(n => n.m.name.replace("'", '′'));
+  $('#next').innerHTML = d === 0 ? '' : `Best next: ${best.map(b => `<span class="pill">${b}</span>`).join('')}`;
+  $('#btnStep').disabled = $('#btnSolve').disabled = d === 0;
+  $('#treeSub').textContent = `${fmt(S.total)} positions`;
+}
+
+function renderTree(idx, d) {
+  const svg = $('#tree');
+  const W = Math.max(260, svg.clientWidth || 320);
+  const RH = 27, TOP = 20, H = TOP + (S.maxD + 1) * RH + 6;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = H + 'px';
+  const Y = r => TOP + r * RH, cx = W / 2;
+  const maxC = Math.max(...S.counts);
+  let bands = '', twigs = '', edges = '', nodes = '';
+
+  for (let r = 0; r <= S.maxD; r++) {
+    const w = 26 + (W - 120) * Math.sqrt(S.counts[r] / maxC);
+    const cur = r === d ? ' cur' : '';
+    bands += `<rect class="band${cur}" x="${cx - w / 2}" y="${Y(r) - 10}" width="${w}" height="20" rx="10"><title>${fmt(S.counts[r])} positions are ${r} move${r === 1 ? '' : 's'} from solved</title></rect>`;
+    bands += `<text class="lab${cur}" x="6" y="${Y(r) + 3.5}">${r}</text>`;
+    bands += `<text class="lab${cur}" x="${W - 6}" y="${Y(r) + 3.5}" text-anchor="end">${fmt(S.counts[r])}</text>`;
+  }
+
+  // the current node's children, laid out on their rows
+  const kids = S.neighbors(idx);
+  const groups = { [-1]: [], 0: [], 1: [] };
+  kids.forEach(k => groups[k.d - d].push(k));
+  const kidPos = new Map();
+  groups[-1].forEach((k, i, a) => kidPos.set(k, [cx + (i - (a.length - 1) / 2) * 27, Y(d - 1)]));
+  groups[0].forEach((k, i) => kidPos.set(k, [cx + (i % 2 ? 1 : -1) * (30 + Math.floor(i / 2) * 26), Y(d)]));
+  const sp = Math.min(25, (W - 70) / Math.max(1, groups[1].length));
+  groups[1].forEach((k, i, a) => kidPos.set(k, [cx + (i - (a.length - 1) / 2) * sp, Y(d + 1)]));
+
+  // shortest path back to the root
+  const path = S.solution(idx);
+  const pts = [[cx, Y(d)]];
+  let cur = idx;
+  path.forEach((m, k) => {
+    cur = S.next(cur, m.i);
+    if (k === 0) { pts.push(kidPos.get(groups[-1].find(g => g.m === m))); return; }
+    const depth = d - k - 1;
+    const x = depth === 0 ? cx : cx + 16 * Math.sin(k * 1.9 + idx % 7);
+    pts.push([x, Y(depth)]);
+    // twigs: the other branches at this node
+    const nb = S.neighbors(cur).filter((n, j) => j % 3 === 0 || n.d < depth);
+    nb.slice(0, 5).forEach((n, j) => {
+      const ox = (j % 2 ? 1 : -1) * (12 + (j >> 1) * 8), oy = (n.d - depth) * RH * 0.55;
+      twigs += `<path class="twig" d="M${x},${Y(depth)} q${ox * 0.3},${oy * 0.6} ${ox},${oy}"/><circle class="twigdot" cx="${x + ox}" cy="${Y(depth) + oy}" r="2.2"/>`;
+    });
+  });
+  if (d > 0) {
+    let dstr = `M${pts[0][0]},${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], my = (y0 + y1) / 2;
+      dstr += ` C${x0},${my} ${x1},${my} ${x1},${y1}`;
+      if (i > 1) edges += `<text class="mvlab" x="${(x0 + x1) / 2 + 9}" y="${my + 3}">${path[i - 1].name.replace("'", '′')}</text>`;
+      if (i > 1 && i < pts.length - 1) nodes += `<circle class="pnode" cx="${x1}" cy="${y1}" r="5"/>`;
+    }
+    edges = `<path class="path" d="${dstr}"/>` + edges;
+  }
+
+  // children (clickable)
+  let kidsSvg = '';
+  [[-1, 'good'], [0, 'same'], [1, 'bad']].forEach(([g, c]) => groups[g].forEach(k => {
+    const [x, y] = kidPos.get(k);
+    const onPath = g === -1 && k.m === path[0];
+    kidsSvg += `<path class="cedge" stroke="${COL[c]}" d="M${cx},${Y(d)} C${cx},${(Y(d) + y) / 2} ${x},${(Y(d) + y) / 2} ${x},${y}"/>`;
+    nodes += `<g class="child" data-m="${k.m.i}"><title>${k.m.name}: ${k.d} move${k.d === 1 ? '' : 's'} from solved</title>
+      <circle cx="${x}" cy="${y}" r="${onPath ? 11 : 10}" fill="${COL[c]}"/><text x="${x}" y="${y + 3}" text-anchor="middle">${k.m.name.replace("'", '′')}</text></g>`;
+  }));
+
+  // root
+  const rootNode = d === 0 ? '' : `<circle cx="${cx}" cy="${Y(0)}" r="11" fill="var(--accent)"/><text x="${cx}" y="${Y(0) + 4.5}" text-anchor="middle" font-size="12">🍌</text>`;
+  const you = `<g class="you"><circle cx="${cx}" cy="${Y(d)}" r="13"/><text x="${cx}" y="${Y(d) + 3}" text-anchor="middle">${d === 0 ? '🍌' : 'You'}</text></g>`;
+  svg.innerHTML = bands + twigs + kidsSvg + edges + nodes + rootNode + you;
+}
+$('#tree').addEventListener('click', e => {
+  const g = e.target.closest('.child');
+  if (g) doMove(S.MOVES[+g.dataset.m]);
+});
+
+function renderSpark() {
+  const svg = $('#spark'), W = 320, H = 54, n = journey.length;
+  const x = i => (n === 1 ? W : (i / (n - 1)) * (W - 8) + 4), y = v => H - 6 - (v / S.maxD) * (H - 12);
+  const pts = journey.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+  svg.innerHTML = `<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--good)" stroke-dasharray="3 4" opacity=".6"/>
+    <polygon points="${x(0)},${y(0)} ${pts} ${x(n - 1)},${y(0)}" fill="var(--band)"/>
+    <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+}
+
+let spin = null;
+function celebrate() {
+  $('#distCard').classList.remove('solved-pop'); void $('#distCard').offsetWidth; $('#distCard').classList.add('solved-pop');
+  spin = { t0: performance.now(), dur: 1300 };
+  toast('Solved! 🍌');
+}
+
+// ---------- loop ----------
+function resize() {
+  const r = stage.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  camera.position.setLength(10.5 * Math.max(1, 1.15 / camera.aspect)); // keep the whole banana in view on narrow screens
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(() => { resize(); renderTree(S.toIndex(logical), S.dist[S.toIndex(logical)]); }).observe(stage);
+resize();
+journey = [];
+const fromHash = parseMoves(decodeURIComponent(location.hash.slice(1)));
+if (fromHash.out.length && !fromHash.bad.length) {
+  fromHash.out.forEach(m => (logical = S.applyMove(logical, m)));
+  snapTo(logical);
+  $('#seq').value = fromHash.out.map(m => m.name).join(' ');
+}
+onSettled(logical);
+
+renderer.setAnimationLoop(now => {
+  stepAnim(now);
+  if (spin) {
+    const k = Math.min(1, (now - spin.t0) / spin.dur);
+    root.rotation.y = ease(k) * Math.PI * 2;
+    root.position.y = Math.sin(k * Math.PI) * 0.35;
+    if (k >= 1) { spin = null; root.rotation.y = 0; root.position.y = 0; }
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

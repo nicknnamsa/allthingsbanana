@@ -1,0 +1,236 @@
+---
+interface Props { title: string; description: string; wide?: boolean; section?: string }
+const { title, description, wide = false, section = '' } = Astro.props;
+const path = Astro.url.pathname;
+const sections = [
+  { id: 'home', href: '/', label: 'Home' },
+  { id: 'markets', href: '/markets/', label: 'Markets' },
+  { id: 'softs', href: '/markets/#board', label: 'Fruit & softs' },
+  { id: 'shops', href: '/markets/#shops', label: 'US shop prices' },
+  { id: 'news', href: '/#latest', label: 'Latest news' },
+  { id: 'cube', href: '/banana-cube/', label: 'Banana Cube' },
+  { id: 'about', href: '/about/', label: 'About' },
+];
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="canonical" href={new URL(path, Astro.site)}>
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap wide mast-in">
+      <a class="logo" href="/" aria-label="All Things Banana, home">allthings<span>banana</span></a>
+      <div class="search" id="search">
+        <input id="q" type="search" placeholder="Search prices, fruit or banana news" autocomplete="off" aria-label="Search" aria-controls="qres">
+        <button id="qgo" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <div class="qres" id="qres" hidden></div>
+      </div>
+      <nav class="toplinks" aria-label="Main">
+        <a href="/#latest">News</a><a href="/markets/">Markets</a><a href="/banana-cube/">Play</a>
+      </nav>
+    </div>
+  </header>
+  <nav class="sections" aria-label="Sections">
+    <div class="wrap wide sec-in">
+      {sections.map(s => <a href={s.href} class={section === s.id ? 'on' : ''}>{s.label}</a>)}
+    </div>
+  </nav>
+  <div class="tickers" aria-label="Market summary">
+    <div class="wrap wide tk-in" id="tickers">
+      {Array.from({ length: 6 }).map(() => <div class="tk sk"><span></span><span></span></div>)}
+    </div>
+  </div>
+
+  <main class={wide ? 'wrap wide' : 'wrap'}><slot /></main>
+
+  <footer class="foot">
+    <div class="wrap wide foot-in">
+      <span>© {new Date().getFullYear()} All Things Banana · Prices are delayed or monthly averages and are not financial advice.</span>
+      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a></span>
+    </div>
+  </footer>
+</body>
+</html>
+
+<script>
+  import { getMarket, getFeed, allSeries, lookup, label, tickerCode, money, signed, lastChange, marketLink, esc, ago, type Sel, type Feed } from '../scripts/market';
+  import { sparkline } from '../scripts/charts';
+
+  // ---------- ticker strip ----------
+  const TICKERS = ['PBANSOP', 'APU0000711211', 'PORANG', 'PCOCO', 'PCOFFOTM', 'PSUGAISA', 'DOLE', 'FDP'];
+  Promise.all([getMarket(), getFeed().catch(() => null)]).then(([m, f]) => {
+    const quotes = new Map((f?.stocks || []).map(q => [q.symbol, q]));
+    const html = (TICKERS.map(c => lookup(m, c)).filter(Boolean) as Sel[]).map(s => {
+      const pts = s.pts, last = pts[pts.length - 1], prev = pts[pts.length - 2], q = quotes.get(s.code);
+      const price = q?.price ?? last.y, ch = q?.change ?? last.y - prev.y, chp = q?.changePct ?? lastChange(pts) ?? 0;
+      return `<a class="tk" href="${marketLink(s.code)}">
+        <span class="tk-n">${esc(label(s))}</span>
+        <span class="tk-v num">${money(s, price)}</span>
+        <span class="tk-c num ${chp >= 0 ? 'up' : 'down'}">${signed(ch, s.dec)} ${signed(chp)}%</span>
+        ${sparkline(pts.slice(s.daily ? -40 : -12).map(p => p.y), 56, 26)}
+      </a>`;
+    }).join('');
+    document.getElementById('tickers')!.innerHTML = html || '<span class="muted">Market data is unavailable right now.</span>';
+  }).catch(() => { document.getElementById('tickers')!.innerHTML = '<span class="muted">Market data is unavailable right now.</span>'; });
+
+  // ---------- search ----------
+  const input = document.getElementById('q') as HTMLInputElement, box = document.getElementById('qres')!;
+  let series: Sel[] = [], feed: Feed | null = null, first: string | null = null;
+  input.addEventListener('focus', () => {
+    getMarket().then(m => (series = allSeries(m))).catch(() => {});
+    getFeed().then(f => (feed = f)).catch(() => {});
+  }, { once: true });
+  function results() {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { box.hidden = true; first = null; return; }
+    const prices = series.filter(s => `${label(s)} ${s.code} ${s.desc} ${tickerCode(s)}`.toLowerCase().includes(q)).slice(0, 6);
+    const news = (feed?.items || []).filter(it => it.title.toLowerCase().includes(q)).slice(0, 6);
+    first = prices[0] ? marketLink(prices[0].code) : news[0]?.url ?? null;
+    box.innerHTML = (prices.length ? `<div class="qh">Prices</div>` + prices.map(s => `<a href="${marketLink(s.code)}">
+        <b>${esc(label(s))}</b><span>${esc(s.desc)}</span><em class="num">${money(s, s.pts[s.pts.length - 1].y)}</em></a>`).join('') : '')
+      + (news.length ? `<div class="qh">News</div>` + news.map(it => `<a href="${esc(it.url)}" target="_blank" rel="noopener nofollow">
+        <b class="nt">${esc(it.title)}</b><span>${esc(it.source)} · ${ago(it.published)}</span></a>`).join('') : '')
+      || `<div class="qnone">No matches for “${esc(input.value.trim())}”</div>`;
+    box.hidden = false;
+  }
+  input.addEventListener('input', results);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && first) { if (first.startsWith('http')) window.open(first, '_blank', 'noopener'); else location.href = first; }
+    if (e.key === 'Escape') { box.hidden = true; input.blur(); }
+  });
+  document.getElementById('qgo')!.addEventListener('click', () => { if (first) location.href = first; else input.focus(); });
+  document.addEventListener('click', e => { if (!(e.target as HTMLElement).closest('#search')) box.hidden = true; });
+</script>
+
+<style is:global>
+  :root {
+    --bg: #ffffff; --surface: #f4f5f7; --card: #ffffff; --border: #e3e6ea; --border-2: #eceff2;
+    --ink: #10141a; --ink-2: #464f5b; --ink-3: #7a8491;
+    --mast: #ffffff; --mast-ink: #10141a; --secbar: #f4f5f7; --field: #eef0f3;
+    --brand: #f2b81f; --link: #1f63c6;
+    --series: #2a78d6; --up: #0b8a0b; --down: #d03b3b;
+    --chip: #eef0f3; --hover: #f5f7f9; --shadow: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101418; --surface: #161b20; --card: #161b20; --border: #2a3037; --border-2: #222830;
+      --ink: #f1f3f5; --ink-2: #b9c1c9; --ink-3: #8b949e;
+      --mast: #1d2228; --mast-ink: #f1f3f5; --secbar: #000000; --field: #2c333b;
+      --link: #8ab4ff; --series: #3987e5; --up: #25c45f; --down: #f2555a;
+      --chip: #262c33; --hover: #1b2026;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101418; --surface: #161b20; --card: #161b20; --border: #2a3037; --border-2: #222830;
+    --ink: #f1f3f5; --ink-2: #b9c1c9; --ink-3: #8b949e;
+    --mast: #1d2228; --mast-ink: #f1f3f5; --secbar: #000000; --field: #2c333b;
+    --link: #8ab4ff; --series: #3987e5; --up: #25c45f; --down: #f2555a;
+    --chip: #262c33; --hover: #1b2026;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; font-family: 'Inter', system-ui, sans-serif; color: var(--ink); background: var(--bg);
+    line-height: 1.45; min-height: 100vh; display: flex; flex-direction: column; font-feature-settings: 'cv11';
+  }
+  main { flex: 1; width: 100%; }
+  a { color: inherit; }
+  h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--ink-3); }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 16px; }
+  .wrap.wide { max-width: 1320px; }
+
+  /* masthead */
+  .masthead { background: var(--mast); color: var(--mast-ink); border-bottom: 1px solid var(--border); }
+  .mast-in { display: flex; align-items: center; gap: 24px; height: 62px; }
+  .logo { font-weight: 800; font-size: 23px; letter-spacing: -0.04em; text-decoration: none; white-space: nowrap; }
+  .logo span { color: var(--brand); }
+  .search { position: relative; flex: 1; max-width: 680px; display: flex; }
+  .search input { flex: 1; min-width: 0; height: 40px; border: none; border-radius: 999px 0 0 999px; background: var(--field); color: var(--ink);
+    padding: 0 18px; font: 500 15px 'Inter', sans-serif; outline: none; }
+  .search input::placeholder { color: var(--ink-3); }
+  .search input:focus { box-shadow: inset 0 0 0 2px var(--brand); }
+  .search button { width: 64px; border: none; border-radius: 0 999px 999px 0; background: var(--brand); color: #1d1600; cursor: pointer; display: grid; place-items: center; }
+  .qres { position: absolute; top: 46px; left: 0; right: 0; z-index: 30; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.25); padding: 6px; max-height: 70vh; overflow: auto; }
+  .qres .qh { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding: 8px 10px 4px; }
+  .qres a { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 8px 10px; border-radius: 8px; text-decoration: none; }
+  .qres a:hover { background: var(--hover); }
+  .qres b { font-size: 14px; }
+  .qres b.nt { grid-column: 1 / -1; font-weight: 600; }
+  .qres span { font-size: 12px; color: var(--ink-3); grid-column: 1; }
+  .qres em { font-style: normal; font-weight: 700; font-size: 13px; grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .qnone { padding: 14px 10px; color: var(--ink-3); font-size: 14px; }
+  .toplinks { display: flex; gap: 6px; margin-left: auto; }
+  .toplinks a { text-decoration: none; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 999px; }
+  .toplinks a:hover { background: var(--field); }
+
+  .sections { background: var(--secbar); border-bottom: 2px solid var(--brand); }
+  .sec-in { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .sec-in::-webkit-scrollbar { display: none; }
+  .sections a { text-decoration: none; font-weight: 600; font-size: 14px; padding: 13px 12px; white-space: nowrap; color: var(--ink); opacity: .85; }
+  .sections a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 4px; }
+  .sections a.on { opacity: 1; box-shadow: inset 0 -3px 0 var(--brand); }
+
+  .tickers { border-bottom: 1px solid var(--border); background: var(--bg); }
+  .tk-in { display: flex; overflow-x: auto; scrollbar-width: none; padding-top: 10px; padding-bottom: 10px; }
+  .tk-in::-webkit-scrollbar { display: none; }
+  .tk { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto; column-gap: 12px; padding: 4px 22px 4px 0; margin-right: 22px;
+    text-decoration: none; min-width: 150px; border-right: 1px solid var(--border-2); flex: none; }
+  .tk:last-child { border-right: none; }
+  .tk-n { font-size: 12px; font-weight: 700; color: var(--link); text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; }
+  .tk-v { font-size: 13px; font-weight: 600; grid-column: 1; }
+  .tk-c { font-size: 12px; font-weight: 600; grid-column: 1; white-space: nowrap; }
+  .tk .spark { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+  .tk:hover .tk-n { text-decoration: underline; }
+  .tk.sk { display: flex; flex-direction: column; gap: 6px; padding: 6px 0; }
+  .tk.sk span { display: block; width: 110px; height: 9px; border-radius: 4px; background: var(--chip); }
+
+  .foot { border-top: 1px solid var(--border); margin-top: 40px; }
+  .foot-in { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 20px; padding-bottom: 24px; color: var(--ink-3); font-size: 12.5px; }
+
+  .prose { padding: 36px 0 16px; }
+  .prose h1 { font-size: 32px; margin: 0 0 12px; }
+  .prose p, .prose li { color: var(--ink-2); font-size: 16px; }
+  .prose a { color: var(--link); }
+
+  /* charts */
+  .chart { position: relative; }
+  .chart svg { display: block; overflow: visible; touch-action: pan-y; }
+  .chart .grid { stroke: var(--border-2); stroke-width: 1; }
+  .chart .axis { fill: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chart .line { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .chart .base { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 4; opacity: .7; }
+  .chart .cross { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+  .chart .dot { fill: var(--series); stroke: var(--card); stroke-width: 2; }
+  .chart .bar path { fill: var(--series); opacity: .85; }
+  .chart .bar.on path { opacity: 1; }
+  .chart-tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 8px;
+    padding: 6px 10px; font-size: 12px; white-space: nowrap; display: flex; flex-direction: column; line-height: 1.35; z-index: 2; }
+  .chart-tip b { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .chart-tip span { opacity: .75; }
+  .chart-tip[hidden] { display: none; }
+
+  @media (max-width: 760px) {
+    .mast-in { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 10px; gap: 10px 16px; }
+    .search { order: 3; flex-basis: 100%; max-width: none; }
+    .search input { height: 38px; font-size: 14px; }
+    .logo { font-size: 20px; }
+    .toplinks a { padding: 6px 8px; font-size: 13px; }
+  }
+</style>

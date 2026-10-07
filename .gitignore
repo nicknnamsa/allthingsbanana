@@ -1,0 +1,14 @@
+# Python
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+.banana_tables.npz
+
+# Website build output, dependencies and local secrets
+node_modules/
+web/dist/
+web/.astro/
+web/.wrangler/
+.dev.vars
+
+.DS_Store

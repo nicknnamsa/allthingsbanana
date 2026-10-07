@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local development. Both are optional; without them the feed shows news only.
+FINNHUB_API_KEY=
+ALPHAVANTAGE_API_KEY=
+YOUTUBE_API_KEY=

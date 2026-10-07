@@ -1,0 +1,301 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base wide section="home" title="All Things Banana · banana news, prices and markets"
+      description="Banana news as it happens, the global banana price, US shop prices and fruit commodity markets, plus a 3D banana cube solver.">
+  <div class="home">
+    <section class="lead">
+      <a class="hero" id="hero" href="/markets/">
+        <div class="hero-chart" id="heroChart"><div class="ph"></div></div>
+        <div class="kicker">Market data</div>
+        <h1 id="heroTitle">Banana prices</h1>
+        <p id="heroText">Loading the latest prices…</p>
+        <div class="meta" id="heroMeta"></div>
+      </a>
+      <div class="duo">
+        <a class="story" id="s1" href="/markets/"><div class="story-chart"></div><h3>&nbsp;</h3><div class="meta"></div></a>
+        <a class="story" id="s2" href="/markets/"><div class="story-chart"></div><h3>&nbsp;</h3><div class="meta"></div></a>
+      </div>
+    </section>
+
+    <section class="top">
+      <h2 class="col-h">Banana business</h2>
+      <div id="top">{Array.from({ length: 6 }).map(() => <div class="sk-item"><span></span><span></span></div>)}</div>
+    </section>
+
+    <section class="latest" id="latest">
+      <h2 class="col-h">Latest <span class="upd" id="updated"></span></h2>
+      <div id="latestList">{Array.from({ length: 8 }).map(() => <div class="sk-item"><span></span><span></span></div>)}</div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>Trending prices</h2>
+        <div id="trend"></div>
+      </section>
+      <section class="panel">
+        <h2>Banana buzz <span class="h-sub">stories per day</span></h2>
+        <div id="buzz" class="chart-box" style="height:110px"></div>
+      </section>
+      <a class="panel promo" href="/banana-cube/">
+        <div class="promo-art" aria-hidden="true">🍌🧩</div>
+        <div>
+          <div class="kicker">Play</div>
+          <h3>Banana Cube solver</h3>
+          <p>Twist a 3D banana puzzle and see exactly how many moves you are from solved.</p>
+        </div>
+      </a>
+    </aside>
+  </div>
+
+  <section class="more">
+    <h2 class="col-h">More banana news</h2>
+    <ol id="more" class="more-list"></ol>
+    <button id="moreBtn" class="more-btn" hidden>Show more stories</button>
+  </section>
+</Base>
+
+<script>
+  import { lineChart, sparkline, barChart } from '../scripts/charts';
+  import {
+    getMarket, getFeed, lookup, allSeries, money, signed, num, pctHtml, change, lastChange, sliceYears, label,
+    fmtDate, monthOnly, marketLink, esc, ago, YEAR, type Market, type Feed, type Item, type Sel,
+  } from '../scripts/market';
+
+  const $ = (s: string) => document.querySelector(s) as HTMLElement;
+  let market: Market | null = null;
+
+  // ---------- data stories, written from the latest numbers ----------
+  const pctWord = (p: number) => `${num(Math.abs(p), 1)}%`;
+  function storyTitle(s: Sel) {
+    const p = lastChange(s.pts) ?? 0, m = monthOnly(s.pts[s.pts.length - 1].x);
+    const one = ({ Bananas: 'Banana', Oranges: 'Orange', Apples: 'Apple' } as Record<string, string>)[s.name] ?? s.name;
+    const name = s.kind === 'US shop price' ? `${one} prices in US shops` : `${one} prices`;
+    return Math.abs(p) <= 0.5 ? `${name} hold steady in ${m}` : `${name} ${p > 0 ? 'rise' : 'fall'} ${pctWord(p)} in ${m}`;
+  }
+
+  function renderStories() {
+    const g = lookup(market, 'PBANSOP'), r = lookup(market, 'APU0000711211');
+    if (g) {
+      const last = g.pts[g.pts.length - 1], yoy = change(g.pts, YEAR);
+      $('#heroTitle').textContent = storyTitle(g);
+      $('#heroText').textContent =
+        `The global benchmark for bananas imported into the US averaged ${money(g, last.y)} a tonne in ${fmtDate(last.x)}` +
+        (yoy != null ? `, ${yoy >= 0 ? 'up' : 'down'} ${pctWord(yoy)} on a year earlier.` : '.') +
+        (r ? ` In US shops, a pound of bananas cost ${money(r, r.pts[r.pts.length - 1].y)} in ${fmtDate(r.pts[r.pts.length - 1].x)}.` : '');
+      $('#heroMeta').innerHTML = `IMF · US BLS · <span class="mlink">See the full chart →</span>`;
+      $('#hero').setAttribute('href', marketLink('PBANSOP'));
+      const view = sliceYears(g.pts, 3), up = view[view.length - 1].y >= view[0].y;
+      const box = $('#heroChart');
+      box.innerHTML = '';
+      lineChart(box, view, {
+        height: box.clientHeight - 20, color: `var(${up ? '--up' : '--down'})`, baseline: true, label: 'Global banana price, last 3 years',
+        fmt: v => `${money(g, v)} / tonne`, axisFmt: v => money(g, v, 0), dateFmt: x => fmtDate(x),
+      });
+    }
+    // biggest monthly mover among the other world prices, and biggest yearly mover in US shops
+    const all = allSeries(market);
+    const world = all.filter(s => s.kind === 'World price' && s.code !== 'PBANSOP')
+      .sort((a, b) => Math.abs(lastChange(b.pts) ?? 0) - Math.abs(lastChange(a.pts) ?? 0))[0];
+    const shops = all.filter(s => s.kind === 'US shop price')
+      .sort((a, b) => Math.abs(change(b.pts, YEAR) ?? 0) - Math.abs(change(a.pts, YEAR) ?? 0))[0];
+    const fill = (id: string, s: Sel | undefined, title: string, meta: string) => {
+      const el = $(id);
+      if (!s) { el.hidden = true; return; }
+      el.setAttribute('href', marketLink(s.code));
+      el.querySelector('h3')!.textContent = title;
+      el.querySelector('.meta')!.innerHTML = meta;
+      el.querySelector('.story-chart')!.innerHTML = sparkline(s.pts.slice(-24).map(p => p.y), 300, 110, true);
+    };
+    if (world) fill('#s1', world, storyTitle(world), `${esc(world.desc)} · ${money(world, world.pts[world.pts.length - 1].y)} per ${world.per}`);
+    if (shops) {
+      const y = change(shops.pts, YEAR) ?? 0;
+      fill('#s2', shops, `${shops.name} cost ${pctWord(y)} ${y >= 0 ? 'more' : 'less'} than a year ago in US shops`,
+        `US BLS · ${money(shops, shops.pts[shops.pts.length - 1].y)} per ${shops.per}`);
+    }
+  }
+
+  function renderTrending() {
+    $('#trend').innerHTML = allSeries(market).slice(0, 9).map(s => {
+      const pts = s.pts, last = pts[pts.length - 1], prev = pts[pts.length - 2], p = lastChange(pts) ?? 0;
+      return `<a class="tr" href="${marketLink(s.code)}">
+        <span class="tr-n"><b>${esc(s.kind === 'US shop price' ? 'US ' + s.name : label(s))}</b><span>${esc(s.desc)}</span></span>
+        ${sparkline(pts.slice(s.daily ? -40 : -12).map(q => q.y), 54, 24)}
+        <span class="tr-v num"><b>${money(s, last.y)}</b><span class="${p >= 0 ? 'up' : 'down'}">${signed(last.y - prev.y, s.dec)} (${signed(p)}%)</span></span>
+      </a>`;
+    }).join('');
+  }
+
+  // ---------- news ----------
+  // price chips under headlines that mention something we have data for
+  const CHIPS: [RegExp, string][] = [
+    [/\bdole\b/i, 'DOLE'], [/del monte/i, 'FDP'],
+    [/\b(price|prices|priced|cost|costs|cheap|cheaper|expensive|tariffs?|inflation)\b/i, 'PBANSOP'],
+    [/cocoa|chocolate/i, 'PCOCO'], [/coffee/i, 'PCOFFOTM'], [/sugar/i, 'PSUGAISA'], [/orange/i, 'PORANG'],
+    [/strawberr/i, 'APU0000711415'], [/lemon/i, 'APU0000711412'], [/\bapples?\b/i, 'PAPPLE'], [/\brice\b/i, 'PRICENPQ'], [/\btea\b/i, 'PTEA'],
+  ];
+  function chips(title: string) {
+    const out: string[] = [];
+    for (const [re, code] of CHIPS) {
+      if (out.length === 2 || !re.test(title)) continue;
+      const s = lookup(market, code);
+      if (!s) continue;
+      const name = s.code === 'PBANSOP' ? 'BANANAS' : s.kind === 'Stock' ? s.code : s.name.toUpperCase();
+      out.push(`<a class="chip" href="${marketLink(code)}">${esc(name)} ${pctHtml(lastChange(s.pts))}</a>`);
+    }
+    return out.length ? `<div class="chips">${out.join('')}</div>` : '';
+  }
+  const meta = (it: Item) => `<div class="meta">${it.type === 'video' ? '<span class="vid">Video</span> · ' : ''}${esc(it.source)} · <time datetime="${new Date(it.published).toISOString()}">${ago(it.published)}</time></div>`;
+  const link = (it: Item) => `<a class="hl" href="${esc(it.url)}" target="_blank" rel="noopener nofollow">${esc(it.title)}</a>`;
+
+  const BUSINESS = /\b(price|prices|market|markets|export|exports|import|imports|supply|industry|tariffs?|fairtrade|growers?|farms?|farmers|crops?|disease|shipments?|trade|retailers?|supermarkets?|sales|investors?|company|deal)\b/i;
+  let moreShown = 12, feedCache: Feed | null = null;
+
+  function renderNews(f: Feed) {
+    feedCache = f;
+    const items = f.items;
+    if (!items.length) {
+      $('#latestList').innerHTML = $('#top').innerHTML = '<p class="empty">Collecting the first banana news… check back in a minute.</p>';
+      return;
+    }
+    // Latest: the newest stories. Banana business: trade and price stories (plus a video) not already in Latest.
+    const latest = items.slice(0, 10);
+    const used = new Set(latest.map(i => i.id));
+    const video = items.find(i => i.type === 'video' && i.thumb && !used.has(i.id));
+    if (video) used.add(video.id);
+    let biz = items.filter(i => !used.has(i.id) && BUSINESS.test(i.title)).slice(0, video ? 6 : 7);
+    if (!biz.length) biz = items.filter(i => !used.has(i.id)).slice(0, 7);
+    biz.forEach(i => used.add(i.id));
+    const top = (video ? [video] : []).concat(biz);
+
+    $('#top').innerHTML = top.map((it, i) => `<article class="t-item">
+      ${i === 0 && it.thumb ? `<a href="${esc(it.url)}" target="_blank" rel="noopener nofollow" class="t-img"><img src="${esc(it.thumb)}" alt="" loading="lazy"></a>` : ''}
+      ${link(it)}${meta(it)}${chips(it.title)}</article>`).join('');
+    $('#latestList').innerHTML = latest.map(it => `<article class="l-item">${link(it)}${meta(it)}${chips(it.title)}</article>`).join('');
+
+    const rest = items.filter(i => !used.has(i.id));
+    $('#more').innerHTML = rest.slice(0, moreShown).map(it => `<li>${link(it)}${meta(it)}</li>`).join('');
+    ($('#moreBtn') as HTMLButtonElement).hidden = rest.length <= moreShown;
+    $('.more').hidden = !rest.length;
+    $('#updated').textContent = `· updated ${ago(f.updated)}`;
+    renderBuzz(items);
+  }
+
+  function renderBuzz(items: Item[]) {
+    const days = [], today = new Date(); today.setHours(0, 0, 0, 0);
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const n = items.filter(it => it.published >= d.getTime() && it.published < d.getTime() + 864e5).length;
+      days.push({ label: d.toLocaleDateString('en-GB', { weekday: 'short' }), value: n,
+        tip: `<b>${n} ${n === 1 ? 'story' : 'stories'}</b><span>${d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>` });
+    }
+    barChart($('#buzz'), days, 110);
+  }
+
+  $('#moreBtn').addEventListener('click', () => { moreShown += 12; if (feedCache) renderNews(feedCache); });
+
+  getMarket().then(m => {
+    market = m;
+    renderStories(); renderTrending();
+    if (feedCache) renderNews(feedCache);   // add price chips now that prices are here
+  }).catch(() => { $('#heroText').textContent = 'Price data is unavailable right now.'; });
+  getFeed().then(renderNews).catch(() => { $('#latestList').innerHTML = '<p class="empty">Couldn’t load the news. We’ll keep trying.</p>'; });
+  setInterval(() => getFeed(true).then(renderNews).catch(() => {}), 60_000);
+  setInterval(() => document.querySelectorAll('time').forEach(el => (el.textContent = ago(Date.parse(el.getAttribute('datetime')!)))), 30_000);
+</script>
+
+<style>
+  .home { display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr) minmax(0, 1.1fr) 310px; gap: 0 28px; padding-top: 24px; align-items: start; }
+  .side { border-left: 1px solid var(--border); padding-left: 24px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .top, .latest, .lead { min-width: 0; }
+  .latest { border-left: 1px solid var(--border); padding-left: 20px; }
+  .col-h { font-size: 18px; font-weight: 800; margin: 0 0 10px; }
+  .upd { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+  .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); }
+  .home :global(.meta), .more :global(.meta), .meta { font-size: 12px; color: var(--ink-3); margin-top: 4px; font-weight: 500; }
+  .home :global(.vid), .more :global(.vid) { color: var(--down); font-weight: 700; }
+  .h-sub { color: var(--ink-3); font-size: 12px; font-weight: 500; }
+  .empty { color: var(--ink-3); font-size: 14px; }
+
+  /* lead */
+  .hero { display: block; text-decoration: none; text-align: center; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .hero-chart { background: var(--surface); border-radius: 10px; padding: 16px 8px 4px 16px; text-align: left; height: 314px; }
+  .ph { height: 100%; border-radius: 8px; background: var(--chip); }
+  .hero .kicker { margin-top: 18px; }
+  .hero h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.025em; margin: 6px 12px 10px; }
+  .hero p { font-size: 17px; color: var(--ink-2); margin: 0 auto; max-width: 560px; line-height: 1.5; }
+  .hero:hover h1 { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  .hero :global(.mlink) { color: var(--link); font-weight: 600; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; padding-top: 20px; }
+  .story { text-decoration: none; display: block; }
+  .story-chart { background: var(--surface); border-radius: 10px; height: 130px; overflow: hidden; padding-top: 18px; }
+  .story-chart :global(svg) { width: 100%; height: 112px; display: block; }
+  .story h3 { font-size: 17px; font-weight: 700; margin: 10px 0 0; line-height: 1.3; }
+  .story:hover h3 { text-decoration: underline; }
+
+  /* news columns */
+  .t-item, .l-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .t-item:first-child, .l-item:first-child { padding-top: 0; }
+  .top :global(.hl), .latest :global(.hl), .more :global(.hl) { text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.3; display: block; }
+  .latest :global(.hl) { font-size: 15.5px; font-weight: 600; }
+  .home :global(.hl:hover), .more :global(.hl:hover) { text-decoration: underline; }
+  .top :global(.t-img) { display: block; margin-bottom: 10px; }
+  .top :global(.t-img img) { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; display: block; background: var(--chip); }
+  .home :global(.chips) { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+  .home :global(.chip) { font-size: 11.5px; font-weight: 700; text-decoration: none; color: var(--link); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .home :global(.chip:hover) { border-color: var(--link); }
+  .home :global(.chip span) { font-weight: 600; margin-left: 3px; }
+  .home :global(.t-item), .home :global(.l-item) { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .home :global(.t-item:first-child), .home :global(.l-item:first-child) { padding-top: 0; }
+  .sk-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 7px; }
+  .sk-item span { display: block; height: 11px; border-radius: 4px; background: var(--chip); width: 90%; }
+  .sk-item span:last-child { width: 40%; height: 9px; }
+
+  /* sidebar */
+  .panel { background: var(--surface); border-radius: 10px; padding: 14px 14px 10px; }
+  .panel h2 { font-size: 16px; font-weight: 800; margin: 0 0 8px; }
+  .side :global(.tr) { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--border); text-decoration: none; }
+  .side :global(.tr:first-child) { border-top: none; }
+  .side :global(.tr-n) { min-width: 0; }
+  .side :global(.tr-n b) { display: block; font-size: 12.5px; color: var(--link); text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .side :global(.tr-n span) { display: block; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .side :global(.tr-v) { text-align: right; font-size: 12.5px; }
+  .side :global(.tr-v b) { display: block; font-weight: 600; }
+  .side :global(.tr-v span) { font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .side :global(.tr:hover .tr-n b) { text-decoration: underline; }
+  .promo { display: flex; gap: 12px; align-items: center; text-decoration: none; }
+  .promo-art { font-size: 24px; flex: none; }
+  .promo h3 { margin: 2px 0 2px; font-size: 15px; }
+  .promo p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+  .promo:hover h3 { text-decoration: underline; }
+
+  /* more */
+  .more { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .more-list { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+  .more-list :global(li) { break-inside: avoid; padding: 10px 0; border-bottom: 1px solid var(--border-2); }
+  .more-list :global(.hl) { font-size: 15px !important; font-weight: 600 !important; }
+  .more-btn { margin-top: 16px; font: 700 14px 'Inter', sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 9px 20px; cursor: pointer; }
+  .more-btn:hover { background: var(--chip); }
+  .more-btn[hidden] { display: none; }
+
+  @media (max-width: 1240px) {
+    .home { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 300px; }
+    .lead { grid-column: 1 / 3; margin-bottom: 24px; }
+    .top { grid-column: 1; grid-row: 2; }
+    .latest { grid-column: 2; grid-row: 2; }
+    .side { grid-column: 3; grid-row: 1 / span 2; }
+  }
+  @media (max-width: 900px) {
+    .home { grid-template-columns: 1fr; }
+    .lead, .top, .latest, .side { grid-column: auto; grid-row: auto; }
+    .latest, .side { border-left: none; padding-left: 0; }
+    .top, .latest { margin-bottom: 24px; }
+    .hero h1 { font-size: 26px; }
+    .hero p { font-size: 15px; }
+    .more-list { columns: 1; }
+  }
+  @media (max-width: 560px) {
+    .duo { grid-template-columns: 1fr; }
+    .hero-chart { height: 254px; padding: 12px 4px 4px 10px; }
+  }
+</style>

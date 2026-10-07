@@ -1,0 +1,16 @@
+{
+  "name": "allthingsbanana",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "snapshot": "node scripts/snapshot.mjs",
+    "build": "node scripts/snapshot.mjs && astro build",
+    "dev": "npm run build && wrangler dev --test-scheduled",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "astro": "^7.3.6",
+    "fast-xml-parser": "^5.11.2",
+    "wrangler": "^4.148.0"
+  }
+}

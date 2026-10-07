@@ -1,0 +1,33 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "allthingsbanana",
+	"main": "worker/index.js",
+	"compatibility_date": "2026-09-01",
+	// the built Astro site; anything that isn't a file (like /api/feed) goes to the worker
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "404-page"
+	},
+	"kv_namespaces": [
+		// create with: npx wrangler kv namespace create FEED  (then paste the id here)
+		{
+			"binding": "FEED",
+			"id": "8f9c453f65864182bf77b201f28f3ae2",
+			"remote": true
+		}
+	],
+	// serve the site on the real domain (Cloudflare creates the DNS records and certificate)
+	"routes": [
+		{ "pattern": "allthingsbanana.com", "custom_domain": true },
+		{ "pattern": "www.allthingsbanana.com", "custom_domain": true }
+	],
+	"triggers": {
+		"crons": [
+			"*/10 * * * *"
+		]
+	},
+	"observability": {
+		"enabled": true
+	}
+}
