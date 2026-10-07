@@ -2,70 +2,132 @@
 import Base from '../../layouts/Base.astro';
 ---
 <Base wide section="more" title="Banana Clicker · peel bananas for your country · All Things Banana"
-      description="Click the banana to peel it. Every banana you peel counts for your country on the live world leaderboard.">
+      description="Click the banana to peel it. Keep clicking and the page descends into a banana rave. Every banana you peel counts for your country on the live world leaderboard.">
+  <canvas id="rave" class="rave" aria-hidden="true"></canvas>
+  <div id="chant" class="chant" aria-hidden="true"></div>
+  <div id="stageCall" class="stage-call" aria-hidden="true"></div>
+
   <nav class="crumbs"><a href="/more/">More Bananas</a> › Banana Clicker</nav>
 
   <div class="game">
-    <section class="play">
+    <section class="play" id="play">
       <div class="scores">
         <div><span class="lbl">You've peeled</span><b class="num" id="mine">0</b></div>
         <div><span class="lbl" id="countryLbl">Your country</span><b class="num" id="ours">—</b></div>
         <div><span class="lbl">The whole world</span><b class="num" id="world">—</b></div>
       </div>
 
-      <button class="banana-btn" id="banana" aria-label="Peel the banana">
-        <svg viewBox="0 0 200 330" width="220" height="363" aria-hidden="true">
-          <defs>
-            <linearGradient id="peelG" x1="0" x2="1">
-              <stop offset="0" stop-color="#e9b923"/><stop offset=".45" stop-color="#ffe066"/><stop offset="1" stop-color="#d9a514"/>
-            </linearGradient>
-            <linearGradient id="fleshG" x1="0" x2="1">
-              <stop offset="0" stop-color="#efe2b0"/><stop offset=".5" stop-color="#fff7d8"/><stop offset="1" stop-color="#e8d9a2"/>
-            </linearGradient>
-          </defs>
-          <g id="whole">
-            <!-- the fruit inside -->
-            <path d="M100 34 C122 34 133 82 131 156 L69 156 C67 82 78 34 100 34 Z" fill="url(#fleshG)"/>
-            <!-- lower peel and tip -->
-            <path d="M68 150 C66 214 78 270 100 296 C122 270 134 214 132 150 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/>
-            <path d="M86 160 C84 210 90 250 100 280" stroke="#c9970f" stroke-width="2" fill="none" opacity=".5"/>
-            <circle cx="100" cy="297" r="6" fill="#4b3420"/>
-            <!-- the two peel flaps that open -->
-            <g class="flap left"><path d="M100 26 C82 28 68 62 67 152 L101 152 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/></g>
-            <g class="flap right">
-              <path d="M100 26 C118 28 132 62 133 152 L99 152 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/>
-              <rect x="94" y="8" width="12" height="22" rx="3" fill="#7a4b22"/>
-            </g>
-          </g>
-        </svg>
-      </button>
-      <p class="hint">Click or tap the banana · or press <kbd>Space</kbd></p>
+      <div class="hype">
+        <div class="hype-top">
+          <span class="stage-name" id="stageName">Chill</span>
+          <span class="hype-next" id="hypeNext">Keep peeling…</span>
+        </div>
+        <div class="hype-bar"><i id="hypeFill"></i></div>
+      </div>
+
+      <div class="banana-zone">
+        <div class="combo" id="combo" hidden></div>
+        <button class="banana-btn" id="banana" aria-label="Peel the banana">
+          <span class="spinner" id="spinner">
+            <svg viewBox="0 0 200 330" width="220" height="363" aria-hidden="true">
+              <defs>
+                <linearGradient id="peelG" x1="0" x2="1">
+                  <stop offset="0" stop-color="#e9b923"/><stop offset=".45" stop-color="#ffe066"/><stop offset="1" stop-color="#d9a514"/>
+                </linearGradient>
+                <linearGradient id="fleshG" x1="0" x2="1">
+                  <stop offset="0" stop-color="#efe2b0"/><stop offset=".5" stop-color="#fff7d8"/><stop offset="1" stop-color="#e8d9a2"/>
+                </linearGradient>
+              </defs>
+              <g id="whole">
+                <path d="M100 34 C122 34 133 82 131 156 L69 156 C67 82 78 34 100 34 Z" fill="url(#fleshG)"/>
+                <path d="M68 150 C66 214 78 270 100 296 C122 270 134 214 132 150 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/>
+                <path d="M86 160 C84 210 90 250 100 280" stroke="#c9970f" stroke-width="2" fill="none" opacity=".5"/>
+                <circle cx="100" cy="297" r="6" fill="#4b3420"/>
+                <g class="flap left"><path d="M100 26 C82 28 68 62 67 152 L101 152 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/></g>
+                <g class="flap right">
+                  <path d="M100 26 C118 28 132 62 133 152 L99 152 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/>
+                  <rect x="94" y="8" width="12" height="22" rx="3" fill="#7a4b22"/>
+                </g>
+              </g>
+            </svg>
+          </span>
+        </button>
+      </div>
+
+      <div class="level">
+        <span id="levelName">Level 1 · Banana Rookie</span>
+        <div class="level-bar"><i id="levelFill"></i></div>
+        <span class="level-next" id="levelNext"></span>
+      </div>
+
+      <div class="controls">
+        <button id="soundBtn" aria-pressed="true">🔊 Sound on</button>
+        <button id="calmBtn" aria-pressed="false">Calm mode: off</button>
+      </div>
+      <p class="hint">Click, tap or press <kbd>Space</kbd>. Keep going and see what happens. <span class="warn">Gets loud and flashy.</span></p>
       <div id="pops" class="pops" aria-hidden="true"></div>
+      <div id="toast" class="toast" aria-live="polite"></div>
     </section>
 
     <aside class="board">
       <h2>World leaderboard <span class="live"><i></i>live</span></h2>
       <ol id="leaders" class="leaders"><li class="empty">Loading…</li></ol>
-      <p class="note">Your country comes from your connection, as seen by our host, Cloudflare. We only store a total per country, nothing about you.</p>
+      <p class="note">Your country comes from your connection, as seen by our host, Cloudflare. We only store a total per country, nothing about you. One click is one banana, however hyped you are.</p>
     </aside>
   </div>
 </Base>
 
 <script>
+  import { Techno, RaveCanvas } from '../../scripts/rave';
+
   const $ = (s: string) => document.querySelector(s) as HTMLElement;
   const fmt = (n: number) => n.toLocaleString('en-US');
+  const store = {
+    get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
+    set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch {} },
+  };
   const regionName = new Intl.DisplayNames(['en'], { type: 'region' });
   const nameOf = (c: string) => (c === 'XX' ? 'Unknown' : (() => { try { return regionName.of(c) || c; } catch { return c; } })());
   const flag = (c: string) => (c === 'XX' ? '🏳️' : String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))));
+  const lastIndex = <T,>(a: T[], f: (x: T) => boolean) => { for (let i = a.length - 1; i >= 0; i--) if (f(a[i])) return i; return -1; };
 
+  // ---------- stages: how deep into the rave you are ----------
+  const STAGES = [
+    { at: 0, name: 'Chill' },
+    { at: 15, name: 'Groovy' },
+    { at: 50, name: 'Banana Rain' },
+    { at: 110, name: 'Disco Peel' },
+    { at: 200, name: 'BANANA RAVE' },
+    { at: 320, name: 'BANANAGEDDON' },
+  ];
+  const MAX_HYPE = 420;
+  // lifetime levels, from your own total
+  const LEVELS = [
+    { at: 0, name: 'Banana Rookie' }, { at: 50, name: 'Peel Apprentice' }, { at: 250, name: 'Peel Pro' },
+    { at: 1000, name: 'Banana Baron' }, { at: 5000, name: 'Banana Overlord' }, { at: 25000, name: 'Supreme Banana' },
+    { at: 100000, name: 'One With The Banana' },
+  ];
+
+  let hype = 0, stage = 0, combo = 0, lastClick = 0, spin = 0, lastFrame = performance.now();
+  let calm = store.get('atb-calm') != null ? store.get('atb-calm') === '1' : matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let muted = store.get('atb-muted') === '1';
+
+  const music = new Techno();
+  music.setMuted(muted);
+  const fx = new RaveCanvas($('#rave') as HTMLCanvasElement);
+  fx.calm = calm;
+
+  // ---------- scores and leaderboard ----------
   type Tally = { country: string; total: number; countries: Record<string, number> };
-  let tally: Tally | null = null;
-  let pending = 0, sending = false, recent: number[] = [];
-  let mine = 0;
-  try { mine = Number(localStorage.getItem('atb-peeled')) || 0; } catch {}
+  let tally: Tally | null = null, pending = 0, sending = false, recent: number[] = [];
+  let mine = Number(store.get('atb-peeled')) || 0;
 
-  function render() {
+  function renderScores() {
     $('#mine').textContent = fmt(mine);
+    const li = lastIndex(LEVELS, l => mine >= l.at), cur = LEVELS[li], next = LEVELS[li + 1];
+    $('#levelName').textContent = `Level ${li + 1} · ${cur.name}`;
+    $('#levelFill').style.width = next ? `${((mine - cur.at) / (next.at - cur.at)) * 100}%` : '100%';
+    $('#levelNext').textContent = next ? `${fmt(next.at - mine)} to ${next.name}` : 'Maximum banana';
     if (!tally) return;
     const yours = tally.country, total = tally.total + pending, ours = (tally.countries[yours] || 0) + pending;
     $('#world').textContent = fmt(total);
@@ -81,33 +143,48 @@ import Base from '../../layouts/Base.astro';
       </li>`).join('') : '<li class="empty">No bananas peeled yet. Be the first!</li>';
   }
 
-  // ---------- the peel ----------
-  const btn = $('#banana');
-  const whole = btn.querySelector('#whole') as SVGGElement;
-  const left = btn.querySelector('.flap.left') as SVGGElement, right = btn.querySelector('.flap.right') as SVGGElement;
-  const running: Animation[] = [];
-  function peelAnimation() {
-    running.splice(0).forEach(a => a.cancel());
-    // linear overall; each step has its own easing (an overall easing would squash the whole sequence)
-    const timing = { duration: 620 }, out = 'cubic-bezier(.2,.7,.3,1)';
-    const flap = (deg: number) => [{ transform: 'rotate(0deg)', easing: out }, { transform: `rotate(${deg}deg)`, offset: .32 },
-      { transform: `rotate(${deg}deg)`, offset: .78 }, { transform: 'rotate(0deg)', offset: .8 }, { transform: 'rotate(0deg)' }];
-    running.push(
-      left.animate(flap(-150), timing),
-      right.animate(flap(150), timing),
-      // pop, then the peeled banana shrinks away and a fresh one appears
-      whole.animate([{ transform: 'scale(1)', opacity: 1, easing: out }, { transform: 'scale(1.05)', offset: .32 }, { transform: 'scale(1.02)', opacity: 1, offset: .62, easing: 'ease-in' },
-        { transform: 'scale(.55) translateY(40px)', opacity: 0, offset: .79 }, { transform: 'scale(.8)', opacity: 0, offset: .8, easing: out }, { transform: 'scale(1)', opacity: 1 }], timing),
-    );
+  // ---------- feedback ----------
+  function toast(text: string) {
+    const t = $('#toast');
+    t.textContent = text;
+    t.getAnimations().forEach(a => a.cancel());
+    t.animate([{ opacity: 0, transform: 'translate(-50%, 10px) scale(.9)' }, { opacity: 1, transform: 'translate(-50%, 0) scale(1)', offset: .15 },
+      { opacity: 1, offset: .8 }, { opacity: 0, transform: 'translate(-50%, -10px)' }], { duration: 1800, fill: 'forwards' });
+  }
+  function stageCall(name: string) {
+    const el = $('#stageCall');
+    el.textContent = name;
+    el.getAnimations().forEach(a => a.cancel());
+    el.animate([{ opacity: 0, transform: 'translate(-50%, -50%) scale(.6)' }, { opacity: 1, transform: 'translate(-50%, -50%) scale(1.1)', offset: .2 },
+      { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: .7 }, { opacity: 0, transform: 'translate(-50%, -50%) scale(1.4)' }], { duration: 1500, fill: 'forwards' });
   }
   function popPlusOne(x: number, y: number) {
     const el = document.createElement('span');
     el.className = 'pop';
     el.textContent = '+1';
-    el.style.left = `${x}px`; el.style.top = `${y}px`;
+    const box = $('#play').getBoundingClientRect();
+    el.style.left = `${x - box.left}px`; el.style.top = `${y - box.top}px`;
     $('#pops').append(el);
-    el.animate([{ transform: 'translate(-50%, 0) scale(.8)', opacity: 1 }, { transform: 'translate(-50%, -90px) scale(1.2)', opacity: 0 }], { duration: 800, easing: 'ease-out' })
-      .onfinish = () => el.remove();
+    el.animate([{ transform: 'translate(-50%, 0) scale(.8)', opacity: 1 }, { transform: `translate(${-50 + (Math.random() - .5) * 120}%, -90px) scale(1.3)`, opacity: 0 }],
+      { duration: 800, easing: 'ease-out' }).onfinish = () => el.remove();
+  }
+
+  // ---------- the peel ----------
+  const whole = document.getElementById('whole') as unknown as SVGGElement;
+  const left = document.querySelector('.flap.left') as SVGGElement, right = document.querySelector('.flap.right') as SVGGElement;
+  const running: Animation[] = [];
+  function peelAnimation() {
+    running.splice(0).forEach(a => a.cancel());
+    // linear overall; each step has its own easing (an overall easing would squash the whole sequence)
+    const timing = { duration: stage >= 3 ? 420 : 620 }, out = 'cubic-bezier(.2,.7,.3,1)';
+    const flap = (deg: number) => [{ transform: 'rotate(0deg)', easing: out }, { transform: `rotate(${deg}deg)`, offset: .32 },
+      { transform: `rotate(${deg}deg)`, offset: .78 }, { transform: 'rotate(0deg)', offset: .8 }, { transform: 'rotate(0deg)' }];
+    running.push(
+      left.animate(flap(-150), timing),
+      right.animate(flap(150), timing),
+      whole.animate([{ transform: 'scale(1)', opacity: 1, easing: out }, { transform: 'scale(1.05)', offset: .32 }, { transform: 'scale(1.02)', opacity: 1, offset: .62, easing: 'ease-in' },
+        { transform: 'scale(.55) translateY(40px)', opacity: 0, offset: .79 }, { transform: 'scale(.8)', opacity: 0, offset: .8, easing: out }, { transform: 'scale(1)', opacity: 1 }], timing),
+    );
   }
 
   function peel(e?: MouseEvent) {
@@ -115,19 +192,96 @@ import Base from '../../layouts/Base.astro';
     recent = recent.filter(t => now - t < 1000);
     if (recent.length >= 20) return;   // fair play: at most 20 bananas a second
     recent.push(now);
+    music.ensure();
+
+    combo = now - lastClick < 1100 ? combo + 1 : 1;
+    lastClick = now;
+    hype = Math.min(MAX_HYPE, hype + 1);
     mine++; pending++;
-    try { localStorage.setItem('atb-peeled', String(mine)); } catch {}
+    store.set('atb-peeled', String(mine));
+
+    const before = lastIndex(LEVELS, l => mine - 1 >= l.at), after = lastIndex(LEVELS, l => mine >= l.at);
+    if (after > before) toast(`Level up! You're now a ${LEVELS[after].name} 🍌`);
+    else if ([25, 50, 100, 200, 300, 500, 1000].includes(combo)) toast(`${combo} combo! 🔥`);
+    else if (mine % 100 === 0) toast(`${fmt(mine)} bananas peeled!`);
+
     peelAnimation();
-    const box = $('.play').getBoundingClientRect(), b = btn.getBoundingClientRect();
-    const x = e && e.clientX ? e.clientX - box.left : b.left - box.left + b.width / 2 + (Math.random() - .5) * 60;
-    const y = e && e.clientY ? e.clientY - box.top : b.top - box.top + b.height * .3;
+    music.pop(combo);
+    const b = $('#banana').getBoundingClientRect();
+    const x = e?.clientX || b.left + b.width / 2 + (Math.random() - .5) * 60, y = e?.clientY || b.top + b.height * .35;
     popPlusOne(x, y);
-    render();
+    if (stage >= 2) fx.burst(x, y, calm ? 2 : 2 + stage * 2);
+    if (stage >= 4 && !calm) $('#play').animate([{ transform: 'translate(0,0)' }, { transform: `translate(${(Math.random() - .5) * 10}px, ${(Math.random() - .5) * 8}px)` }, { transform: 'translate(0,0)' }], { duration: 120 });
+    if (stage >= 2 && !calm) spin += 25;
+    $('#combo').hidden = combo < 5;
+    $('#combo').textContent = `×${combo}`;
+    renderScores();
   }
-  btn.addEventListener('click', e => peel(e as MouseEvent));
+  $('#banana').addEventListener('click', e => peel(e as MouseEvent));
   addEventListener('keydown', e => {
-    if (e.code === 'Space' && !(e.target as HTMLElement).closest('input, textarea')) { e.preventDefault(); if (!e.repeat) peel(); }
+    if (e.code === 'Space' && !(e.target as HTMLElement).closest('input, textarea, button:not(#banana)')) { e.preventDefault(); if (!e.repeat) peel(); }
   });
+
+  // ---------- the loop: hype decays, stages change, everything moves to the beat ----------
+  function setStage(s: number) {
+    if (s === stage) return;
+    const up = s > stage;
+    stage = s;
+    document.body.dataset.rave = String(s);
+    fx.target = s;
+    music.setStage(s);
+    if (up && s >= 1) stageCall(STAGES[s].name);
+  }
+  const chants = ['BA', 'NA', 'NA'];
+  let lastBeat = -1;
+  function frame(now: number) {
+    const dt = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    // stop clicking and it calms down: slowly while you're still going, quickly once you stop
+    const idle = now - lastClick > 1200;
+    hype = Math.max(0, hype - dt * (idle ? Math.max(4, hype * 0.12) : 0.8));
+    if (idle && combo) { combo = 0; $('#combo').hidden = true; }
+    // stage from hype, dropping a little later than it rises so it doesn't flicker
+    let s = lastIndex(STAGES, x => hype >= x.at);
+    if (s < stage && hype > STAGES[stage].at * 0.85) s = stage;
+    setStage(s);
+
+    const next = STAGES[stage + 1];
+    $('#stageName').textContent = STAGES[stage].name;
+    $('#hypeFill').style.width = `${Math.min(100, (hype / MAX_HYPE) * 100)}%`;
+    $('#hypeNext').textContent = next ? `${Math.ceil(next.at - hype)} more to ${next.name}` : 'MAXIMUM BANANA';
+
+    const beat = music.beat(now);
+    // the banana bobs, then pulses, then spins
+    const bob = stage >= 1 && !calm ? Math.sin(beat.phase * Math.PI * 2) * (4 + stage * 2) : 0;
+    if (!calm) spin += dt * [0, 0, 0, 40, 260, 520][stage];
+    else spin = 0;
+    const pulse = stage >= 3 && !calm ? 1 + Math.max(0, 1 - beat.phase * 4) * 0.08 : 1;
+    $('#spinner').style.transform = `translateY(${bob}px) rotate(${-12 + spin}deg) scale(${pulse})`;
+
+    // BA-NA-NA at the very top
+    if (stage >= 5 && beat.n !== lastBeat) {
+      const el = $('#chant');
+      el.textContent = chants[((beat.n % 3) + 3) % 3];
+      if (!calm) el.animate([{ opacity: .9, transform: 'translate(-50%, -50%) scale(1.3)' }, { opacity: 0, transform: 'translate(-50%, -50%) scale(.9)' }], { duration: 450 });
+    }
+    lastBeat = beat.n;
+    fx.frame(now, beat);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- sound and calm mode ----------
+  function syncButtons() {
+    $('#soundBtn').textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
+    $('#soundBtn').setAttribute('aria-pressed', String(!muted));
+    $('#calmBtn').textContent = `Calm mode: ${calm ? 'on' : 'off'}`;
+    $('#calmBtn').setAttribute('aria-pressed', String(calm));
+  }
+  $('#soundBtn').addEventListener('click', () => { muted = !muted; store.set('atb-muted', muted ? '1' : '0'); music.ensure(); music.setMuted(muted); syncButtons(); });
+  $('#calmBtn').addEventListener('click', () => { calm = !calm; fx.calm = calm; store.set('atb-calm', calm ? '1' : '0'); syncButtons(); });
+  syncButtons();
+  addEventListener('pagehide', () => { music.ctx?.close(); });
 
   // ---------- talking to the server ----------
   async function flush() {
@@ -139,46 +293,78 @@ import Base from '../../layouts/Base.astro';
       if (res.ok) { tally = await res.json(); pending -= n; }
     } catch {}
     sending = false;
-    render();
+    renderScores();
   }
   async function refresh() {
     if (pending) return flush();
-    try { tally = await (await fetch('/api/peel')).json(); render(); } catch {}
+    try { tally = await (await fetch('/api/peel')).json(); renderScores(); } catch {}
   }
   setInterval(flush, 1500);
   setInterval(refresh, 5000);
-  // send any last clicks when leaving the page
   addEventListener('pagehide', () => {
     if (pending) navigator.sendBeacon('/api/peel', new Blob([JSON.stringify({ n: Math.min(pending, 60) })], { type: 'application/json' }));
   });
-  render();
+  renderScores();
   refresh();
 </script>
 
 <style>
+  /* the rave layer covers the whole page, under the game itself */
+  .rave { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 40; pointer-events: none; opacity: 0; transition: opacity .4s; }
+  .chant, .stage-call { position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 41; pointer-events: none; opacity: 0;
+    font-weight: 900; letter-spacing: -0.04em; color: #ffe066; text-shadow: 0 0 30px rgba(255, 200, 0, .7), 0 6px 0 #8a5a1c; white-space: nowrap; }
+  .chant { font-size: min(34vw, 420px); color: rgba(255, 224, 102, .18); text-shadow: none; }
+  .stage-call { z-index: 60; font-size: clamp(36px, 8vw, 96px); top: 30%; }
+
   .crumbs { padding-top: 18px; font-size: 13px; color: var(--ink-3); }
   .crumbs a { color: var(--link); text-decoration: none; }
   .game { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; padding-top: 12px; align-items: start; }
-  .play { position: relative; background: radial-gradient(700px 420px at 50% 55%, #3a2f0e, var(--surface) 70%); border: 1px solid var(--border); border-radius: 16px;
-    padding: 22px 20px 26px; display: flex; flex-direction: column; align-items: center; overflow: hidden; user-select: none; min-height: 600px; }
+  .play { position: relative; z-index: 45; background: radial-gradient(700px 420px at 50% 55%, #3a2f0e, var(--surface) 70%); border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px 20px 22px; display: flex; flex-direction: column; align-items: center; overflow: hidden; user-select: none; -webkit-user-select: none;
+    transition: background .6s, border-color .6s; }
+  /* deeper in, the game box melts into the rave */
+  :global(body[data-rave="3"]) .play, :global(body[data-rave="4"]) .play, :global(body[data-rave="5"]) .play { background: rgba(0, 0, 0, .25); border-color: transparent; overflow: visible; }
+
   .scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 10px; text-align: center; }
-  .scores div { background: rgba(0, 0, 0, .25); border-radius: 12px; padding: 10px 6px; }
+  .scores div { background: rgba(0, 0, 0, .3); border-radius: 12px; padding: 10px 6px; }
   .lbl { display: block; font-size: 12px; color: var(--ink-3); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .scores b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
   #mine { color: var(--brand); }
-  .banana-btn { margin-top: 26px; background: none; border: none; cursor: pointer; padding: 10px; border-radius: 50%; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+  .hype { width: 100%; margin-top: 14px; }
+  .hype-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; margin-bottom: 5px; }
+  .stage-name { font-weight: 900; letter-spacing: .02em; text-transform: uppercase; color: var(--brand); }
+  .hype-next { color: var(--ink-3); font-weight: 600; }
+  .hype-bar, .level-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+  .hype-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #f2b81f, #ff7a18, #ff2e88, #8b5cf6, #22d3ee); background-size: 420px 100%; transition: width .15s; }
+
+  .banana-zone { position: relative; margin-top: 10px; }
+  .combo { position: absolute; right: -36px; top: 30px; z-index: 2; font-weight: 900; font-size: 28px; color: #ff7a18; text-shadow: 0 2px 10px rgba(0, 0, 0, .5); transform: rotate(10deg); }
+  .banana-btn { background: none; border: none; cursor: pointer; padding: 10px; border-radius: 50%; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .banana-btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 6px; }
-  .banana-btn svg { display: block; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .45)); transform: rotate(-12deg); transition: transform .15s; }
-  .banana-btn:hover svg { transform: rotate(-8deg) scale(1.02); }
-  .banana-btn:active svg { transform: rotate(-12deg) scale(.97); }
+  .spinner { display: block; transform: rotate(-12deg); will-change: transform; }
+  .banana-btn svg { display: block; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .45)); transition: transform .12s; }
+  .banana-btn:hover svg { transform: scale(1.02); }
+  .banana-btn:active svg { transform: scale(.96); }
   #whole { transform-box: fill-box; transform-origin: 50% 60%; }
   .flap { transform-box: fill-box; }
   .flap.left { transform-origin: 0% 100%; }
   .flap.right { transform-origin: 100% 100%; }
-  .hint { color: var(--ink-3); font-size: 13px; margin: 18px 0 0; }
+
+  .level { width: 100%; max-width: 420px; text-align: center; font-size: 12.5px; font-weight: 700; color: var(--ink-2); margin-top: 8px; }
+  .level-bar { height: 5px; margin: 6px 0 4px; }
+  .level-bar i { display: block; height: 100%; width: 0; background: var(--brand); border-radius: inherit; transition: width .2s; }
+  .level-next { color: var(--ink-3); font-weight: 600; font-size: 11.5px; }
+  .controls { display: flex; gap: 8px; margin-top: 14px; }
+  .controls button { font: 600 12.5px 'Inter', sans-serif; color: var(--ink-2); background: rgba(0, 0, 0, .3); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .controls button:hover { color: var(--ink); }
+  .hint { color: var(--ink-3); font-size: 12.5px; margin: 10px 0 0; text-align: center; }
+  .warn { color: var(--ink-2); }
   kbd { font: 600 11px 'Inter', sans-serif; background: var(--chip); border-radius: 4px; padding: 1px 6px; }
   .pops { position: absolute; inset: 0; pointer-events: none; }
-  .pops :global(.pop) { position: absolute; font-weight: 800; font-size: 26px; color: var(--brand); text-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+  .pops :global(.pop) { position: absolute; font-weight: 900; font-size: 26px; color: var(--brand); text-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+  .toast { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 3;
+    background: #1d1600; color: #ffe066; border: 2px solid var(--brand); font-weight: 800; font-size: 15px; padding: 8px 16px; border-radius: 999px; white-space: nowrap; }
 
   .board { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; position: sticky; top: 16px; }
   .board h2 { font-size: 17px; font-weight: 800; margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between; }
@@ -201,13 +387,13 @@ import Base from '../../layouts/Base.astro';
   @media (max-width: 900px) {
     .game { grid-template-columns: 1fr; }
     .board { position: static; }
-    .play { min-height: 0; }
+    .combo { right: -10px; }
   }
   @media (max-width: 480px) {
     .play { padding: 14px 10px 20px; }
     .scores { gap: 6px; }
     .lbl { font-size: 11px; }
     .scores b { font-size: 22px; }
-    .banana-btn svg { width: 180px; height: 297px; }
+    .banana-btn svg { width: 170px; height: 280px; }
   }
 </style>
