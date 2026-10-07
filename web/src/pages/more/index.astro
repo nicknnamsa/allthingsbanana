@@ -2,13 +2,23 @@
 import Base from '../../layouts/Base.astro';
 ---
 <Base wide section="more" title="More Bananas · games, puzzles and experiments · All Things Banana"
-      description="Banana games, puzzles and experiments: the Banana Clicker world leaderboard, the 3D Banana Cube solver and more to come.">
+      description="Banana games, puzzles and experiments: Six Degrees of Banana, the Banana Clicker world leaderboard, the 3D Banana Cube solver and more to come.">
   <header class="head">
     <h1>More Bananas</h1>
     <p>Games, puzzles and experiments. This is our banana lab: new things land here first.</p>
   </header>
 
   <div class="grid">
+    <a class="tile" href="/more/six-degrees/">
+      <div class="art degrees" aria-hidden="true"><span>🧠</span></div>
+      <div class="info">
+        <div class="tags"><span class="tag live">New</span><span class="tag">Daily puzzle</span></div>
+        <h2>Six Degrees of Banana</h2>
+        <p>Start on a random Wikipedia article and reach Banana by naming the pages it links to, all from memory. A new start every day.</p>
+        <div class="stat">Today: can you make par?</div>
+      </div>
+    </a>
+
     <a class="tile" href="/more/banana-clicker/">
       <div class="art clicker" aria-hidden="true"><span>🍌</span></div>
       <div class="info">
@@ -64,6 +74,7 @@ import Base from '../../layouts/Base.astro';
   a.tile:hover .art span { transform: scale(1.08) rotate(-6deg); }
   .art.clicker { background: radial-gradient(circle at 30% 25%, #5a4812, #1f190a); }
   .art.cube { background: radial-gradient(circle at 30% 25%, #24405e, #111a25); }
+  .art.degrees { background: radial-gradient(circle at 30% 25%, #3d2d5e, #16111f); }
   .art.lab { background: radial-gradient(circle at 30% 25%, #33333d, #16161b); }
   .info { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
   .tags { display: flex; gap: 6px; }

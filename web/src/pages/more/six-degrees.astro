@@ -1,0 +1,530 @@
+---
+import Base from '../../layouts/Base.astro';
+import degrees from '../../data/games/degrees.json';
+// only what the game needs in the browser
+const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s.routes }));
+---
+<Base wide section="more" title="Six Degrees of Banana · a daily Wikipedia puzzle · All Things Banana"
+      description="A daily word puzzle: start on a Wikipedia article and get to Banana by naming articles each page links to, from memory. New start page every day.">
+  <script type="application/json" id="degData" set:html={JSON.stringify(starts)} />
+
+  <header class="head">
+    <div>
+      <div class="kicker">More Bananas · Daily puzzle <span id="dayNo"></span></div>
+      <h1>Six Degrees of Banana</h1>
+      <p>Get from today's Wikipedia article to <b>Banana</b>. Type the name of an article the current page links to, then keep going. No peeking: it's all from memory.</p>
+    </div>
+    <div class="modes" role="tablist">
+      <button id="modeDaily" class="on" role="tab">Daily</button>
+      <button id="modePractice" role="tab">Practice</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="game" aria-live="polite">
+      <div class="where">
+        <div class="label" id="whereLabel">You are on</div>
+        <h2 id="current">…</h2>
+        <div class="desc" id="desc"></div>
+        <p class="extract" id="extract"></p>
+      </div>
+
+      <form id="guessForm" class="guess" autocomplete="off">
+        <input id="guess" type="text" placeholder="Name an article this page links to…" aria-label="Your guess" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+        <button type="submit" id="goBtn">Go</button>
+      </form>
+      <div id="feedback" class="feedback"></div>
+
+      <div class="statsRow">
+        <div><span>Steps</span><b id="sSteps">0</b></div>
+        <div><span>Par</span><b id="sPar">–</b></div>
+        <div><span>Misses</span><b id="sMisses">0</b></div>
+        <div><span>Hints</span><b id="sHints">0</b></div>
+        <div><span>Time</span><b id="sTime">0:00</b></div>
+      </div>
+
+      <div class="pathBox">
+        <div class="pathHead"><span>Your route</span><small>Tap an earlier page to go back (costs a step)</small></div>
+        <ol id="path" class="path"></ol>
+      </div>
+
+      <div class="tools">
+        <button id="hintBtn" class="ghost">💡 Hint <small>(shows 3 links, counts as a hint)</small></button>
+        <button id="giveUpBtn" class="ghost">Give up</button>
+      </div>
+      <div id="hintBox" class="hintBox" hidden></div>
+
+      <div id="done" class="done" hidden>
+        <div class="doneTop">
+          <div class="big" id="doneTitle"></div>
+          <div class="sub" id="doneSub"></div>
+        </div>
+        <ol id="donePath" class="donePath"></ol>
+        <p class="best" id="best"></p>
+        <div class="doneBtns">
+          <button id="shareBtn" class="primary">Share result</button>
+          <button id="practiceBtn" class="ghost">Play a practice round</button>
+        </div>
+        <div id="world" class="world" hidden>
+          <h3>Everyone today</h3>
+          <div id="worldSummary" class="worldSummary"></div>
+          <div id="hist" class="hist"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="card">
+        <h3>How to play</h3>
+        <ol class="rules">
+          <li>You start on a Wikipedia article.</li>
+          <li>Type the title of <b>another article that page links to</b>. If it does, you move there.</li>
+          <li>Keep going until you reach <b>Banana</b>. Fewest steps wins; par is the shortest possible route.</li>
+          <li>Guessing a real article that isn't linked is a <b>miss</b>. Typos aren't: we'll ask "did you mean…?"</li>
+        </ol>
+        <p class="eg">Example: <b>Napoleon</b> → <b>Haiti</b> → <b>Banana</b>. Haiti's article mentions bananas as a crop, and Napoleon's article links to Haiti.</p>
+      </div>
+      <div class="card">
+        <h3>Your streak</h3>
+        <div class="streak"><div><b id="streak">0</b><span>day streak</span></div><div><b id="played">0</b><span>played</span></div><div><b id="pars">0</b><span>on par</span></div></div>
+      </div>
+      <p class="credit">Article titles and summaries come live from <a href="https://en.wikipedia.org/" rel="noopener" target="_blank">Wikipedia</a> (text under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener" target="_blank">CC BY-SA 4.0</a>). Not affiliated with Wikipedia.</p>
+    </aside>
+  </div>
+</Base>
+
+<script>
+  type Start = { t: string; p: number; r: string[]; n: number | null };
+  type State = { day: number; start: string; path: string[]; misses: number; hints: number; secs: number; done: boolean; gaveUp: boolean; posted?: boolean };
+
+  const STARTS: Start[] = JSON.parse(document.getElementById('degData')!.textContent!);
+  const TARGET = 'Banana';
+  const EPOCH = Date.UTC(2026, 9, 7);   // puzzle #1 (must match worker/degrees.js)
+  const W = 'https://en.wikipedia.org/w/api.php';
+  const $ = (id: string) => document.getElementById(id)!;
+  const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const wikiUrl = (t: string) => 'https://en.wikipedia.org/wiki/' + encodeURIComponent(t.replace(/ /g, '_'));
+  // compare titles loosely: case, accents, punctuation and underscores don't matter
+  const key = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[_\s]+/g, ' ').replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim();
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const store = {
+    get<T>(k: string, d: T): T { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  // today's puzzle number, by the player's own calendar day
+  const now = new Date();
+  const today = Math.max(1, Math.floor((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - EPOCH) / 864e5) + 1);
+  const dailyStart = STARTS[(today - 1) % STARTS.length];
+
+  async function api(params: Record<string, string>) {
+    const q = new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params });
+    const res = await fetch(`${W}?${q}`);
+    if (!res.ok) throw new Error('Wikipedia ' + res.status);
+    return res.json();
+  }
+
+  // everything the current article links to: loose key -> real title (also under the names it was linked by)
+  const linkCache = new Map<string, Promise<Map<string, string>>>();
+  function linksOf(title: string) {
+    if (!linkCache.has(title)) linkCache.set(title, (async () => {
+      const m = new Map<string, string>();
+      let cont: Record<string, string> | null = {};
+      while (cont) {
+        const d = await api({ action: 'query', generator: 'links', titles: title, gplnamespace: '0', gpllimit: 'max', redirects: '1', ...cont });
+        for (const p of d.query?.pages || []) if (!p.missing) m.set(key(p.title), p.title);
+        for (const r of d.query?.redirects || []) m.set(key(r.from), r.to);
+        cont = d.continue || null;
+      }
+      return m;
+    })().catch(e => { linkCache.delete(title); throw e; }));
+    return linkCache.get(title)!;
+  }
+
+  // articles one step from Banana, for hints (built by scripts/build-degrees.mjs)
+  let intoBanana: Promise<Set<string>> | null = null;
+  const nearBanana = () => (intoBanana ??= fetch('/games/banana-links-in.json').then(r => r.json()).then((a: string[]) => new Set(a)));
+
+  async function summary(title: string) {
+    try {
+      const r = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_')));
+      if (!r.ok) return null;
+      const d = await r.json();
+      return { desc: d.description as string | undefined, extract: d.extract as string | undefined };
+    } catch { return null; }
+  }
+
+  // edit distance where swapping two neighbouring letters ("napels") counts as one mistake
+  function distance(a: string, b: string) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i ? (j ? 0 : i) : j)));
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+    return d[a.length][b.length];
+  }
+
+  // ---------- game state ----------
+  let mode: 'daily' | 'practice' = 'daily';
+  let start: Start = dailyStart;
+  let s: State;
+  let busy = false;
+  const saveKey = () => `atb-deg-${today}`;
+  const save = () => { if (mode === 'daily') store.set(saveKey(), s); };
+  const current = () => s.path[s.path.length - 1];
+  const steps = () => s.path.length - 1;
+
+  function newState(st: Start): State {
+    return { day: today, start: st.t, path: [st.t], misses: 0, hints: 0, secs: 0, done: false, gaveUp: false };
+  }
+
+  function begin(m: 'daily' | 'practice') {
+    mode = m;
+    $('modeDaily').classList.toggle('on', m === 'daily');
+    $('modePractice').classList.toggle('on', m === 'practice');
+    if (m === 'daily') {
+      start = dailyStart;
+      const saved = store.get<State | null>(saveKey(), null);
+      s = saved && saved.start === start.t ? saved : newState(start);
+      $('dayNo').textContent = `#${today}`;
+    } else {
+      const pool = STARTS.filter(x => x.t !== dailyStart.t && x.t !== s?.start);
+      start = pool[Math.floor(Math.random() * pool.length)];
+      s = newState(start);
+      $('dayNo').textContent = '· practice';
+    }
+    $('feedback').innerHTML = '';
+    $('hintBox').hidden = true;
+    (document.getElementById('guess') as HTMLInputElement).value = '';
+    render();
+    if (s.done) showDone(); else { $('done').hidden = true; (document.getElementById('guess') as HTMLInputElement).focus({ preventScroll: true }); }
+  }
+
+  let shownTitle = '';
+  function render() {
+    const cur = current();
+    $('current').textContent = cur;
+    $('whereLabel').textContent = s.path.length === 1 ? 'Start here' : 'You are on';
+    $('sSteps').textContent = String(steps());
+    $('sPar').textContent = String(start.p);
+    $('sMisses').textContent = String(s.misses);
+    $('sHints').textContent = String(s.hints);
+    $('sTime').textContent = fmtTime(s.secs);
+    $('path').innerHTML = s.path.map((t, i) => {
+      const last = i === s.path.length - 1;
+      return `<li>${last || s.done ? `<span class="${last ? 'here' : ''}">${esc(t)}</span>` : `<button data-i="${i}">${esc(t)}</button>`}</li>`;
+    }).join('');
+    const playing = !s.done;
+    for (const id of ['guess', 'goBtn', 'hintBtn', 'giveUpBtn']) (document.getElementById(id) as HTMLButtonElement).disabled = !playing;
+    if (cur !== shownTitle) {
+      shownTitle = cur;
+      $('desc').textContent = ''; $('extract').textContent = '';
+      summary(cur).then(d => {
+        if (shownTitle !== cur || !d) return;
+        $('desc').textContent = d.desc || '';
+        // a short taste of the article, without the full page (or its links)
+        const ex = (d.extract || '').split(/(?<=\.)\s+/).slice(0, 2).join(' ');
+        $('extract').textContent = ex.length > 320 ? ex.slice(0, 317) + '…' : ex;
+      });
+      if (playing) linksOf(cur).catch(() => {});   // start loading, so the first guess is quick
+    }
+    renderStreak();
+  }
+
+  function say(html: string, kind: 'ok' | 'miss' | 'info' = 'info') {
+    $('feedback').innerHTML = `<div class="msg ${kind}">${html}</div>`;
+  }
+
+  async function move(to: string, backtrack = false) {
+    s.path.push(to);
+    $('hintBox').hidden = true;
+    if (to === TARGET) {
+      s.done = true;
+      save(); render(); finish();
+      say(`✓ <b>${esc(s.path[s.path.length - 2])}</b> links to <b>Banana</b>. You made it! 🍌`, 'ok');
+      return;
+    }
+    save(); render();
+    say(backtrack ? `Back on <b>${esc(to)}</b>.` : `✓ <b>${esc(s.path[s.path.length - 2])}</b> links to <b>${esc(to)}</b>. Where next?`, 'ok');
+  }
+
+  async function guess(raw: string) {
+    const g = raw.trim();
+    if (!g || busy || s.done) return;
+    busy = true; $('goBtn').textContent = '…';
+    const from = current();
+    try {
+      const links = await linksOf(from);
+      const k = key(g);
+      if (k === key(from)) { say(`You're already on <b>${esc(from)}</b>.`); return; }
+      // 1. one of this page's links, however it's capitalised or spelled with accents
+      let hit = links.get(k);
+      // 2. another name for an article (a redirect, like "Dubya")
+      let real: string | null = null;
+      if (!hit) {
+        const d = await api({ action: 'query', titles: g, redirects: '1' });
+        const p = d.query?.pages?.[0];
+        if (p && !p.missing && !p.invalid) { real = p.title; hit = links.get(key(p.title)); }
+      }
+      if (hit) { (document.getElementById('guess') as HTMLInputElement).value = ''; await move(hit); return; }
+      if (real) {
+        s.misses++; save(); render();
+        say(`✗ <b>${esc(real)}</b> is on Wikipedia, but <b>${esc(from)}</b> doesn't link to it. That's a miss.`, 'miss');
+        return;
+      }
+      // 3. not an article: suggest the nearest spelling (a typo isn't a miss)
+      let near = '', best = 99;
+      for (const [lk, title] of links) {
+        if (Math.abs(lk.length - k.length) > 2) continue;
+        const dist = distance(k, lk);
+        if (dist < best) { best = dist; near = title; }
+      }
+      let suggest = best <= Math.max(1, Math.floor(k.length / 6)) ? near : '';
+      if (!suggest) {
+        const d = await api({ action: 'query', list: 'search', srsearch: g, srlimit: '1', srinfo: 'suggestion', srprop: '' });
+        suggest = d.query?.search?.[0]?.title || d.query?.searchinfo?.suggestion || '';
+      }
+      say(`“${esc(g)}” isn't a Wikipedia article.${suggest ? ` Did you mean <button class="sugg" data-t="${esc(suggest)}">${esc(suggest)}</button>?` : ' Check the spelling and try again.'} <span class="free">(not counted)</span>`);
+    } catch {
+      say(`Couldn't reach Wikipedia just now. Check your connection and try again.`, 'miss');
+    } finally {
+      busy = false; $('goBtn').textContent = 'Go';
+    }
+  }
+
+  async function hint() {
+    if (s.done) return;
+    const from = current();
+    $('hintBox').hidden = false;
+    $('hintBox').innerHTML = '<span class="dim">Looking…</span>';
+    try {
+      const [links, near] = await Promise.all([linksOf(from), nearBanana()]);
+      const all = [...new Set(links.values())].filter(t => t !== from);
+      const pick = <T,>(a: T[]) => a.splice(Math.floor(Math.random() * a.length), 1)[0];
+      // one of the three gets you closer to Banana, if this page has such a link
+      const closer = all.filter(t => t === TARGET || near.has(t));
+      const shown = closer.length ? [pick(closer)] : [];
+      const rest = all.filter(t => !shown.includes(t));
+      while (shown.length < 3 && rest.length) shown.push(pick(rest));
+      shown.sort(() => Math.random() - 0.5);
+      s.hints++; save(); render();
+      $('hintBox').innerHTML = `<b>${esc(from)}</b> links to ${shown.map(t => `<button class="sugg" data-t="${esc(t)}">${esc(t)}</button>`).join(', ')}${closer.length ? '. One of these is a step closer to Banana.' : '.'}`;
+    } catch {
+      $('hintBox').innerHTML = `Couldn't reach Wikipedia just now.`;
+    }
+  }
+
+  function giveUp() {
+    if (s.done || !confirm('Give up and see a shortest route?')) return;
+    s.done = true; s.gaveUp = true; save(); render(); finish();
+  }
+
+  // ---------- results ----------
+  function finish() {
+    showDone();
+    if (mode !== 'daily') return;
+    const hist = store.get<Record<number, { steps: number; solved: boolean; par: number }>>('atb-deg-history', {});
+    hist[today] = { steps: steps(), solved: !s.gaveUp, par: start.p };
+    store.set('atb-deg-history', hist);
+    renderStreak();
+    if (!s.posted) {
+      s.posted = true; save();
+      fetch('/api/degrees', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ day: today, steps: Math.max(1, steps()), secs: Math.max(1, s.secs), solved: !s.gaveUp }) })
+        .then(r => r.json()).then(showWorld).catch(() => {});
+    }
+  }
+
+  function verdict() {
+    const over = steps() - start.p;
+    if (over <= 0) return 'Par! As short as it gets. 🏆';
+    if (over === 1) return 'One over par. So close.';
+    return `${over} over par.`;
+  }
+
+  function showDone() {
+    $('done').hidden = false;
+    $('doneTitle').textContent = s.gaveUp ? 'Banana stays out of reach today' : `🍌 Banana in ${steps()} ${steps() === 1 ? 'step' : 'steps'}!`;
+    $('doneSub').textContent = s.gaveUp
+      ? `You got ${steps()} ${steps() === 1 ? 'step' : 'steps'} in. Here's one way it could go.`
+      : `${verdict()} ${s.misses} ${s.misses === 1 ? 'miss' : 'misses'}, ${s.hints} ${s.hints === 1 ? 'hint' : 'hints'}, ${fmtTime(s.secs)}.`;
+    $('donePath').innerHTML = s.path.map(t => `<li><a href="${wikiUrl(t)}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join('');
+    const others = start.n && start.n > 1 ? ` There were ${start.n} different ${start.p}-step routes.` : '';
+    $('best').innerHTML = `A shortest route (par ${start.p}): ${start.r.map(t => `<a href="${wikiUrl(t)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(' → ')}.${others}`;
+    $('practiceBtn').textContent = mode === 'daily' ? 'Play a practice round' : 'Another practice round';
+    if (mode === 'daily') fetch(`/api/degrees?day=${today}`).then(r => r.json()).then(showWorld).catch(() => {});
+    else $('world').hidden = true;
+  }
+
+  function showWorld(w: { played: number; solved: number; steps: Record<string, number>; secs: number; best: number | null }) {
+    if (!w || !w.played) return;
+    $('world').hidden = false;
+    const avg = w.solved ? Object.entries(w.steps).reduce((a, [k, n]) => a + +k * n, 0) / w.solved : 0;
+    $('worldSummary').innerHTML = `<div><b>${w.played.toLocaleString('en-US')}</b><span>played</span></div><div><b>${w.played ? Math.round((w.solved / w.played) * 100) : 0}%</b><span>reached Banana</span></div>` +
+      (w.solved ? `<div><b>${avg.toFixed(1)}</b><span>average steps</span></div><div><b>${w.best != null ? fmtTime(w.best) : '–'}</b><span>fastest</span></div>` : '');
+    const max = Math.max(1, ...Object.values(w.steps));
+    const mine = s.gaveUp ? -1 : Math.min(steps(), 10);
+    $('hist').innerHTML = Array.from({ length: 10 }, (_, i) => i + 1).map(k => {
+      const n = w.steps[k] || 0;
+      return `<div class="bar${k === mine ? ' me' : ''}${k === start.p ? ' par' : ''}"><span class="k">${k === 10 ? '10+' : k}</span><span class="track"><i style="width:${(n / max) * 100}%"></i></span><span class="n">${n}</span></div>`;
+    }).join('');
+  }
+
+  function shareText() {
+    const head = mode === 'daily' ? `🍌 Six Degrees of Banana #${today}` : '🍌 Six Degrees of Banana (practice)';
+    const line = s.gaveUp ? `${start.t} → ❌ gave up after ${steps()} steps` : `${start.t} → Banana in ${steps()} ${steps() === 1 ? 'step' : 'steps'} (par ${start.p})`;
+    const squares = s.gaveUp ? '' : '\n' + '🟨'.repeat(Math.max(0, steps() - 1)) + '🍌' + (s.misses ? ` ${'❌'.repeat(Math.min(s.misses, 8))}` : '') + (s.hints ? ` ${'💡'.repeat(Math.min(s.hints, 5))}` : '');
+    return `${head}\n${line}${squares}\n⏱ ${fmtTime(s.secs)}\nhttps://allthingsbanana.com/more/six-degrees/`;
+  }
+
+  async function share() {
+    const text = shareText();
+    try {
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ text }); return; }
+      await navigator.clipboard.writeText(text);
+      $('shareBtn').textContent = 'Copied! Paste it anywhere';
+      setTimeout(() => ($('shareBtn').textContent = 'Share result'), 2500);
+    } catch {}
+  }
+
+  function renderStreak() {
+    const hist = store.get<Record<number, { steps: number; solved: boolean; par: number }>>('atb-deg-history', {});
+    let streak = 0;
+    for (let d = hist[today]?.solved ? today : today - 1; hist[d]?.solved; d--) streak++;
+    const all = Object.values(hist);
+    $('streak').textContent = String(streak);
+    $('played').textContent = String(all.length);
+    $('pars').textContent = String(all.filter(h => h.solved && h.steps <= h.par).length);
+  }
+
+  // ---------- wiring ----------
+  $('guessForm').addEventListener('submit', e => { e.preventDefault(); guess((document.getElementById('guess') as HTMLInputElement).value); });
+  document.addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button');
+    if (!b) return;
+    if (b.classList.contains('sugg') && b.dataset.t) { (document.getElementById('guess') as HTMLInputElement).value = b.dataset.t; guess(b.dataset.t); }
+    else if (b.dataset.i && b.closest('#path') && !s.done) move(s.path[+b.dataset.i], true);
+  });
+  $('hintBtn').addEventListener('click', hint);
+  $('giveUpBtn').addEventListener('click', giveUp);
+  $('shareBtn').addEventListener('click', share);
+  $('practiceBtn').addEventListener('click', () => { begin('practice'); scrollTo({ top: 0, behavior: 'smooth' }); });
+  $('modeDaily').addEventListener('click', () => mode !== 'daily' && begin('daily'));
+  $('modePractice').addEventListener('click', () => mode !== 'practice' && begin('practice'));
+  // the clock only runs while the page is open and visible
+  setInterval(() => {
+    if (!s || s.done || document.hidden || s.path.length === 0) return;
+    s.secs++; $('sTime').textContent = fmtTime(s.secs);
+    if (s.secs % 5 === 0) save();
+  }, 1000);
+  addEventListener('pagehide', () => s && save());
+
+  begin('daily');
+</script>
+
+<style>
+  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding: 26px 0 8px; }
+  .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--brand); }
+  .head h1 { font-size: 34px; font-weight: 900; margin: 4px 0 0; letter-spacing: -0.03em; }
+  .head p { color: var(--ink-2); margin: 6px 0 0; font-size: 15.5px; max-width: 680px; line-height: 1.5; }
+  .modes { display: flex; background: var(--chip); border-radius: 999px; padding: 3px; flex: none; }
+  .modes button { font: 700 13.5px 'Inter', sans-serif; color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+  .modes button.on { background: var(--brand); color: #1d1600; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; margin-top: 16px; align-items: start; }
+  .game { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+  .where .label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); }
+  .where h2 { font-size: 34px; font-weight: 900; letter-spacing: -0.02em; margin: 4px 0 2px; line-height: 1.15; overflow-wrap: anywhere; }
+  .desc { color: var(--brand); font-size: 14px; font-weight: 600; min-height: 1.3em; }
+  .extract { color: var(--ink-2); font-size: 14.5px; line-height: 1.55; margin: 8px 0 0; min-height: 3em; }
+
+  .guess { display: flex; gap: 8px; margin-top: 18px; }
+  .guess input { flex: 1; min-width: 0; font: 600 17px 'Inter', sans-serif; color: var(--ink); background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 13px 16px; outline: none; }
+  .guess input:focus { border-color: var(--brand); }
+  .guess button { font: 800 16px 'Inter', sans-serif; background: var(--brand); color: #1d1600; border: none; border-radius: 12px; padding: 0 22px; cursor: pointer; min-width: 70px; }
+  .guess input:disabled, .guess button:disabled { opacity: .5; cursor: default; }
+  .feedback { min-height: 46px; margin-top: 10px; }
+  .feedback :global(.msg) { border-radius: 10px; padding: 10px 14px; font-size: 14.5px; line-height: 1.5; background: var(--chip); }
+  .feedback :global(.msg.ok) { background: color-mix(in srgb, var(--up) 14%, transparent); }
+  .feedback :global(.msg.miss) { background: color-mix(in srgb, var(--down) 14%, transparent); }
+  .feedback :global(.free) { color: var(--ink-3); font-size: 12.5px; }
+  .layout :global(.sugg) { font: 700 14px 'Inter', sans-serif; color: var(--link); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+  .statsRow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  .statsRow div { background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 8px 10px; }
+  .statsRow span { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+  .statsRow b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  .pathBox { margin-top: 18px; }
+  .pathHead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+  .pathHead small { text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .path { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0; margin: 8px 0 0; }
+  .path :global(li) { display: flex; align-items: center; gap: 6px; }
+  .path :global(li + li::before) { content: '→'; color: var(--ink-3); }
+  .path :global(button), .path :global(span) { font: 600 13.5px 'Inter', sans-serif; color: var(--ink); background: var(--chip); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+  .path :global(button) { cursor: pointer; }
+  .path :global(button:hover) { border-color: var(--brand); }
+  .path :global(.here) { background: var(--brand); color: #1d1600; border-color: var(--brand); }
+
+  .tools { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .ghost { font: 700 13.5px 'Inter', sans-serif; color: var(--ink); background: none; border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+  .ghost:hover:not(:disabled) { border-color: var(--brand); }
+  .ghost:disabled { opacity: .45; cursor: default; }
+  .ghost small { color: var(--ink-3); font-weight: 500; }
+  .hintBox { margin-top: 10px; font-size: 14.5px; line-height: 1.6; background: color-mix(in srgb, var(--brand) 10%, transparent); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; padding: 10px 14px; }
+  .hintBox :global(.dim) { color: var(--ink-3); }
+
+  .done { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .big { font-size: 26px; font-weight: 900; letter-spacing: -0.02em; }
+  .sub { color: var(--ink-2); margin-top: 4px; font-size: 15px; }
+  .donePath { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 14px 0 0; }
+  .donePath :global(li) { display: flex; align-items: center; gap: 6px; }
+  .donePath :global(li + li::before) { content: '→'; color: var(--ink-3); }
+  .donePath :global(a) { color: var(--link); font-weight: 600; font-size: 14.5px; }
+  .best { color: var(--ink-2); font-size: 14px; line-height: 1.6; }
+  .best :global(a) { color: var(--link); }
+  .doneBtns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .primary { font: 800 15px 'Inter', sans-serif; background: var(--brand); color: #1d1600; border: none; border-radius: 10px; padding: 10px 18px; cursor: pointer; }
+  .world { margin-top: 22px; }
+  .world h3 { font-size: 16px; font-weight: 800; margin: 0 0 10px; }
+  .worldSummary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .worldSummary :global(div) { background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 8px 10px; }
+  .worldSummary :global(b) { display: block; font-size: 20px; font-weight: 800; }
+  .worldSummary :global(span) { font-size: 12px; color: var(--ink-3); }
+  .hist { margin-top: 12px; display: grid; gap: 4px; }
+  .hist :global(.bar) { display: grid; grid-template-columns: 34px 1fr 40px; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .hist :global(.bar) :global(.k) { text-align: right; font-weight: 700; }
+  .hist :global(.bar) :global(.track) { height: 14px; background: var(--chip); border-radius: 4px; overflow: hidden; }
+  .hist :global(.bar) :global(i) { display: block; height: 100%; background: color-mix(in srgb, var(--brand) 55%, transparent); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .hist :global(.bar.me i) { background: var(--brand); }
+  .hist :global(.bar.me .k), .hist :global(.bar.me .n) { color: var(--ink); }
+  .hist :global(.bar.par .k::after) { content: ' par'; font-weight: 500; }
+
+  .side { display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .card h3 { font-size: 16px; font-weight: 800; margin: 0 0 8px; }
+  .rules { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 14px; line-height: 1.55; display: grid; gap: 6px; }
+  .rules b, .eg b { color: var(--ink); }
+  .eg { margin: 12px 0 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+  .streak { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  .streak b { display: block; font-size: 26px; font-weight: 900; }
+  .streak span { font-size: 12px; color: var(--ink-3); }
+  .credit { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin: 0; }
+  .credit a { color: var(--ink-3); }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .head { flex-direction: column; align-items: flex-start; }
+  }
+  @media (max-width: 560px) {
+    .head h1 { font-size: 28px; }
+    .game { padding: 16px; }
+    .where h2 { font-size: 27px; }
+    .statsRow { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+    .statsRow div { padding: 6px 6px; }
+    .statsRow span { font-size: 9px; }
+    .statsRow b { font-size: 16px; }
+    .pathHead small { display: none; }
+    .worldSummary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>

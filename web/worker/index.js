@@ -6,6 +6,8 @@ import { isAboutBananas } from './filter.js';
 import { refreshMarket, MARKET_EVERY_MS, MARKET_VERSION, STOCKS } from './market.js';
 import { handlePeel } from './peel.js';
 export { PeelCounter } from './peel.js';
+import { handleDegrees } from './degrees.js';
+export { DegreesStats } from './degrees.js';
 
 const MAX_ITEMS = 300;
 const MAX_AGE_MS = 30 * 864e5;            // drop stories older than a month (some feeds include old posts)
@@ -43,6 +45,7 @@ export default {
       return Response.json(publicView(data), { headers: { 'cache-control': 'public, max-age=60' } });
     }
     if (url.pathname === '/api/peel') return handlePeel(request, env);
+    if (url.pathname === '/api/degrees') return handleDegrees(request, env);
     if (url.pathname === '/api/market') {
       let market = await env.FEED.get('market', 'json');
       if (!market || market.v !== MARKET_VERSION) market = await updateMarket(env, market);

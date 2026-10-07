@@ -22,11 +22,18 @@
 		{ "pattern": "allthingsbanana.com", "custom_domain": true },
 		{ "pattern": "www.allthingsbanana.com", "custom_domain": true }
 	],
-	// Banana Clicker: one shared tally of peeled bananas per country
+	// Banana Clicker: one shared tally of peeled bananas per country.
+	// Six Degrees of Banana: everyone's daily results, anonymously
 	"durable_objects": {
-		"bindings": [{ "name": "PEELS", "class_name": "PeelCounter" }]
+		"bindings": [
+			{ "name": "PEELS", "class_name": "PeelCounter" },
+			{ "name": "DEGREES", "class_name": "DegreesStats" }
+		]
 	},
-	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["PeelCounter"] }],
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["PeelCounter"] },
+		{ "tag": "v2", "new_sqlite_classes": ["DegreesStats"] }
+	],
 	"triggers": {
 		"crons": [
 			"*/10 * * * *"

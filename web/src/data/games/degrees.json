@@ -1,0 +1,684 @@
+{
+ "built": "2026-10-07",
+ "linksIn": 3039,
+ "starts": [
+  {
+   "title": "Pizza",
+   "par": 2,
+   "route": [
+    "Pizza",
+    "List of pizza varieties by country",
+    "Banana"
+   ],
+   "routes": 10,
+   "links": 775
+  },
+  {
+   "title": "Bitcoin",
+   "par": 3,
+   "route": [
+    "Bitcoin",
+    "Colorado",
+    "Food processing",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 498
+  },
+  {
+   "title": "Wolfgang Amadeus Mozart",
+   "par": 2,
+   "route": [
+    "Wolfgang Amadeus Mozart",
+    "Puspawarna",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 521
+  },
+  {
+   "title": "Dracula",
+   "par": 3,
+   "route": [
+    "Dracula",
+    "Antisemitism",
+    "Israeli cuisine",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 506
+  },
+  {
+   "title": "Eiffel Tower",
+   "par": 3,
+   "route": [
+    "Eiffel Tower",
+    "Antoine Lavoisier",
+    "Botany",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 1033
+  },
+  {
+   "title": "Queen Victoria",
+   "par": 2,
+   "route": [
+    "Queen Victoria",
+    "Jamaica",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 893
+  },
+  {
+   "title": "Antarctica",
+   "par": 2,
+   "route": [
+    "Antarctica",
+    "Fur",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 1305
+  },
+  {
+   "title": "Mount Everest",
+   "par": 2,
+   "route": [
+    "Mount Everest",
+    "Indian people",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 1000
+  },
+  {
+   "title": "Iceland",
+   "par": 2,
+   "route": [
+    "Iceland",
+    "Introduced species",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 917
+  },
+  {
+   "title": "Frida Kahlo",
+   "par": 3,
+   "route": [
+    "Frida Kahlo",
+    "Academy Awards",
+    "The Beverly Hills Hotel",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 746
+  },
+  {
+   "title": "Beyoncé",
+   "par": 2,
+   "route": [
+    "Beyoncé",
+    "Hurricane Ike",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 2445
+  },
+  {
+   "title": "Titanic",
+   "par": 2,
+   "route": [
+    "Titanic",
+    "Nab Tower",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 830
+  },
+  {
+   "title": "Tennis",
+   "par": 3,
+   "route": [
+    "Tennis",
+    "Andre Agassi",
+    "Ecuador",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 578
+  },
+  {
+   "title": "Volcano",
+   "par": 2,
+   "route": [
+    "Volcano",
+    "Lombok",
+    "Banana"
+   ],
+   "routes": 4,
+   "links": 545
+  },
+  {
+   "title": "Lionel Messi",
+   "par": 2,
+   "route": [
+    "Lionel Messi",
+    "Belize",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1726
+  },
+  {
+   "title": "Basketball",
+   "par": 2,
+   "route": [
+    "Basketball",
+    "Tamil Nadu",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1647
+  },
+  {
+   "title": "Lego",
+   "par": 3,
+   "route": [
+    "Lego",
+    "American English",
+    "American cuisine",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 452
+  },
+  {
+   "title": "Harry Potter",
+   "par": 3,
+   "route": [
+    "Harry Potter",
+    "Arabic",
+    "Central African Republic",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 552
+  },
+  {
+   "title": "Star Wars",
+   "par": 3,
+   "route": [
+    "Star Wars",
+    "Academy Awards",
+    "The Beverly Hills Hotel",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 1634
+  },
+  {
+   "title": "Chess",
+   "par": 2,
+   "route": [
+    "Chess",
+    "Drosophila",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1001
+  },
+  {
+   "title": "Penguin",
+   "par": 2,
+   "route": [
+    "Penguin",
+    "Tropical climate",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 472
+  },
+  {
+   "title": "Vikings",
+   "par": 2,
+   "route": [
+    "Vikings",
+    "Oat",
+    "Banana"
+   ],
+   "routes": 7,
+   "links": 1459
+  },
+  {
+   "title": "Coffee",
+   "par": 2,
+   "route": [
+    "Coffee",
+    "Laxative",
+    "Banana"
+   ],
+   "routes": 13,
+   "links": 508
+  },
+  {
+   "title": "William Shakespeare",
+   "par": 3,
+   "route": [
+    "William Shakespeare",
+    "Achilles",
+    "Myrrh",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 1815
+  },
+  {
+   "title": "Sherlock Holmes",
+   "par": 3,
+   "route": [
+    "Sherlock Holmes",
+    "Atlantic Ocean",
+    "Columbian exchange",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 789
+  },
+  {
+   "title": "Moon",
+   "par": 2,
+   "route": [
+    "Moon",
+    "Ionic liquid",
+    "Banana"
+   ],
+   "routes": 4,
+   "links": 1254
+  },
+  {
+   "title": "Minecraft",
+   "par": 2,
+   "route": [
+    "Minecraft",
+    "Stockholm Pride",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 786
+  },
+  {
+   "title": "Jupiter",
+   "par": 3,
+   "route": [
+    "Jupiter",
+    "Albedo",
+    "Radiation",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 746
+  },
+  {
+   "title": "Olympic Games",
+   "par": 3,
+   "route": [
+    "Olympic Games",
+    "Asia",
+    "Deccan Plateau",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 2590
+  },
+  {
+   "title": "The Simpsons",
+   "par": 2,
+   "route": [
+    "The Simpsons",
+    "Springfield (The Simpsons)",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1989
+  },
+  {
+   "title": "Pikachu",
+   "par": 3,
+   "route": [
+    "Pikachu",
+    "Aristotle",
+    "Botany",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 545
+  },
+  {
+   "title": "Dinosaur",
+   "par": 2,
+   "route": [
+    "Dinosaur",
+    "South America",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1126
+  },
+  {
+   "title": "Cleopatra",
+   "par": 2,
+   "route": [
+    "Cleopatra",
+    "Jericho",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 1707
+  },
+  {
+   "title": "Isaac Newton",
+   "par": 2,
+   "route": [
+    "Isaac Newton",
+    "Existence",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 1460
+  },
+  {
+   "title": "Albert Einstein",
+   "par": 2,
+   "route": [
+    "Albert Einstein",
+    "Radiation",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1062
+  },
+  {
+   "title": "Leonardo da Vinci",
+   "par": 2,
+   "route": [
+    "Leonardo da Vinci",
+    "Varnish",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 780
+  },
+  {
+   "title": "Tyrannosaurus",
+   "par": 3,
+   "route": [
+    "Tyrannosaurus",
+    "Albertosaurus",
+    "Peat",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 791
+  },
+  {
+   "title": "The Beatles",
+   "par": 2,
+   "route": [
+    "The Beatles",
+    "Calypso (album)",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 2645
+  },
+  {
+   "title": "Napoleon",
+   "par": 2,
+   "route": [
+    "Napoleon",
+    "Haiti",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1571
+  },
+  {
+   "title": "Ancient Egypt",
+   "par": 2,
+   "route": [
+    "Ancient Egypt",
+    "Trade",
+    "Banana"
+   ],
+   "routes": 12,
+   "links": 1404
+  },
+  {
+   "title": "Tokyo",
+   "par": 2,
+   "route": [
+    "Tokyo",
+    "Bengaluru",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1471
+  },
+  {
+   "title": "George W. Bush",
+   "par": 2,
+   "route": [
+    "George W. Bush",
+    "Banana republic",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 2123
+  },
+  {
+   "title": "Charles Darwin",
+   "par": 2,
+   "route": [
+    "Charles Darwin",
+    "Hybrid (biology)",
+    "Banana"
+   ],
+   "routes": 4,
+   "links": 1156
+  },
+  {
+   "title": "Shark",
+   "par": 2,
+   "route": [
+    "Shark",
+    "Tropical climate",
+    "Banana"
+   ],
+   "routes": 4,
+   "links": 1097
+  },
+  {
+   "title": "Michael Jackson",
+   "par": 2,
+   "route": [
+    "Michael Jackson",
+    "Calypso (album)",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 2582
+  },
+  {
+   "title": "Taylor Swift",
+   "par": 2,
+   "route": [
+    "Taylor Swift",
+    "Calypso (album)",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 2269
+  },
+  {
+   "title": "Sushi",
+   "par": 2,
+   "route": [
+    "Sushi",
+    "Pancit",
+    "Banana"
+   ],
+   "routes": 49,
+   "links": 982
+  },
+  {
+   "title": "Super Mario",
+   "par": 3,
+   "route": [
+    "Super Mario",
+    "Japanese language",
+    "Laguna (province)",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 329
+  },
+  {
+   "title": "Mars",
+   "par": 2,
+   "route": [
+    "Mars",
+    "Radiation",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 1344
+  },
+  {
+   "title": "Rome",
+   "par": 2,
+   "route": [
+    "Rome",
+    "Paleolithic",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 1656
+  },
+  {
+   "title": "Winston Churchill",
+   "par": 2,
+   "route": [
+    "Winston Churchill",
+    "United States involvement in regime change",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 3043
+  },
+  {
+   "title": "Elvis Presley",
+   "par": 2,
+   "route": [
+    "Elvis Presley",
+    "Peanut butter, banana and bacon sandwich",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 1381
+  },
+  {
+   "title": "Honey bee",
+   "par": 2,
+   "route": [
+    "Honey bee",
+    "List of crop plants pollinated by bees",
+    "Banana"
+   ],
+   "routes": 13,
+   "links": 517
+  },
+  {
+   "title": "Great Wall of China",
+   "par": 2,
+   "route": [
+    "Great Wall of China",
+    "Quanzhou",
+    "Banana"
+   ],
+   "routes": 1,
+   "links": 451
+  },
+  {
+   "title": "Football",
+   "par": 3,
+   "route": [
+    "Football",
+    "Aberdeen",
+    "Duthie Park",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 719
+  },
+  {
+   "title": "Mona Lisa",
+   "par": 2,
+   "route": [
+    "Mona Lisa",
+    "Varnish",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 795
+  },
+  {
+   "title": "Julius Caesar",
+   "par": 3,
+   "route": [
+    "Julius Caesar",
+    "Apollo",
+    "Crete",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 849
+  },
+  {
+   "title": "Elon Musk",
+   "par": 2,
+   "route": [
+    "Elon Musk",
+    "Mushroom",
+    "Banana"
+   ],
+   "routes": 3,
+   "links": 2050
+  },
+  {
+   "title": "Marilyn Monroe",
+   "par": 3,
+   "route": [
+    "Marilyn Monroe",
+    "Abraham Lincoln",
+    "James Carville",
+    "Banana"
+   ],
+   "routes": null,
+   "links": 526
+  },
+  {
+   "title": "Barack Obama",
+   "par": 2,
+   "route": [
+    "Barack Obama",
+    "James Carville",
+    "Banana"
+   ],
+   "routes": 2,
+   "links": 2851
+  }
+ ]
+}
