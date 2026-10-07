@@ -1,5 +1,5 @@
-// All Things Banana: serves the site, and every 10 minutes collects banana news,
-// videos and stock prices into KV (/api/feed). Banana price history for the charts
+// All Things Banana: serves the site, and every 10 minutes collects banana news
+// (Google News and publishers' feeds), videos and stock prices into KV (/api/feed). Banana price history for the charts
 // is refreshed every 6 hours (/api/market).
 import { XMLParser } from 'fast-xml-parser';
 import { isAboutBananas } from './filter.js';
@@ -8,10 +8,22 @@ import { refreshMarket, MARKET_EVERY_MS, MARKET_VERSION, STOCKS } from './market
 const MAX_ITEMS = 300;
 const STALE_MS = 20 * 60 * 1000;          // refresh on request if the cron hasn't run for a while
 const YOUTUBE_EVERY_MS = 30 * 60 * 1000;  // each search costs 100 of the 10,000 daily quota units
+const PUBLISHER_EVERY_MS = 20 * 60 * 1000; // be polite to publishers' feeds
 
+// Google News sometimes refuses requests from Cloudflare's servers, so we also read
+// publishers' own feeds directly. Each feed is fetched on its own: one failing doesn't stop the rest.
+// allBanana: every story in that feed is about bananas, even if the headline doesn't say so.
 const NEWS_FEEDS = [
-  'https://news.google.com/rss/search?q=banana+OR+bananas+when:7d&hl=en-GB&gl=GB&ceid=GB:en',
-  'https://news.google.com/rss/search?q=banana+OR+bananas+when:7d&hl=en-US&gl=US&ceid=US:en',
+  { name: 'google-gb', google: true, url: 'https://news.google.com/rss/search?q=banana+OR+bananas+when:7d&hl=en-GB&gl=GB&ceid=GB:en' },
+  { name: 'google-us', google: true, url: 'https://news.google.com/rss/search?q=banana+OR+bananas+when:7d&hl=en-US&gl=US&ceid=US:en' },
+  { name: 'freshplaza', source: 'FreshPlaza', url: 'https://www.freshplaza.com/rss.xml' },
+  { name: 'freshplaza-europe', source: 'FreshPlaza', url: 'https://www.freshplaza.com/europe/rss.xml' },
+  { name: 'freshplaza-north-america', source: 'FreshPlaza', url: 'https://www.freshplaza.com/north-america/rss.xml' },
+  { name: 'freshplaza-latin-america', source: 'FreshPlaza', url: 'https://www.freshplaza.com/latin-america/rss.xml' },
+  { name: 'freshfruitportal', source: 'FreshFruitPortal', url: 'https://www.freshfruitportal.com/feed/' },
+  { name: 'andnowuknow', source: 'AndNowUKnow', url: 'https://www.andnowuknow.com/rss.xml' },
+  { name: 'hortidaily', source: 'Hortidaily', url: 'https://www.hortidaily.com/rss.xml' },
+  { name: 'bananalink', source: 'Banana Link', url: 'https://www.bananalink.org.uk/feed/', allBanana: true },
 ];
 
 export default {
@@ -67,8 +79,9 @@ async function refresh(env) {
 
   let stocks = old.stocks;
   const youtubeDue = env.YOUTUBE_API_KEY && now - (sources.youtube?.at || 0) > YOUTUBE_EVERY_MS;
+  const due = f => f.google || now - (sources[f.name]?.at || 0) > PUBLISHER_EVERY_MS;
   await Promise.all([
-    run('news', googleNews),
+    ...NEWS_FEEDS.filter(due).map(f => run(f.name, () => readFeed(f))),
     youtubeDue && run('youtube', () => youtube(env.YOUTUBE_API_KEY)),
     env.FINNHUB_API_KEY && run('stocks', async () => { stocks = await quotes(env.FINNHUB_API_KEY); }),
   ]);
@@ -76,7 +89,7 @@ async function refresh(env) {
   // merge, drop duplicates (the same story from many outlets), newest first
   const seen = new Set();
   const items = [...fresh, ...old.items]
-    .filter(it => isAboutBananas(it.title))
+    .filter(it => isAboutBananas(it.title, it.allBanana))
     .sort((a, b) => b.published - a.published)
     .filter(it => {
       const k = it.type + ':' + it.title.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 70);
@@ -94,26 +107,42 @@ async function refresh(env) {
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' });
 const asArray = x => (Array.isArray(x) ? x : x ? [x] : []);
 
-async function googleNews() {
-  const out = [];
-  for (const feed of NEWS_FEEDS) {
-    const res = await fetch(feed, { headers: { 'user-agent': 'AllThingsBanana/1.0 (+https://allthingsbanana.com)' } });
-    if (!res.ok) throw new Error(`Google News ${res.status}`);
-    const rss = xml.parse(await res.text());
-    for (const it of asArray(rss?.rss?.channel?.item)) {
-      const source = typeof it.source === 'object' ? it.source['#text'] : it.source || 'News';
-      const title = decode(String(it.title)).replace(new RegExp(`\\s+-\\s+${escapeRe(source)}$`), '');
-      out.push({
-        id: 'news:' + it.link,
-        type: 'news',
-        title,
-        url: it.link,
-        source,
-        published: Date.parse(it.pubDate) || Date.now(),
-      });
-    }
-  }
-  return out;
+const UA = { 'user-agent': 'AllThingsBanana/1.0 (+https://allthingsbanana.com)' };
+
+async function readFeed(feed) {
+  const res = await fetch(feed.url, { headers: UA });
+  if (!res.ok) throw new Error(`${feed.name} ${res.status}`);
+  const rss = xml.parse(await res.text());
+  return asArray(rss?.rss?.channel?.item).map(it => {
+    const source = feed.source || (typeof it.source === 'object' ? it.source['#text'] : it.source) || 'News';
+    let title = decode(text(it.title));
+    if (feed.google) title = title.replace(new RegExp(`\\s+-\\s+${escapeRe(source)}$`), '');
+    const url = text(it.link);
+    return {
+      id: 'news:' + url,
+      type: 'news',
+      title,
+      url,
+      source,
+      thumb: imageOf(it),
+      published: Date.parse(it.pubDate) || Date.now(),
+      ...(feed.allBanana ? { allBanana: true } : {}),
+    };
+  }).filter(it => it.title && it.url.startsWith('http'));
+}
+
+const text = v => String(typeof v === 'object' && v !== null ? v['#text'] ?? '' : v ?? '').trim();
+// a picture for the story, if the feed has one (only https, so browsers will show it)
+function imageOf(it) {
+  const candidates = [
+    ...asArray(it['media:content']).map(m => m.url),
+    ...asArray(it['media:thumbnail']).map(m => m.url),
+    ...asArray(it.enclosure).filter(e => !e.type || e.type.startsWith('image')).map(e => e.url),
+  ];
+  const html = text(it['content:encoded']) + text(it.description);
+  const img = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+  if (img) candidates.push(img[1]);
+  return candidates.find(u => typeof u === 'string' && u.startsWith('https://')) || undefined;
 }
 
 async function youtube(key) {

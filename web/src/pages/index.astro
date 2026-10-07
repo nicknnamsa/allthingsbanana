@@ -158,15 +158,16 @@ import Base from '../layouts/Base.astro';
       $('#latestList').innerHTML = $('#top').innerHTML = '<p class="empty">Collecting the first banana news… check back in a minute.</p>';
       return;
     }
-    // Latest: the newest stories. Banana business: trade and price stories (plus a video) not already in Latest.
+    // Latest: the newest stories. Banana business: trade and price stories not already in Latest, led by one with a picture.
     const latest = items.slice(0, 10);
     const used = new Set(latest.map(i => i.id));
-    const video = items.find(i => i.type === 'video' && i.thumb && !used.has(i.id));
-    if (video) used.add(video.id);
-    let biz = items.filter(i => !used.has(i.id) && BUSINESS.test(i.title)).slice(0, video ? 6 : 7);
+    // lead with a story that has a picture: a business story if possible, else a video
+    const pic = items.find(i => i.thumb && !used.has(i.id) && BUSINESS.test(i.title)) || items.find(i => i.thumb && !used.has(i.id));
+    if (pic) used.add(pic.id);
+    let biz = items.filter(i => !used.has(i.id) && BUSINESS.test(i.title)).slice(0, pic ? 6 : 7);
     if (!biz.length) biz = items.filter(i => !used.has(i.id)).slice(0, 7);
     biz.forEach(i => used.add(i.id));
-    const top = (video ? [video] : []).concat(biz);
+    const top = (pic ? [pic] : []).concat(biz);
 
     $('#top').innerHTML = top.map((it, i) => `<article class="t-item">
       ${i === 0 && it.thumb ? `<a href="${esc(it.url)}" target="_blank" rel="noopener nofollow" class="t-img"><img src="${esc(it.thumb)}" alt="" loading="lazy"></a>` : ''}

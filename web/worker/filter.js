@@ -21,8 +21,9 @@ export const NOT_BANANAS = [
 // Never show these, whatever the context. Extend as needed.
 export const BLOCKED_WORDS = [/\bporn/i, /\bnsfw\b/i, /\bnude/i, /\bsex(ual|y)?\b/i, /\bonlyfans\b/i];
 
-export function isAboutBananas(title) {
-  if (!MUST_MATCH.test(title)) return false;
+// trusted: the story comes from a banana-only source, so the headline needn't say "banana"
+export function isAboutBananas(title, trusted = false) {
+  if (!trusted && !MUST_MATCH.test(title)) return false;
   if (NOT_BANANAS.some(re => re.test(title))) return false;
   if (BLOCKED_WORDS.some(re => re.test(title))) return false;
   return true;

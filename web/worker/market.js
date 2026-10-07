@@ -1,8 +1,9 @@
 // Market data for the homepage. Refreshed every few hours into KV.
 //   commodities: IMF Primary Commodity Prices, monthly world prices (no key needed)
-//   retail:      US BLS average shop prices in US cities, monthly (no key needed)
+//   retail:      US BLS average shop prices in US cities, monthly (optional free BLS_API_KEY raises the daily limit)
 //   history:     daily closes for banana companies from Alpha Vantage (optional ALPHAVANTAGE_API_KEY)
-import snapshot from './snapshot/imf.json' with { type: 'json' };
+import imfSnapshot from './snapshot/imf.json' with { type: 'json' };
+import blsSnapshot from './snapshot/bls.json' with { type: 'json' };
 
 export const MARKET_EVERY_MS = 6 * 60 * 60 * 1000;
 // bump when the stored shape changes, so old data is replaced straight away after a deploy
@@ -40,9 +41,12 @@ export async function refreshMarket(env, old = {}) {
   };
   await Promise.all([
     tryRun('commodities', imfPrices),
-    tryRun('retail', blsPrices),
+    tryRun('retail', () => blsPrices(env.BLS_API_KEY)),
     env.ALPHAVANTAGE_API_KEY && tryRun('history', () => stockHistory(env.ALPHAVANTAGE_API_KEY)),
   ]);
+  // if a source failed and we have nothing newer, use the copy saved at build time (scripts/snapshot.mjs)
+  if (!out.commodities && imfSnapshot?.PBANSOP) out.commodities = imfSnapshot;
+  if (!out.retail && blsSnapshot?.APU0000711211) out.retail = blsSnapshot;
   out.updated = Date.now();
   return out;
 }
@@ -68,29 +72,26 @@ export function parseImf(d) {
   return out;
 }
 
-// The IMF server's certificate chain isn't trusted by every runtime, so if the live
-// fetch fails we fall back to the snapshot taken at build time (scripts/snapshot.mjs).
-async function imfPrices() {
-  try {
-    const res = await fetch(IMF_URL, { headers: { ...UA, accept: 'application/json' } });
-    if (!res.ok) throw new Error(`IMF ${res.status}`);
-    return parseImf(await res.json());
-  } catch (e) {
-    if (snapshot?.PBANSOP) return snapshot;
-    throw e;
-  }
+// The IMF server's certificate chain isn't trusted by every runtime; refreshMarket falls
+// back to the build-time snapshot when this fails.
+export async function imfPrices() {
+  const res = await fetch(IMF_URL, { headers: { ...UA, accept: 'application/json' } });
+  if (!res.ok) throw new Error(`IMF ${res.status}`);
+  return parseImf(await res.json());
 }
 
-async function blsPrices() {
-  // without a key, BLS returns at most 10 years per request (but many series at once)
-  const now = new Date().getUTCFullYear(), spans = [];
-  for (let y = 1995; y <= now; y += 10) spans.push([y, Math.min(y + 9, now)]);
+export async function blsPrices(key) {
+  // without a key: 10 years per request and 25 requests a day per address (Cloudflare's addresses
+  // are shared, so that runs out). A free key gives 20 years per request and 500 a day.
+  const now = new Date().getUTCFullYear(), step = key ? 20 : 10, spans = [];
+  for (let y = 1995; y <= now; y += step) spans.push([y, Math.min(y + step - 1, now)]);
   const out = {};
   for (const [a, b] of spans) {
-    const res = await fetch('https://api.bls.gov/publicAPI/v1/timeseries/data/', {
+    const body = { seriesid: Object.keys(RETAIL), startyear: String(a), endyear: String(b), ...(key ? { registrationkey: key } : {}) };
+    const res = await fetch(`https://api.bls.gov/publicAPI/${key ? 'v2' : 'v1'}/timeseries/data/`, {
       method: 'POST',
       headers: { ...UA, 'content-type': 'application/json' },
-      body: JSON.stringify({ seriesid: Object.keys(RETAIL), startyear: String(a), endyear: String(b) }),
+      body: JSON.stringify(body),
     });
     const d = await res.json();
     if (d.status !== 'REQUEST_SUCCEEDED') throw new Error(`BLS: ${d.status} ${d.message}`);

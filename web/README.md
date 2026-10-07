@@ -50,6 +50,7 @@ Without these keys the site shows banana prices and news only. All three are fre
 
 - **Stock prices (Dole, Fresh Del Monte):** sign up at finnhub.io and copy your API key.
 - **Stock price charts (sparklines):** sign up at alphavantage.co for a free API key.
+- **US shop prices (recommended):** register at data.bls.gov/registrationEngine for a free BLS key. Without one, the BLS often refuses Cloudflare's shared servers and the site falls back to the copy saved at build time.
 - **YouTube videos:** in Google Cloud Console, create a project, enable **YouTube Data API v3**, then create an API key.
 
 Add them to the live site (each command asks you to paste the key):
@@ -58,9 +59,12 @@ Add them to the live site (each command asks you to paste the key):
 npx wrangler secret put FINNHUB_API_KEY
 npx wrangler secret put ALPHAVANTAGE_API_KEY
 npx wrangler secret put YOUTUBE_API_KEY
+npx wrangler secret put BLS_API_KEY
 ```
 
-The banana price charts need no keys: they use the IMF and the US Bureau of Labor Statistics. If the Worker can't reach the IMF, it uses a copy saved at build time (`npm run snapshot` refreshes it; `npm run build` does it automatically).
+The price charts use the IMF and the US Bureau of Labor Statistics. If the Worker can't reach either, it uses a copy saved at build time in `worker/snapshot/` (`npm run snapshot` refreshes it; `npm run build` does it automatically). Commit the refreshed snapshot files so automatic builds have them too.
+
+News comes from Google News plus publishers' own feeds (FreshPlaza, FreshFruitPortal, AndNowUKnow, Hortidaily, Banana Link), listed in `worker/index.js`. Google News sometimes refuses Cloudflare's servers, so the publisher feeds keep the site supplied.
 
 For local development, put them in `.dev.vars` instead. That file is never committed or deployed.
 
