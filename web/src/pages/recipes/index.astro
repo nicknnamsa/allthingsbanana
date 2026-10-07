@@ -2,14 +2,19 @@
 import Base from '../../layouts/Base.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
 import { recipes, MEALS, RIPENESS } from '../../data/recipes';
-const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as never)).length;
+import { readFileSync } from 'node:fs';
+// recipes from other sites, found by scripts/crawl-recipes.mjs (loaded in the browser, counted here)
+let web: { meals: string[]; s: string }[] = [];
+try { web = JSON.parse(readFileSync(new URL('../../../public/recipes/web.json', import.meta.url), 'utf8')); } catch {}
+const webSites = new Set(web.map(w => w.s)).size;
+const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as never)).length + web.filter(w => w.meals.includes(meal)).length;
 ---
 <Base wide section="recipes" title="Peelicious · banana recipes for breakfast, lunch, dinner and more · All Things Banana"
       description={`${recipes.length} banana recipes from around the world: banana bread, pancakes, smoothies, plantain dishes, desserts and more. Filter by meal, by how ripe your bananas are, or by how much banana you want.`}>
   <header class="head">
     <div>
       <h1>Peelicious</h1>
-      <p><b>{recipes.length} banana recipes</b> from around the world, from breakfast to cocktails. Pick a meal, tell us how ripe your bananas are, or just browse.</p>
+      <p><b>{recipes.length} banana recipes</b> of our own{web.length > 0 && <> plus <b>{web.length.toLocaleString('en-US')} more</b> from {webSites} recipe sites</>}, from breakfast to cocktails. Pick a meal, tell us how ripe your bananas are, or just browse.</p>
     </div>
     <button class="surprise" id="surprise">🎲 Surprise me</button>
   </header>
@@ -28,7 +33,7 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
 
   <div class="tools">
     <div class="meals" id="meals" role="group" aria-label="Meal">
-      <button data-meal="" class="on">All <span>{recipes.length}</span></button>
+      <button data-meal="" class="on">All <span>{(recipes.length + web.length).toLocaleString('en-US')}</span></button>
       {MEALS.map(m => <button data-meal={m.id}>{m.label} <span>{count(m.id)}</span></button>)}
     </div>
     <div class="row2">
@@ -39,11 +44,15 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
         <button data-diet="no-bake">No oven</button>
         <button data-quick="30">Under 30 min</button>
       </div>
+      <div class="src" id="src" role="group" aria-label="Whose recipes" hidden={web.length === 0}>
+        <button data-src="" class="on">All</button><button data-src="ours">Ours</button><button data-src="web">Other sites</button>
+      </div>
       <label class="sort">Sort
         <select id="sort">
           <option value="banana">Most banana first</option>
           <option value="quick">Quickest first</option>
           <option value="az">A–Z</option>
+          <option value="rated">Top rated</option>
           <option value="few">Fewest ingredients</option>
         </select>
       </label>
@@ -51,9 +60,16 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
   </div>
 
   <p class="status" id="status" aria-live="polite"></p>
+  <h2 class="sec-h" id="ourHead">Our recipes</h2>
   <div class="grid" id="grid">
     {recipes.map(r => <RecipeCard recipe={r} />)}
   </div>
+  <section class="web" id="web" hidden>
+    <div class="web-head"><h2 class="sec-h">From around the web</h2><span id="webCount"></span></div>
+    <div class="grid" id="webGrid"></div>
+    <button id="webMore" class="more-btn" hidden>Show more recipes</button>
+    <p class="web-note">These link to recipes on other sites. We show the name, photo, time and rating each site publishes; the full recipe is on their site.</p>
+  </section>
   <div class="none" id="none" hidden>
     <p>No recipes match all of that.</p>
     <button id="clear">Clear filters</button>
@@ -64,7 +80,38 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
   const $ = (s: string) => document.querySelector(s) as HTMLElement;
   const grid = $('#grid');
   const cards = [...grid.querySelectorAll<HTMLAnchorElement>('.rc')];
-  const state = { meal: '', ripe: '', diet: new Set<string>(), quick: 0, q: '', sort: 'banana' };
+  const state = { meal: '', ripe: '', diet: new Set<string>(), quick: 0, q: '', sort: 'banana', src: '' };
+
+  // ---------- recipes from other sites ----------
+  type Web = { n: string; u: string; s: string; i?: string; m?: number; meals: string[]; d: string[]; l: number; r?: number; c?: number; k?: string };
+  let web: Web[] = [], webShown = 24;
+  const MEAL_LABEL: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks', dessert: 'Desserts', drink: 'Drinks' };
+  // other sites don't say how ripe the bananas should be, so match on the kind of dish
+  const RIPE_HINT: Record<string, RegExp> = {
+    green: /tostone|green|mofongo|matoke|chips|mang[uú]|patacon|fried plantain|plantain chips|curry|raw banana/i,
+    yellow: /split|foster|caramel|grill|salad|foster|boat|pudding|banoffee|cream pie|dipped|sushi|sandwich/i,
+    spotty: /smoothie|pancake|muffin|shake|waffle|oat|nice cream|ice cream|lassi|french toast|crepe/i,
+    brown: /banana bread|bread|muffin|cake|cookie|brownie|smoothie|nice cream|blondie|loaf|pancake/i,
+  };
+  const esc = (t: string) => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+  const fmtMins = (m?: number) => !m ? '' : m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
+  function webCard(w: Web) {
+    const art = w.i
+      ? `<img src="${esc(w.i)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('noimg');this.remove()">`
+      : '';
+    return `<a class="wc" href="${esc(w.u)}" target="_blank" rel="noopener">
+      <div class="wc-art ${w.i ? '' : 'noimg'}">${art}</div>
+      <div class="wc-body">
+        <div class="wc-tags">${w.meals.slice(0, 2).map(m => `<span>${MEAL_LABEL[m] || m}</span>`).join('')}</div>
+        <h3>${esc(w.n)}</h3>
+        <div class="wc-src">on ${esc(w.s)} ↗</div>
+        <div class="wc-foot">
+          <span class="meter">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= w.l ? 'on' : ''}">🍌</i>`).join('')}</span>
+          <span>${w.r ? `★ ${w.r.toFixed(1)}${w.c ? ` <small>(${w.c.toLocaleString('en-US')})</small>` : ''}` : ''}${w.r && w.m ? ' · ' : ''}${fmtMins(w.m)}</span>
+        </div>
+      </div></a>`;
+  }
+  fetch('/recipes/web.json').then(r => r.json()).then((d: Web[]) => { web = d; apply(); }).catch(() => {});
 
   // filters live in the address, so a filtered view can be shared or bookmarked
   function readUrl() {
@@ -75,6 +122,7 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
     state.quick = Number(p.get('quick')) || 0;
     state.q = p.get('q') || '';
     state.sort = p.get('sort') || 'banana';
+    state.src = p.get('from') || '';
   }
   function writeUrl() {
     const p = new URLSearchParams();
@@ -84,14 +132,17 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
     if (state.quick) p.set('quick', String(state.quick));
     if (state.q) p.set('q', state.q);
     if (state.sort !== 'banana') p.set('sort', state.sort);
+    if (state.src) p.set('from', state.src);
     history.replaceState(null, '', p.size ? `?${p}` : location.pathname);
   }
 
   function apply() {
     const words = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+    // our recipes: shown or hidden in place
     const shown = cards.filter(c => {
       const d = c.dataset;
-      const ok = (!state.meal || d.meals!.split(' ').includes(state.meal))
+      const ok = state.src !== 'web'
+        && (!state.meal || d.meals!.split(' ').includes(state.meal))
         && (!state.ripe || d.ripe!.split(' ').includes(state.ripe))
         && [...state.diet].every(x => d.diet!.split(' ').includes(x))
         && (!state.quick || Number(d.mins) <= state.quick)
@@ -104,33 +155,61 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
       quick: (a, b) => Number(a.dataset.mins) - Number(b.dataset.mins),
       az: (a, b) => a.dataset.name!.localeCompare(b.dataset.name!),
       few: (a, b) => Number(a.dataset.ings) - Number(b.dataset.ings),
+      rated: (a, b) => Number(b.dataset.level) - Number(a.dataset.level),
     };
     [...cards].sort(by[state.sort]).forEach(c => grid.append(c));
+    $('#ourHead').hidden = !shown.length || !web.length;
 
-    $('#none').hidden = shown.length > 0;
-    const bits = [state.meal && document.querySelector(`[data-meal="${state.meal}"]`)?.firstChild?.textContent?.trim().toLowerCase(),
+    // other sites: filtered, sorted, then shown a page at a time
+    const webList = state.src === 'ours' ? [] : web.filter(w =>
+      (!state.meal || w.meals.includes(state.meal))
+      && (!state.ripe || RIPE_HINT[state.ripe].test(w.n))
+      && [...state.diet].every(x => w.d.includes(x))
+      && (!state.quick || (w.m != null && w.m <= state.quick))
+      && words.every(x => `${w.n} ${w.s} ${w.k || ''}`.toLowerCase().includes(x)));
+    const wBy: Record<string, (a: Web, b: Web) => number> = {
+      banana: (a, b) => b.l - a.l || (b.c || 0) - (a.c || 0),
+      quick: (a, b) => (a.m ?? 1e9) - (b.m ?? 1e9),
+      az: (a, b) => a.n.localeCompare(b.n),
+      rated: (a, b) => ((b.r || 0) * Math.log10((b.c || 0) + 10)) - ((a.r || 0) * Math.log10((a.c || 0) + 10)),
+      few: (a, b) => (b.c || 0) - (a.c || 0),
+    };
+    webList.sort(wBy[state.sort]);
+    $('#web').hidden = !webList.length;
+    $('#webGrid').innerHTML = webList.slice(0, webShown).map(webCard).join('');
+    $('#webMore').hidden = webList.length <= webShown;
+    $('#webCount').textContent = `${webList.length.toLocaleString('en-US')} from ${new Set(webList.map(w => w.s)).size} sites`;
+
+    const total = shown.length + webList.length;
+    $('#none').hidden = total > 0 || (!web.length && shown.length > 0);
+    const bits = [state.meal && MEAL_LABEL[state.meal]?.toLowerCase(),
       state.ripe && `for ${state.ripe} bananas`, state.q && `matching “${state.q}”`].filter(Boolean);
-    $('#status').textContent = `${shown.length} ${shown.length === 1 ? 'recipe' : 'recipes'}${bits.length ? ' · ' + bits.join(' · ') : ''}`;
+    $('#status').textContent = `${total.toLocaleString('en-US')} ${total === 1 ? 'recipe' : 'recipes'}${web.length && state.src === '' ? ` (${shown.length} ours, ${webList.length.toLocaleString('en-US')} from other sites)` : ''}${bits.length ? ' · ' + bits.join(' · ') : ''}`;
 
     document.querySelectorAll<HTMLButtonElement>('#meals button').forEach(b => b.classList.toggle('on', (b.dataset.meal || '') === state.meal));
     document.querySelectorAll<HTMLButtonElement>('#ripe button').forEach(b => { const on = b.dataset.ripe === state.ripe; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
     document.querySelectorAll<HTMLButtonElement>('#diet button').forEach(b => b.classList.toggle('on', b.dataset.diet ? state.diet.has(b.dataset.diet) : state.quick === Number(b.dataset.quick)));
+    document.querySelectorAll<HTMLButtonElement>('#src button').forEach(b => b.classList.toggle('on', (b.dataset.src || '') === state.src));
     ($('#sort') as HTMLSelectElement).value = state.sort;
     if (($('#find') as HTMLInputElement).value !== state.q) ($('#find') as HTMLInputElement).value = state.q;
     writeUrl();
   }
+  const reset = () => { webShown = 24; apply(); };
 
-  $('#meals').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { state.meal = b.dataset.meal || ''; apply(); } });
-  $('#ripe').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { state.ripe = state.ripe === b.dataset.ripe ? '' : b.dataset.ripe!; apply(); } });
+  $('#meals').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { state.meal = b.dataset.meal || ''; reset(); } });
+  $('#ripe').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { state.ripe = state.ripe === b.dataset.ripe ? '' : b.dataset.ripe!; reset(); } });
+  $('#src').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { state.src = b.dataset.src || ''; reset(); } });
+  $('#webMore').addEventListener('click', () => { webShown += 24; apply(); });
   $('#diet').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('button'); if (!b) return;
     if (b.dataset.diet) { state.diet.has(b.dataset.diet) ? state.diet.delete(b.dataset.diet) : state.diet.add(b.dataset.diet); }
     else state.quick = state.quick ? 0 : Number(b.dataset.quick);
-    apply();
+    reset();
   });
-  $('#find').addEventListener('input', e => { state.q = (e.target as HTMLInputElement).value.trim(); apply(); });
-  $('#sort').addEventListener('change', e => { state.sort = (e.target as HTMLSelectElement).value; apply(); });
-  $('#clear').addEventListener('click', () => { Object.assign(state, { meal: '', ripe: '', diet: new Set(), quick: 0, q: '' }); apply(); });
+  $('#find').addEventListener('input', e => { state.q = (e.target as HTMLInputElement).value.trim(); reset(); });
+  $('#sort').addEventListener('change', e => { state.sort = (e.target as HTMLSelectElement).value; reset(); });
+  $('#clear').addEventListener('click', () => { Object.assign(state, { meal: '', ripe: '', diet: new Set(), quick: 0, q: '', src: '' }); reset(); });
+  // surprise me: one of our recipes (it has a page here), from whatever the filters show
   $('#surprise').addEventListener('click', () => {
     const pool = cards.filter(c => !c.hidden);
     const pick = (pool.length ? pool : cards)[Math.floor(Math.random() * (pool.length || cards.length))];
@@ -177,7 +256,31 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
   .sort { font-size: 13px; color: var(--ink-3); font-weight: 600; display: flex; align-items: center; gap: 6px; }
   .sort select { font: 600 13px 'Inter', sans-serif; color: var(--ink); background: var(--field); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
 
+  .src { display: inline-flex; background: var(--field); border-radius: 999px; padding: 3px; }
+  .src button { font: 700 12.5px 'Inter', sans-serif; color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+  .src button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
   .status { color: var(--ink-3); font-size: 13px; margin: 14px 0 10px; }
+  .sec-h { font-size: 19px; font-weight: 800; margin: 6px 0 12px; }
+  .web { margin-top: 34px; }
+  .web-head { display: flex; align-items: baseline; gap: 12px; }
+  .web-head span { color: var(--ink-3); font-size: 13px; }
+  .web-note { color: var(--ink-3); font-size: 12.5px; margin-top: 14px; }
+  .more-btn { display: block; margin: 18px auto 0; font: 700 14px 'Inter', sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 10px 22px; cursor: pointer; }
+  .more-btn:hover { background: var(--chip); }
+  .web :global(.wc) { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; transition: border-color .15s, transform .15s; }
+  .web :global(.wc:hover) { border-color: var(--brand); transform: translateY(-2px); }
+  .web :global(.wc-art) { height: 150px; background: var(--chip); }
+  .web :global(.wc-art img) { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .web :global(.wc-art.noimg) { display: grid; place-items: center; background: radial-gradient(circle at 30% 25%, #4a3c12, #1f190a); }
+  .web :global(.wc-art.noimg::after) { content: '🍌'; font-size: 48px; }
+  .web :global(.wc-body) { padding: 11px 13px 13px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .web :global(.wc-tags) { display: flex; gap: 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--brand); }
+  .web :global(.wc h3) { margin: 2px 0 0; font-size: 15.5px; font-weight: 800; line-height: 1.25; }
+  .web :global(.wc-src) { color: var(--link); font-size: 12.5px; font-weight: 600; }
+  .web :global(.wc-foot) { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .web :global(.wc-foot small) { font-weight: 500; }
+  .web :global(.meter i) { font-style: normal; font-size: 12px; opacity: .22; filter: grayscale(1); }
+  .web :global(.meter i.on) { opacity: 1; filter: none; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
   .none { text-align: center; padding: 40px 0; color: var(--ink-2); }
   .none button { font: 700 14px 'Inter', sans-serif; color: #1d1600; background: var(--brand); border: none; border-radius: 999px; padding: 9px 18px; cursor: pointer; }
@@ -185,6 +288,9 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
   @media (max-width: 860px) { .ripe-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 560px) {
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .web :global(.wc-art) { height: 96px; }
+    .web :global(.wc h3) { font-size: 13.5px; }
+    .web :global(.wc-foot) { flex-wrap: wrap; font-size: 11px; }
     .head h1 { font-size: 28px; }
     .ripe-hint { display: none; }
     .tools { position: static; }

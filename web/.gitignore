@@ -3,3 +3,4 @@ dist/
 .astro/
 .wrangler/
 .dev.vars
+scripts/.recipe-crawl-cache.json

@@ -6,7 +6,8 @@
     "snapshot": "node scripts/snapshot.mjs",
     "build": "node scripts/snapshot.mjs && astro build",
     "dev": "npm run build && wrangler dev --test-scheduled",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "crawl-recipes": "node scripts/crawl-recipes.mjs"
   },
   "devDependencies": {
     "astro": "^7.3.6",
