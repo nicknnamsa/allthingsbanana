@@ -4,92 +4,119 @@ import degrees from '../../data/games/degrees.json';
 // only what the game needs in the browser
 const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s.routes }));
 ---
-<Base wide section="more" title="Six Degrees of Banana · a daily Wikipedia puzzle · All Things Banana"
+<Base wide section="degrees" title="Six Degrees of Banana · a daily Wikipedia puzzle · All Things Banana"
       description="A daily word puzzle: start on a Wikipedia article and get to Banana by naming articles each page links to, from memory. New start page every day.">
   <script type="application/json" id="degData" set:html={JSON.stringify(starts)} />
 
-  <header class="head">
-    <div>
-      <div class="kicker">More Bananas · Daily puzzle <span id="dayNo"></span></div>
-      <h1>Six Degrees of Banana</h1>
-      <p>Get from today's Wikipedia article to <b>Banana</b>. Type the name of an article the current page links to, then keep going. No peeking: it's all from memory.</p>
+  <div class="sd">
+    <div class="sd-layout">
+      <section class="sd-stage" aria-live="polite">
+        <header class="sd-top">
+          <div class="sd-brand">
+            <span class="sd-logo" aria-hidden="true">🍌</span>
+            <div>
+              <h1>Six Degrees of Banana</h1>
+              <div class="sd-day" id="dayNo"></div>
+            </div>
+          </div>
+          <div class="sd-topBtns">
+            <div class="sd-modes">
+              <button id="modeDaily" class="on">Daily</button>
+              <button id="modePractice">Practice</button>
+            </div>
+            <button id="helpBtn" class="sd-round" aria-label="How to play">?</button>
+          </div>
+        </header>
+
+        <div class="sd-goal">
+          <span class="sd-pill start" id="goalStart">…</span>
+          <span class="sd-dots" aria-hidden="true"></span>
+          <span class="sd-pill target">🍌 Banana</span>
+        </div>
+
+        <div class="sd-card" id="card">
+          <div class="sd-label" id="whereLabel">You're on</div>
+          <h2 id="current">…</h2>
+          <div class="sd-desc" id="desc"></div>
+          <p class="sd-extract" id="extract"></p>
+        </div>
+
+        <div id="playArea">
+          <form id="guessForm" class="sd-guess" autocomplete="off">
+            <input id="guess" type="text" placeholder="Type a page it links to…" aria-label="Your guess" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+            <button type="submit" id="goBtn">Go</button>
+          </form>
+          <div id="feedback" class="sd-feedback"></div>
+        </div>
+
+        <div class="sd-trail">
+          <ol id="path"></ol>
+        </div>
+
+        <div class="sd-bottom">
+          <div class="sd-stats">
+            <span>Steps <b id="sSteps">0</b></span>
+            <span>Par <b id="sPar">–</b></span>
+            <span>Misses <b id="sMisses">0</b></span>
+            <span>⏱ <b id="sTime">0:00</b></span>
+          </div>
+          <div class="sd-tools">
+            <button id="hintBtn" class="sd-text">💡 Hint</button>
+            <button id="giveUpBtn" class="sd-text">Give up</button>
+          </div>
+        </div>
+        <div id="hintBox" class="sd-hint" hidden></div>
+
+        <div id="done" class="sd-done" hidden>
+          <div class="sd-doneEmoji" id="doneEmoji">🍌</div>
+          <div class="sd-big" id="doneTitle"></div>
+          <div class="sd-sub" id="doneSub"></div>
+          <div class="sd-doneBtns">
+            <button id="shareBtn" class="sd-primary">Share result</button>
+            <button id="practiceBtn" class="sd-secondary">Practice round</button>
+          </div>
+          <p class="sd-best" id="best"></p>
+          <div id="world" class="sd-world" hidden>
+            <h3>Everyone today</h3>
+            <div id="worldSummary" class="sd-worldSummary"></div>
+            <div id="hist" class="sd-hist"></div>
+          </div>
+        </div>
+
+        <p class="sd-credit">Page titles and summaries come live from <a href="https://en.wikipedia.org/" rel="noopener" target="_blank">Wikipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener" target="_blank">CC BY-SA 4.0</a>). Not affiliated with Wikipedia.</p>
+      </section>
+
+      <aside class="sd-side">
+        <div class="sd-mini">
+          <h3>Your streak</h3>
+          <div class="sd-streak">
+            <div><b id="streak">0</b><span>days</span></div>
+            <div><b id="played">0</b><span>played</span></div>
+            <div><b id="pars">0</b><span>on par</span></div>
+          </div>
+        </div>
+        <a class="sd-mini sd-peels" href="/more/banana-clicker/" id="peelCard" hidden>
+          <h3>Banana Clicker <span>top peelers</span></h3>
+          <ol id="peelList"></ol>
+          <div class="sd-peelTotal" id="peelTotal"></div>
+        </a>
+      </aside>
     </div>
-    <div class="modes" role="tablist">
-      <button id="modeDaily" class="on" role="tab">Daily</button>
-      <button id="modePractice" role="tab">Practice</button>
-    </div>
-  </header>
 
-  <div class="layout">
-    <section class="game" aria-live="polite">
-      <div class="where">
-        <div class="label" id="whereLabel">You are on</div>
-        <h2 id="current">…</h2>
-        <div class="desc" id="desc"></div>
-        <p class="extract" id="extract"></p>
-      </div>
-
-      <form id="guessForm" class="guess" autocomplete="off">
-        <input id="guess" type="text" placeholder="Name an article this page links to…" aria-label="Your guess" autocapitalize="off" spellcheck="false" enterkeyhint="go">
-        <button type="submit" id="goBtn">Go</button>
-      </form>
-      <div id="feedback" class="feedback"></div>
-
-      <div class="statsRow">
-        <div><span>Steps</span><b id="sSteps">0</b></div>
-        <div><span>Par</span><b id="sPar">–</b></div>
-        <div><span>Misses</span><b id="sMisses">0</b></div>
-        <div><span>Hints</span><b id="sHints">0</b></div>
-        <div><span>Time</span><b id="sTime">0:00</b></div>
-      </div>
-
-      <div class="pathBox">
-        <div class="pathHead"><span>Your route</span><small>Tap an earlier page to go back (costs a step)</small></div>
-        <ol id="path" class="path"></ol>
-      </div>
-
-      <div class="tools">
-        <button id="hintBtn" class="ghost">💡 Hint <small>(shows 3 links, counts as a hint)</small></button>
-        <button id="giveUpBtn" class="ghost">Give up</button>
-      </div>
-      <div id="hintBox" class="hintBox" hidden></div>
-
-      <div id="done" class="done" hidden>
-        <div class="doneTop">
-          <div class="big" id="doneTitle"></div>
-          <div class="sub" id="doneSub"></div>
-        </div>
-        <ol id="donePath" class="donePath"></ol>
-        <p class="best" id="best"></p>
-        <div class="doneBtns">
-          <button id="shareBtn" class="primary">Share result</button>
-          <button id="practiceBtn" class="ghost">Play a practice round</button>
-        </div>
-        <div id="world" class="world" hidden>
-          <h3>Everyone today</h3>
-          <div id="worldSummary" class="worldSummary"></div>
-          <div id="hist" class="hist"></div>
-        </div>
-      </div>
-    </section>
-
-    <aside class="side">
-      <div class="card">
-        <h3>How to play</h3>
-        <ol class="rules">
-          <li>You start on a Wikipedia article.</li>
-          <li>Type the title of <b>another article that page links to</b>. If it does, you move there.</li>
-          <li>Keep going until you reach <b>Banana</b>. Fewest steps wins; par is the shortest possible route.</li>
-          <li>Guessing a real article that isn't linked is a <b>miss</b>. Typos and words with several meanings (like "Greek") aren't: we'll ask "did you mean…?"</li>
+    <div class="sd-overlay" id="intro" hidden>
+      <div class="sd-modal" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+        <div class="sd-modalEmoji" aria-hidden="true">🍌</div>
+        <h2 id="introTitle">Six Degrees of Banana</h2>
+        <p class="sd-today" id="introToday"></p>
+        <ol class="sd-rules">
+          <li><span>🔗</span><div>Type the name of a page that <b>the page you're on links to</b>.</div></li>
+          <li><span>🧭</span><div>Hop from page to page until you land on <b>Banana</b>.</div></li>
+          <li><span>⛳</span><div><b>Par</b> is the shortest route. A wrong page is a miss; typos are free.</div></li>
         </ol>
-        <p class="eg">Example: <b>Napoleon</b> → <b>Haiti</b> → <b>Banana</b>. Haiti's article mentions bananas as a crop, and Napoleon's article links to Haiti.</p>
+        <p class="sd-eg">e.g. <b>Napoleon</b> → <b>Haiti</b> → <b>Banana</b></p>
+        <button id="introOk" class="sd-primary sd-wide">OK, let's go</button>
       </div>
-      <div class="card">
-        <h3>Your streak</h3>
-        <div class="streak"><div><b id="streak">0</b><span>day streak</span></div><div><b id="played">0</b><span>played</span></div><div><b id="pars">0</b><span>on par</span></div></div>
-      </div>
-      <p class="credit">Article titles and summaries come live from <a href="https://en.wikipedia.org/" rel="noopener" target="_blank">Wikipedia</a> (text under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener" target="_blank">CC BY-SA 4.0</a>). Not affiliated with Wikipedia.</p>
-    </aside>
+    </div>
   </div>
 </Base>
 
@@ -102,11 +129,13 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
   const EPOCH = Date.UTC(2026, 9, 7);   // puzzle #1 (must match worker/degrees.js)
   const W = 'https://en.wikipedia.org/w/api.php';
   const $ = (id: string) => document.getElementById(id)!;
+  const input = () => document.getElementById('guess') as HTMLInputElement;
   const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
   const wikiUrl = (t: string) => 'https://en.wikipedia.org/wiki/' + encodeURIComponent(t.replace(/ /g, '_'));
   // compare titles loosely: case, accents, punctuation and underscores don't matter
   const key = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[_\s]+/g, ' ').replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trim();
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
   const store = {
     get<T>(k: string, d: T): T { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
     set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
@@ -124,7 +153,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     return res.json();
   }
 
-  // everything the current article links to: loose key -> real title (also under the names it was linked by)
+  // everything an article links to: loose key -> real title (also under the names it was linked by)
   const linkCache = new Map<string, Promise<Map<string, string>>>();
   function linksOf(title: string) {
     if (!linkCache.has(title)) linkCache.set(title, (async () => {
@@ -178,16 +207,15 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
   let start: Start = dailyStart;
   let s: State;
   let busy = false;
+  let running = false;   // the clock runs once the intro is closed
+  let shownTitle = '';
   const saveKey = () => `atb-deg-${today}`;
   const save = () => { if (mode === 'daily') store.set(saveKey(), s); };
   const current = () => s.path[s.path.length - 1];
   const steps = () => s.path.length - 1;
+  const newState = (st: Start): State => ({ day: today, start: st.t, path: [st.t], misses: 0, hints: 0, secs: 0, done: false, gaveUp: false });
 
-  function newState(st: Start): State {
-    return { day: today, start: st.t, path: [st.t], misses: 0, hints: 0, secs: 0, done: false, gaveUp: false };
-  }
-
-  function begin(m: 'daily' | 'practice') {
+  function begin(m: 'daily' | 'practice', intro = false) {
     mode = m;
     $('modeDaily').classList.toggle('on', m === 'daily');
     $('modePractice').classList.toggle('on', m === 'practice');
@@ -195,45 +223,65 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       start = dailyStart;
       const saved = store.get<State | null>(saveKey(), null);
       s = saved && saved.start === start.t ? saved : newState(start);
-      $('dayNo').textContent = `#${today}`;
+      $('dayNo').textContent = `Daily puzzle #${today}`;
     } else {
       const pool = STARTS.filter(x => x.t !== dailyStart.t && x.t !== s?.start);
       start = pool[Math.floor(Math.random() * pool.length)];
       s = newState(start);
-      $('dayNo').textContent = '· practice';
+      $('dayNo').textContent = 'Practice round';
     }
+    $('goalStart').textContent = start.t;
     $('feedback').innerHTML = '';
     $('hintBox').hidden = true;
-    (document.getElementById('guess') as HTMLInputElement).value = '';
+    input().value = '';
+    shownTitle = '';
     render();
-    if (s.done) showDone(); else { $('done').hidden = true; (document.getElementById('guess') as HTMLInputElement).focus({ preventScroll: true }); }
+    if (s.done) { running = false; showDone(); return; }
+    $('done').hidden = true;
+    if (intro) showIntro();
+    else { running = true; input().focus({ preventScroll: true }); }
   }
 
-  let shownTitle = '';
+  function showIntro() {
+    running = false;
+    $('introToday').innerHTML = s.done
+      ? `Today you went from <b>${esc(start.t)}</b> to <b>Banana</b>.`
+      : `${mode === 'daily' ? 'Today' : 'This round'}: get from <b>${esc(start.t)}</b> to <b>Banana</b>.`;
+    $('introOk').textContent = s.done ? 'Close' : s.path.length > 1 ? 'Carry on' : "OK, let's go";
+    $('intro').hidden = false;
+    ($('introOk') as HTMLButtonElement).focus();
+  }
+  function closeIntro() {
+    $('intro').hidden = true;
+    if (!s.done) { running = true; input().focus({ preventScroll: true }); }
+  }
+
   function render() {
     const cur = current();
     $('current').textContent = cur;
-    $('whereLabel').textContent = s.path.length === 1 ? 'Start here' : 'You are on';
+    $('whereLabel').textContent = s.path.length === 1 ? 'Start here' : "You're on";
+    $('card').classList.toggle('win', s.done && !s.gaveUp);
     $('sSteps').textContent = String(steps());
     $('sPar').textContent = String(start.p);
     $('sMisses').textContent = String(s.misses);
-    $('sHints').textContent = String(s.hints);
     $('sTime').textContent = fmtTime(s.secs);
+    // the route so far; tapping an earlier page rewinds to it
     $('path').innerHTML = s.path.map((t, i) => {
       const last = i === s.path.length - 1;
-      return `<li>${last || s.done ? `<span class="${last ? 'here' : ''}">${esc(t)}</span>` : `<button data-i="${i}">${esc(t)}</button>`}</li>`;
-    }).join('');
+      return `<li>${last || s.done ? `<span class="${last ? 'here' : ''}">${esc(t)}</span>` : `<button data-i="${i}" title="Go back to ${esc(t)}">${esc(t)}</button>`}</li>`;
+    }).join('') + (s.done ? '' : '<li class="ghost"><span>🍌 Banana</span></li>');
     const playing = !s.done;
-    for (const id of ['guess', 'goBtn', 'hintBtn', 'giveUpBtn']) (document.getElementById(id) as HTMLButtonElement).disabled = !playing;
+    $('playArea').hidden = !playing;
+    for (const id of ['hintBtn', 'giveUpBtn']) $(id).hidden = !playing;
     if (cur !== shownTitle) {
       shownTitle = cur;
       $('desc').textContent = ''; $('extract').textContent = '';
       summary(cur).then(d => {
         if (shownTitle !== cur || !d) return;
         $('desc').textContent = d.desc || '';
-        // a short taste of the article, without the full page (or its links)
-        const ex = (d.extract || '').split(/(?<=\.)\s+/).slice(0, 2).join(' ');
-        $('extract').textContent = ex.length > 320 ? ex.slice(0, 317) + '…' : ex;
+        // one sentence, as a reminder of what the page is about
+        const ex = (d.extract || '').split(/(?<=\.)\s+/)[0] || '';
+        $('extract').textContent = ex.length > 200 ? ex.slice(0, 197) + '…' : ex;
       });
       if (playing) linksOf(cur).catch(() => {});   // start loading, so the first guess is quick
     }
@@ -244,17 +292,25 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     $('feedback').innerHTML = `<div class="msg ${kind}">${html}</div>`;
   }
 
-  async function move(to: string, backtrack = false) {
+  function move(to: string) {
     s.path.push(to);
     $('hintBox').hidden = true;
     if (to === TARGET) {
       s.done = true;
       save(); render(); finish();
-      say(`✓ <b>${esc(s.path[s.path.length - 2])}</b> links to <b>Banana</b>. You made it! 🍌`, 'ok');
       return;
     }
     save(); render();
-    say(backtrack ? `Back on <b>${esc(to)}</b>.` : `✓ <b>${esc(s.path[s.path.length - 2])}</b> links to <b>${esc(to)}</b>. Where next?`, 'ok');
+    say(`✓ <b>${esc(s.path[s.path.length - 2])}</b> links to <b>${esc(to)}</b>`, 'ok');
+  }
+
+  // going back to an earlier page undoes the steps after it
+  function rewind(i: number) {
+    if (s.done || i >= s.path.length - 1) return;
+    s.path = s.path.slice(0, i + 1);
+    $('hintBox').hidden = true;
+    save(); render();
+    say(`↩ Back on <b>${esc(current())}</b>`);
   }
 
   async function guess(raw: string) {
@@ -265,7 +321,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     try {
       const links = await linksOf(from);
       const k = key(g);
-      if (k === key(from)) { say(`You're already on <b>${esc(from)}</b>.`); return; }
+      if (k === key(from)) { say(`You're already on <b>${esc(from)}</b>`); return; }
       // 1. one of this page's links, however it's capitalised or spelled with accents
       let hit = links.get(k);
       // 2. another name for an article (a redirect, like "Dubya")
@@ -275,20 +331,20 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
         const p = d.query?.pages?.[0];
         if (p && !p.missing && !p.invalid) { real = p.title; ambiguous = p.pageprops?.disambiguation !== undefined; hit = links.get(key(p.title)); }
       }
-      if (hit) { (document.getElementById('guess') as HTMLInputElement).value = ''; await move(hit); return; }
+      if (hit) { input().value = ''; move(hit); return; }
       // 3. a word with several meanings ("Greek", "Mercury"): offer the meanings this page does link to (not a miss)
       const meanings = await meaningsOf(g, real, ambiguous, links);
       if (meanings.length) {
-        say(`${ambiguous ? `“${esc(g)}” could mean several things.` : `Close!`} Did you mean ${meanings.map(t => `<button class="sugg" data-t="${esc(t)}">${esc(t)}</button>`).join(meanings.length === 2 ? ' or ' : ', ')}? <span class="free">(not counted)</span>`);
+        say(`Which one? ${meanings.map(t => `<button class="sugg" data-t="${esc(t)}">${esc(t)}</button>`).join(' ')} <span class="free">no miss</span>`);
         return;
       }
       if (real && ambiguous) {
-        say(`“${esc(g)}” could mean several different articles, and <b>${esc(from)}</b> doesn't link to any of them. Try something more specific. <span class="free">(not counted)</span>`);
+        say(`“${esc(g)}” has lots of meanings and none are linked here. Try something more specific. <span class="free">no miss</span>`);
         return;
       }
       if (real) {
         s.misses++; save(); render();
-        say(`✗ <b>${esc(real)}</b> is on Wikipedia, but <b>${esc(from)}</b> doesn't link to it. That's a miss.`, 'miss');
+        say(`✗ <b>${esc(from)}</b> doesn't link to <b>${esc(real)}</b>`, 'miss');
         return;
       }
       // 4. not an article: suggest the nearest spelling (a typo isn't a miss)
@@ -303,9 +359,11 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
         const d = await api({ action: 'query', list: 'search', srsearch: g, srlimit: '1', srinfo: 'suggestion', srprop: '' });
         suggest = d.query?.search?.[0]?.title || d.query?.searchinfo?.suggestion || '';
       }
-      say(`“${esc(g)}” isn't a Wikipedia article.${suggest ? ` Did you mean <button class="sugg" data-t="${esc(suggest)}">${esc(suggest)}</button>?` : ' Check the spelling and try again.'} <span class="free">(not counted)</span>`);
+      say(suggest
+        ? `No page called “${esc(g)}”. Did you mean <button class="sugg" data-t="${esc(suggest)}">${esc(suggest)}</button>? <span class="free">no miss</span>`
+        : `No page called “${esc(g)}”. Check the spelling. <span class="free">no miss</span>`);
     } catch {
-      say(`Couldn't reach Wikipedia just now. Check your connection and try again.`, 'miss');
+      say(`Couldn't reach Wikipedia just now. Try again in a moment.`, 'miss');
     } finally {
       busy = false; $('goBtn').textContent = 'Go';
     }
@@ -315,7 +373,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     if (s.done) return;
     const from = current();
     $('hintBox').hidden = false;
-    $('hintBox').innerHTML = '<span class="dim">Looking…</span>';
+    $('hintBox').innerHTML = 'Looking…';
     try {
       const [links, near] = await Promise.all([linksOf(from), nearBanana()]);
       const all = [...new Set(links.values())].filter(t => t !== from);
@@ -326,8 +384,8 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       const rest = all.filter(t => !shown.includes(t));
       while (shown.length < 3 && rest.length) shown.push(pick(rest));
       shown.sort(() => Math.random() - 0.5);
-      s.hints++; save(); render();
-      $('hintBox').innerHTML = `<b>${esc(from)}</b> links to ${shown.map(t => `<button class="sugg" data-t="${esc(t)}">${esc(t)}</button>`).join(', ')}${closer.length ? '. One of these is a step closer to Banana.' : '.'}`;
+      s.hints++; save();
+      $('hintBox').innerHTML = `${closer.length ? 'One of these gets you closer:' : 'This page links to:'} ${shown.map(t => `<button class="sugg" data-t="${esc(t)}">${esc(t)}</button>`).join(' ')}`;
     } catch {
       $('hintBox').innerHTML = `Couldn't reach Wikipedia just now.`;
     }
@@ -340,6 +398,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
 
   // ---------- results ----------
   function finish() {
+    running = false;
     showDone();
     if (mode !== 'daily') return;
     const hist = store.get<Record<number, { steps: number; solved: boolean; par: number }>>('atb-deg-history', {});
@@ -354,23 +413,18 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     }
   }
 
-  function verdict() {
-    const over = steps() - start.p;
-    if (over <= 0) return 'Par! As short as it gets. 🏆';
-    if (over === 1) return 'One over par. So close.';
-    return `${over} over par.`;
-  }
-
   function showDone() {
     $('done').hidden = false;
-    $('doneTitle').textContent = s.gaveUp ? 'Banana stays out of reach today' : `🍌 Banana in ${steps()} ${steps() === 1 ? 'step' : 'steps'}!`;
+    $('feedback').innerHTML = '';
+    const over = steps() - start.p;
+    $('doneEmoji').textContent = s.gaveUp ? '🙈' : over <= 0 ? '🏆' : '🍌';
+    $('doneTitle').textContent = s.gaveUp ? 'So close. Banana got away.' : over <= 0 ? `Par! Banana in ${plural(steps(), 'step')}` : `Banana in ${plural(steps(), 'step')}`;
     $('doneSub').textContent = s.gaveUp
-      ? `You got ${steps()} ${steps() === 1 ? 'step' : 'steps'} in. Here's one way it could go.`
-      : `${verdict()} ${s.misses} ${s.misses === 1 ? 'miss' : 'misses'}, ${s.hints} ${s.hints === 1 ? 'hint' : 'hints'}, ${fmtTime(s.secs)}.`;
-    $('donePath').innerHTML = s.path.map(t => `<li><a href="${wikiUrl(t)}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join('');
-    const others = start.n && start.n > 1 ? ` There were ${start.n} different ${start.p}-step routes.` : '';
-    $('best').innerHTML = `A shortest route (par ${start.p}): ${start.r.map(t => `<a href="${wikiUrl(t)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(' → ')}.${others}`;
-    $('practiceBtn').textContent = mode === 'daily' ? 'Play a practice round' : 'Another practice round';
+      ? 'Here’s one way there.'
+      : `${over <= 0 ? 'As short as it gets.' : `${plural(over, 'step')} over par.`} ${plural(s.misses, 'miss', 'misses')} · ${fmtTime(s.secs)}`;
+    const others = start.n && start.n > 1 ? ` (one of ${start.n})` : '';
+    $('best').innerHTML = `Shortest route${others}: ${start.r.map(t => `<a href="${wikiUrl(t)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(' → ')}`;
+    $('practiceBtn').textContent = mode === 'daily' ? 'Practice round' : 'Another round';
     if (mode === 'daily') fetch(`/api/degrees?day=${today}`).then(r => r.json()).then(showWorld).catch(() => {});
     else $('world').hidden = true;
   }
@@ -379,19 +433,20 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     if (!w || !w.played) return;
     $('world').hidden = false;
     const avg = w.solved ? Object.entries(w.steps).reduce((a, [k, n]) => a + +k * n, 0) / w.solved : 0;
-    $('worldSummary').innerHTML = `<div><b>${w.played.toLocaleString('en-US')}</b><span>played</span></div><div><b>${w.played ? Math.round((w.solved / w.played) * 100) : 0}%</b><span>reached Banana</span></div>` +
-      (w.solved ? `<div><b>${avg.toFixed(1)}</b><span>average steps</span></div><div><b>${w.best != null ? fmtTime(w.best) : '–'}</b><span>fastest</span></div>` : '');
+    $('worldSummary').innerHTML = `<div><b>${w.played.toLocaleString('en-US')}</b><span>played</span></div><div><b>${Math.round((w.solved / w.played) * 100)}%</b><span>made it</span></div>` +
+      (w.solved ? `<div><b>${avg.toFixed(1)}</b><span>avg steps</span></div><div><b>${w.best != null ? fmtTime(w.best) : '–'}</b><span>fastest</span></div>` : '');
     const max = Math.max(1, ...Object.values(w.steps));
     const mine = s.gaveUp ? -1 : Math.min(steps(), 10);
-    $('hist').innerHTML = Array.from({ length: 10 }, (_, i) => i + 1).map(k => {
+    const top = Math.max(6, mine, ...Object.keys(w.steps).map(Number));
+    $('hist').innerHTML = Array.from({ length: top }, (_, i) => i + 1).map(k => {
       const n = w.steps[k] || 0;
-      return `<div class="bar${k === mine ? ' me' : ''}${k === start.p ? ' par' : ''}"><span class="k">${k === 10 ? '10+' : k}</span><span class="track"><i style="width:${(n / max) * 100}%"></i></span><span class="n">${n}</span></div>`;
+      return `<div class="bar${k === mine ? ' me' : ''}"><span class="k">${k === 10 ? '10+' : k}${k === start.p ? ' <em>par</em>' : ''}</span><span class="track"><i style="width:${n ? Math.max(4, (n / max) * 100) : 0}%"></i></span><span class="n">${n}</span></div>`;
     }).join('');
   }
 
   function shareText() {
     const head = mode === 'daily' ? `🍌 Six Degrees of Banana #${today}` : '🍌 Six Degrees of Banana (practice)';
-    const line = s.gaveUp ? `${start.t} → ❌ gave up after ${steps()} steps` : `${start.t} → Banana in ${steps()} ${steps() === 1 ? 'step' : 'steps'} (par ${start.p})`;
+    const line = s.gaveUp ? `${start.t} → ❌ gave up` : `${start.t} → Banana in ${plural(steps(), 'step')} (par ${start.p})`;
     const squares = s.gaveUp ? '' : '\n' + '🟨'.repeat(Math.max(0, steps() - 1)) + '🍌' + (s.misses ? ` ${'❌'.repeat(Math.min(s.misses, 8))}` : '') + (s.hints ? ` ${'💡'.repeat(Math.min(s.hints, 5))}` : '');
     return `${head}\n${line}${squares}\n⏱ ${fmtTime(s.secs)}\nhttps://allthingsbanana.com/more/six-degrees/`;
   }
@@ -401,8 +456,8 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     try {
       if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ text }); return; }
       await navigator.clipboard.writeText(text);
-      $('shareBtn').textContent = 'Copied! Paste it anywhere';
-      setTimeout(() => ($('shareBtn').textContent = 'Share result'), 2500);
+      $('shareBtn').textContent = 'Copied!';
+      setTimeout(() => ($('shareBtn').textContent = 'Share result'), 2000);
     } catch {}
   }
 
@@ -416,134 +471,194 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     $('pars').textContent = String(all.filter(h => h.solved && h.steps <= h.par).length);
   }
 
+  // ---------- Banana Clicker leaderboard (small) ----------
+  const regionName = new Intl.DisplayNames(['en'], { type: 'region' });
+  const nameOf = (c: string) => (c === 'XX' ? 'Unknown' : (() => { try { return regionName.of(c) || c; } catch { return c; } })());
+  const flag = (c: string) => (c === 'XX' ? '🏳️' : String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))));
+  fetch('/api/peel').then(r => r.json()).then(d => {
+    const rows = Object.entries(d.countries as Record<string, number>).sort((a, b) => b[1] - a[1]);
+    if (!rows.length) return;
+    $('peelList').innerHTML = rows.slice(0, 5).map(([c, n], i) => `<li class="${c === d.country ? 'you' : ''}"><span class="r">${i + 1}</span><span class="f">${flag(c)}</span><span class="nm">${esc(nameOf(c))}</span><b>${n.toLocaleString('en-US')}</b></li>`).join('');
+    $('peelTotal').textContent = `${d.total.toLocaleString('en-US')} bananas peeled · play →`;
+    $('peelCard').hidden = false;
+  }).catch(() => {});
+
   // ---------- wiring ----------
-  $('guessForm').addEventListener('submit', e => { e.preventDefault(); guess((document.getElementById('guess') as HTMLInputElement).value); });
-  document.addEventListener('click', e => {
+  $('guessForm').addEventListener('submit', e => { e.preventDefault(); guess(input().value); });
+  document.querySelector('.sd')!.addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest('button');
     if (!b) return;
-    if (b.classList.contains('sugg') && b.dataset.t) { (document.getElementById('guess') as HTMLInputElement).value = b.dataset.t; guess(b.dataset.t); }
-    else if (b.dataset.i && b.closest('#path') && !s.done) move(s.path[+b.dataset.i], true);
+    if (b.classList.contains('sugg') && b.dataset.t) { input().value = b.dataset.t; guess(b.dataset.t); }
+    else if (b.dataset.i && b.closest('#path')) rewind(+b.dataset.i);
   });
   $('hintBtn').addEventListener('click', hint);
   $('giveUpBtn').addEventListener('click', giveUp);
   $('shareBtn').addEventListener('click', share);
+  $('helpBtn').addEventListener('click', showIntro);
+  $('introOk').addEventListener('click', closeIntro);
+  $('intro').addEventListener('click', e => { if (e.target === $('intro')) closeIntro(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('intro').hidden) closeIntro(); });
   $('practiceBtn').addEventListener('click', () => { begin('practice'); scrollTo({ top: 0, behavior: 'smooth' }); });
   $('modeDaily').addEventListener('click', () => mode !== 'daily' && begin('daily'));
   $('modePractice').addEventListener('click', () => mode !== 'practice' && begin('practice'));
-  // the clock only runs while the page is open and visible
+  // the clock only runs while you're playing and the page is visible
   setInterval(() => {
-    if (!s || s.done || document.hidden || s.path.length === 0) return;
+    if (!running || !s || s.done || document.hidden) return;
     s.secs++; $('sTime').textContent = fmtTime(s.secs);
     if (s.secs % 5 === 0) save();
   }, 1000);
   addEventListener('pagehide', () => s && save());
 
-  begin('daily');
+  begin('daily', true);
 </script>
 
-<style>
-  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding: 26px 0 8px; }
-  .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--brand); }
-  .head h1 { font-size: 34px; font-weight: 900; margin: 4px 0 0; letter-spacing: -0.03em; }
-  .head p { color: var(--ink-2); margin: 6px 0 0; font-size: 15.5px; max-width: 680px; line-height: 1.5; }
-  .modes { display: flex; background: var(--chip); border-radius: 999px; padding: 3px; flex: none; }
-  .modes button { font: 700 13.5px 'Inter', sans-serif; color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
-  .modes button.on { background: var(--brand); color: #1d1600; }
+<style is:global>
+  /* Six Degrees has its own light, friendly look (everything is under .sd so nothing leaks) */
+  .sd {
+    --p-paper: #fffaf0; --p-card: #ffffff; --p-ink: #2a2118; --p-ink-2: #5f5446; --p-ink-3: #988b78; --p-line: #eadfca;
+    --p-yellow: #ffd84d; --p-yellow-soft: #fff1b8; --p-mint: #d5f2e0; --p-mint-ink: #1d6b40; --p-coral: #ffe0d8; --p-coral-ink: #a63a26;
+    --p-lilac: #ebe3ff; --p-lilac-ink: #5a3fa6; --p-sky: #dcefff; --p-sky-ink: #1f5d96;
+    color: var(--p-ink); padding: 22px 0 10px;
+  }
+  .sd button { font-family: 'Inter', sans-serif; }
+  .sd [hidden] { display: none !important; }
+  .sd-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; align-items: start; }
+  .sd-stage { background: var(--p-paper); border-radius: 24px; padding: 22px 26px 18px; box-shadow: 0 10px 40px rgba(0, 0, 0, .25); }
 
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; margin-top: 16px; align-items: start; }
-  .game { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
-  .where .label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); }
-  .where h2 { font-size: 34px; font-weight: 900; letter-spacing: -0.02em; margin: 4px 0 2px; line-height: 1.15; overflow-wrap: anywhere; }
-  .desc { color: var(--brand); font-size: 14px; font-weight: 600; min-height: 1.3em; }
-  .extract { color: var(--ink-2); font-size: 14.5px; line-height: 1.55; margin: 8px 0 0; min-height: 3em; }
+  .sd-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .sd-brand { display: flex; align-items: center; gap: 12px; }
+  .sd-logo { width: 46px; height: 46px; border-radius: 14px; background: var(--p-yellow); display: grid; place-items: center; font-size: 26px; transform: rotate(-6deg); flex: none; }
+  .sd-brand h1 { font-size: 21px; font-weight: 900; margin: 0; letter-spacing: -0.02em; color: var(--p-ink); }
+  .sd-day { font-size: 13px; font-weight: 600; color: var(--p-ink-3); }
+  .sd-topBtns { display: flex; align-items: center; gap: 8px; }
+  .sd-modes { display: flex; background: #f3ead6; border-radius: 999px; padding: 3px; }
+  .sd-modes button { font-weight: 700; font-size: 13px; color: var(--p-ink-2); background: none; border: none; border-radius: 999px; padding: 6px 13px; cursor: pointer; }
+  .sd-modes button.on { background: var(--p-card); color: var(--p-ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+  .sd-round { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--p-ink); background: none; color: var(--p-ink); font-weight: 900; font-size: 16px; cursor: pointer; flex: none; }
+  .sd-round:hover { background: var(--p-yellow); }
 
-  .guess { display: flex; gap: 8px; margin-top: 18px; }
-  .guess input { flex: 1; min-width: 0; font: 600 17px 'Inter', sans-serif; color: var(--ink); background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 13px 16px; outline: none; }
-  .guess input:focus { border-color: var(--brand); }
-  .guess button { font: 800 16px 'Inter', sans-serif; background: var(--brand); color: #1d1600; border: none; border-radius: 12px; padding: 0 22px; cursor: pointer; min-width: 70px; }
-  .guess input:disabled, .guess button:disabled { opacity: .5; cursor: default; }
-  .feedback { min-height: 46px; margin-top: 10px; }
-  .feedback :global(.msg) { border-radius: 10px; padding: 10px 14px; font-size: 14.5px; line-height: 1.5; background: var(--chip); }
-  .feedback :global(.msg.ok) { background: color-mix(in srgb, var(--up) 14%, transparent); }
-  .feedback :global(.msg.miss) { background: color-mix(in srgb, var(--down) 14%, transparent); }
-  .feedback :global(.free) { color: var(--ink-3); font-size: 12.5px; }
-  .layout :global(.sugg) { font: 700 14px 'Inter', sans-serif; color: var(--link); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .sd-goal { display: flex; align-items: center; gap: 10px; margin: 22px 0 14px; }
+  .sd-pill { font-weight: 800; font-size: 14px; border-radius: 999px; padding: 6px 14px; white-space: nowrap; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+  .sd-pill.start { background: var(--p-sky); color: var(--p-sky-ink); }
+  .sd-pill.target { background: var(--p-yellow); color: var(--p-ink); }
+  .sd-dots { flex: 1; border-top: 3px dotted var(--p-line); }
 
-  .statsRow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
-  .statsRow div { background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 8px 10px; }
-  .statsRow span { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
-  .statsRow b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .sd-card { background: var(--p-card); border-radius: 20px; padding: 26px 26px 22px; text-align: center; border: 2px solid var(--p-line); transition: background .3s, border-color .3s; }
+  .sd-card.win { background: var(--p-yellow-soft); border-color: var(--p-yellow); }
+  .sd-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--p-ink-3); }
+  .sd-card h2 { font-size: 40px; font-weight: 900; letter-spacing: -0.03em; margin: 6px 0 8px; line-height: 1.1; color: var(--p-ink); overflow-wrap: anywhere; }
+  .sd-desc { display: inline-block; font-size: 13.5px; font-weight: 700; color: var(--p-lilac-ink); background: var(--p-lilac); border-radius: 999px; padding: 3px 12px; min-height: 1.4em; }
+  .sd-desc:empty { visibility: hidden; }
+  .sd-extract { color: var(--p-ink-2); font-size: 14.5px; line-height: 1.5; margin: 10px auto 0; max-width: 560px; min-height: 1.5em; }
 
-  .pathBox { margin-top: 18px; }
-  .pathHead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
-  .pathHead small { text-transform: none; letter-spacing: 0; font-weight: 500; }
-  .path { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0; margin: 8px 0 0; }
-  .path :global(li) { display: flex; align-items: center; gap: 6px; }
-  .path :global(li + li::before) { content: '→'; color: var(--ink-3); }
-  .path :global(button), .path :global(span) { font: 600 13.5px 'Inter', sans-serif; color: var(--ink); background: var(--chip); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
-  .path :global(button) { cursor: pointer; }
-  .path :global(button:hover) { border-color: var(--brand); }
-  .path :global(.here) { background: var(--brand); color: #1d1600; border-color: var(--brand); }
+  .sd-guess { display: flex; gap: 8px; margin-top: 16px; }
+  .sd-guess input { flex: 1; min-width: 0; font: 600 18px 'Inter', sans-serif; color: var(--p-ink); background: var(--p-card); border: 2px solid var(--p-line); border-radius: 16px; padding: 14px 18px; outline: none; }
+  .sd-guess input::placeholder { color: var(--p-ink-3); font-weight: 500; }
+  .sd-guess input:focus { border-color: var(--p-ink); }
+  .sd-guess button { font-weight: 900; font-size: 17px; background: var(--p-ink); color: var(--p-yellow); border: none; border-radius: 16px; padding: 0 24px; cursor: pointer; min-width: 72px; }
+  .sd-feedback { min-height: 44px; margin-top: 10px; }
+  .sd-feedback .msg { display: inline-block; border-radius: 14px; padding: 9px 14px; font-size: 14.5px; line-height: 1.45; background: var(--p-sky); color: var(--p-sky-ink); animation: sd-pop .25s ease-out; }
+  .sd-feedback .msg b { color: inherit; }
+  .sd-feedback .msg.ok { background: var(--p-mint); color: var(--p-mint-ink); }
+  .sd-feedback .msg.miss { background: var(--p-coral); color: var(--p-coral-ink); animation: sd-shake .35s; }
+  .sd .free { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; opacity: .6; }
+  .sd .sugg { font-weight: 700; font-size: 14px; color: var(--p-ink); background: var(--p-card); border: 1.5px solid currentColor; border-radius: 999px; padding: 3px 11px; margin: 2px 1px; cursor: pointer; }
+  .sd .sugg:hover { background: var(--p-yellow); border-color: var(--p-ink); }
+  @keyframes sd-pop { from { transform: scale(.96); opacity: 0; } }
+  @keyframes sd-shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
-  .tools { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-  .ghost { font: 700 13.5px 'Inter', sans-serif; color: var(--ink); background: none; border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
-  .ghost:hover:not(:disabled) { border-color: var(--brand); }
-  .ghost:disabled { opacity: .45; cursor: default; }
-  .ghost small { color: var(--ink-3); font-weight: 500; }
-  .hintBox { margin-top: 10px; font-size: 14.5px; line-height: 1.6; background: color-mix(in srgb, var(--brand) 10%, transparent); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; padding: 10px 14px; }
-  .hintBox :global(.dim) { color: var(--ink-3); }
+  .sd-trail ol { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0; margin: 6px 0 0; }
+  .sd-trail li { display: flex; align-items: center; gap: 6px; }
+  .sd-trail li + li::before { content: '→'; color: var(--p-ink-3); font-weight: 700; }
+  .sd-trail button, .sd-trail span { font-weight: 700; font-size: 13px; color: var(--p-ink-2); background: #f3ead6; border: 2px solid transparent; border-radius: 999px; padding: 4px 11px; }
+  .sd-trail button { cursor: pointer; }
+  .sd-trail button:hover { background: var(--p-sky); color: var(--p-sky-ink); }
+  .sd-trail .here { background: var(--p-ink); color: #fff; }
+  .sd-trail .ghost span { background: none; border: 2px dashed var(--p-line); color: var(--p-ink-3); }
 
-  .done { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
-  .big { font-size: 26px; font-weight: 900; letter-spacing: -0.02em; }
-  .sub { color: var(--ink-2); margin-top: 4px; font-size: 15px; }
-  .donePath { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 14px 0 0; }
-  .donePath :global(li) { display: flex; align-items: center; gap: 6px; }
-  .donePath :global(li + li::before) { content: '→'; color: var(--ink-3); }
-  .donePath :global(a) { color: var(--link); font-weight: 600; font-size: 14.5px; }
-  .best { color: var(--ink-2); font-size: 14px; line-height: 1.6; }
-  .best :global(a) { color: var(--link); }
-  .doneBtns { display: flex; gap: 8px; flex-wrap: wrap; }
-  .primary { font: 800 15px 'Inter', sans-serif; background: var(--brand); color: #1d1600; border: none; border-radius: 10px; padding: 10px 18px; cursor: pointer; }
-  .world { margin-top: 22px; }
-  .world h3 { font-size: 16px; font-weight: 800; margin: 0 0 10px; }
-  .worldSummary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .worldSummary :global(div) { background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 8px 10px; }
-  .worldSummary :global(b) { display: block; font-size: 20px; font-weight: 800; }
-  .worldSummary :global(span) { font-size: 12px; color: var(--ink-3); }
-  .hist { margin-top: 12px; display: grid; gap: 4px; }
-  .hist :global(.bar) { display: grid; grid-template-columns: 34px 1fr 40px; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-  .hist :global(.bar) :global(.k) { text-align: right; font-weight: 700; }
-  .hist :global(.bar) :global(.track) { height: 14px; background: var(--chip); border-radius: 4px; overflow: hidden; }
-  .hist :global(.bar) :global(i) { display: block; height: 100%; background: color-mix(in srgb, var(--brand) 55%, transparent); border-radius: 0 4px 4px 0; min-width: 2px; }
-  .hist :global(.bar.me i) { background: var(--brand); }
-  .hist :global(.bar.me .k), .hist :global(.bar.me .n) { color: var(--ink); }
-  .hist :global(.bar.par .k::after) { content: ' par'; font-weight: 500; }
+  .sd-bottom { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 2px dotted var(--p-line); }
+  .sd-stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--p-ink-3); font-weight: 600; }
+  .sd-stats b { color: var(--p-ink); font-size: 15px; font-variant-numeric: tabular-nums; margin-left: 2px; }
+  .sd-tools { display: flex; gap: 4px; }
+  .sd-text { font-weight: 700; font-size: 13.5px; color: var(--p-ink-2); background: none; border: none; border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+  .sd-text:hover { background: #f3ead6; color: var(--p-ink); }
+  .sd-hint { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; background: var(--p-lilac); color: var(--p-lilac-ink); border-radius: 14px; padding: 10px 14px; }
 
-  .side { display: flex; flex-direction: column; gap: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
-  .card h3 { font-size: 16px; font-weight: 800; margin: 0 0 8px; }
-  .rules { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 14px; line-height: 1.55; display: grid; gap: 6px; }
-  .rules b, .eg b { color: var(--ink); }
-  .eg { margin: 12px 0 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
-  .streak { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
-  .streak b { display: block; font-size: 26px; font-weight: 900; }
-  .streak span { font-size: 12px; color: var(--ink-3); }
-  .credit { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin: 0; }
-  .credit a { color: var(--ink-3); }
+  .sd-done { text-align: center; margin-top: 18px; padding: 22px 10px 6px; border-top: 2px dotted var(--p-line); }
+  .sd-doneEmoji { font-size: 44px; line-height: 1; }
+  .sd-big { font-size: 27px; font-weight: 900; letter-spacing: -0.02em; margin-top: 8px; }
+  .sd-sub { color: var(--p-ink-2); margin-top: 4px; font-size: 15px; }
+  .sd-doneBtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .sd-primary { font-weight: 900; font-size: 15.5px; background: var(--p-ink); color: var(--p-yellow); border: none; border-radius: 14px; padding: 12px 22px; cursor: pointer; }
+  .sd-secondary { font-weight: 800; font-size: 15px; background: var(--p-yellow); color: var(--p-ink); border: none; border-radius: 14px; padding: 12px 20px; cursor: pointer; }
+  .sd-best { color: var(--p-ink-2); font-size: 13.5px; line-height: 1.6; margin: 16px 0 0; }
+  .sd-best a { color: var(--p-sky-ink); font-weight: 700; }
+  .sd-world { margin: 20px auto 0; max-width: 460px; text-align: left; }
+  .sd-world h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--p-ink-3); margin: 0 0 10px; text-align: center; }
+  .sd-worldSummary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; }
+  .sd-worldSummary div { background: var(--p-card); border-radius: 12px; padding: 8px 4px; }
+  .sd-worldSummary b { display: block; font-size: 19px; font-weight: 900; }
+  .sd-worldSummary span { font-size: 11.5px; color: var(--p-ink-3); font-weight: 600; }
+  .sd-hist { margin-top: 12px; display: grid; gap: 5px; }
+  .sd-hist .bar { display: grid; grid-template-columns: 52px 1fr 28px; align-items: center; gap: 8px; font-size: 12.5px; color: var(--p-ink-3); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sd-hist .k { text-align: right; }
+  .sd-hist .k em { font-style: normal; font-size: 10.5px; color: var(--p-mint-ink); }
+  .sd-hist .track { height: 18px; background: #f3ead6; border-radius: 6px; overflow: hidden; }
+  .sd-hist i { display: block; height: 100%; background: #f6c94a; border-radius: 6px; }
+  .sd-hist .me i { background: var(--p-ink); }
+  .sd-hist .me { color: var(--p-ink); }
+  .sd-credit { font-size: 11.5px; color: var(--p-ink-3); text-align: center; margin: 18px 0 0; }
+  .sd-credit a { color: var(--p-ink-3); }
+
+  .sd-side { display: flex; flex-direction: column; gap: 14px; }
+  .sd-mini { display: block; background: var(--p-paper); color: var(--p-ink); border-radius: 18px; padding: 14px 16px; text-decoration: none; }
+  .sd-mini h3 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--p-ink-3); margin: 0 0 8px; }
+  .sd-mini h3 span { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .sd-streak { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  .sd-streak b { display: block; font-size: 24px; font-weight: 900; }
+  .sd-streak span { font-size: 11.5px; color: var(--p-ink-3); font-weight: 600; }
+  .sd-peels { transition: transform .15s; }
+  .sd-peels:hover { transform: translateY(-2px); }
+  .sd-peels ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+  .sd-peels li { display: grid; grid-template-columns: 14px 22px minmax(0, 1fr) auto; align-items: center; gap: 4px; font-size: 13px; padding: 3px 6px; border-radius: 8px; }
+  .sd-peels li.you { background: var(--p-yellow-soft); }
+  .sd-peels .r { color: var(--p-ink-3); font-weight: 700; font-size: 11.5px; }
+  .sd-peels .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .sd-peels b { font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  .sd-peelTotal { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--p-ink-3); }
+
+  .sd-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(20, 16, 10, .55); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 16px; }
+  .sd-modal { background: var(--p-paper); color: var(--p-ink); border-radius: 26px; padding: 30px 28px 24px; width: min(420px, 100%); text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .4); animation: sd-pop .25s ease-out; }
+  .sd-modalEmoji { width: 64px; height: 64px; margin: 0 auto; border-radius: 20px; background: var(--p-yellow); display: grid; place-items: center; font-size: 36px; transform: rotate(-6deg); }
+  .sd-modal h2 { font-size: 24px; font-weight: 900; margin: 14px 0 4px; letter-spacing: -0.02em; color: var(--p-ink); }
+  .sd-today { font-size: 15px; color: var(--p-ink-2); margin: 0 0 18px; }
+  .sd-today b { color: var(--p-ink); }
+  .sd-rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; text-align: left; }
+  .sd-rules li { display: flex; gap: 12px; align-items: center; background: var(--p-card); border-radius: 14px; padding: 10px 14px; font-size: 14.5px; line-height: 1.4; color: var(--p-ink-2); }
+  .sd-rules li span { font-size: 20px; }
+  .sd-rules b { color: var(--p-ink); }
+  .sd-eg { font-size: 13px; color: var(--p-ink-3); margin: 14px 0 18px; }
+  .sd-wide { width: 100%; font-size: 17px; padding: 14px; }
 
   @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    .head { flex-direction: column; align-items: flex-start; }
+    .sd-layout { grid-template-columns: 1fr; }
+    .sd-side { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   }
   @media (max-width: 560px) {
-    .head h1 { font-size: 28px; }
-    .game { padding: 16px; }
-    .where h2 { font-size: 27px; }
-    .statsRow { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
-    .statsRow div { padding: 6px 6px; }
-    .statsRow span { font-size: 9px; }
-    .statsRow b { font-size: 16px; }
-    .pathHead small { display: none; }
-    .worldSummary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sd { padding-top: 12px; }
+    .sd-stage { padding: 16px 14px 14px; border-radius: 20px; }
+    .sd-top { flex-wrap: wrap; }
+    .sd-logo { width: 38px; height: 38px; font-size: 21px; }
+    .sd-brand h1 { font-size: 17px; }
+    .sd-day { font-size: 12px; }
+    .sd-modes button { padding: 5px 9px; font-size: 12px; }
+    .sd-round { width: 30px; height: 30px; font-size: 14px; }
+    .sd-goal { margin: 16px 0 12px; }
+    .sd-card { padding: 20px 14px 16px; }
+    .sd-card h2 { font-size: 30px; }
+    .sd-guess input { font-size: 16px; padding: 13px 14px; }
+    .sd-stats { gap: 10px; }
+    .sd-side { grid-template-columns: 1fr; }
+    .sd-worldSummary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 </style>
