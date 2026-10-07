@@ -1,20 +1,20 @@
 ---
 import Base from '../layouts/Base.astro';
 ---
-<Base wide section="home" title="All Things Banana · banana news, prices and markets"
-      description="Banana news as it happens, the global banana price, US shop prices and fruit commodity markets, plus a 3D banana cube solver.">
+<Base wide section="home" title="All Things Banana · banana news, prices and games"
+      description="Everything banana in one place: banana news as it happens, the global banana price and fruit markets, and banana games like the Banana Cube and Banana Clicker.">
   <div class="home">
     <section class="lead">
       <a class="hero" id="hero" href="/markets/">
         <div class="hero-chart" id="heroChart"><div class="ph"></div></div>
-        <div class="kicker">Market data</div>
+        <div class="kicker">Markets</div>
         <h1 id="heroTitle">Banana prices</h1>
         <p id="heroText">Loading the latest prices…</p>
         <div class="meta" id="heroMeta"></div>
       </a>
       <div class="duo">
-        <a class="story" id="s1" href="/markets/"><div class="story-chart"></div><h3>&nbsp;</h3><div class="meta"></div></a>
-        <a class="story" id="s2" href="/markets/"><div class="story-chart"></div><h3>&nbsp;</h3><div class="meta"></div></a>
+        <a class="story" id="s1" href="/markets/" hidden><div class="story-chart"></div><div class="kicker">Fruit &amp; softs</div><h3></h3><div class="meta"></div></a>
+        <a class="story" id="s2" href="/markets/" hidden><div class="story-chart"></div><div class="kicker">US shop prices</div><h3></h3><div class="meta"></div></a>
       </div>
     </section>
 
@@ -23,47 +23,60 @@ import Base from '../layouts/Base.astro';
       <div id="top">{Array.from({ length: 6 }).map(() => <div class="sk-item"><span></span><span></span></div>)}</div>
     </section>
 
-    <section class="latest" id="latest">
-      <h2 class="col-h">Latest <span class="upd" id="updated"></span></h2>
+    <section class="latest">
+      <h2 class="col-h"><a href="/news/">Latest</a> <span class="upd" id="updated"></span></h2>
       <div id="latestList">{Array.from({ length: 8 }).map(() => <div class="sk-item"><span></span><span></span></div>)}</div>
+      <a class="all-link" href="/news/">See all banana news →</a>
     </section>
 
     <aside class="side">
       <section class="panel">
-        <h2>Trending prices</h2>
+        <h2><a href="/markets/">Trending prices</a></h2>
         <div id="trend"></div>
       </section>
       <section class="panel">
         <h2>Banana buzz <span class="h-sub">stories per day</span></h2>
         <div id="buzz" class="chart-box" style="height:110px"></div>
       </section>
-      <a class="panel promo" href="/banana-cube/">
-        <div class="promo-art" aria-hidden="true">🍌🧩</div>
+    </aside>
+  </div>
+
+  <section class="more-bananas">
+    <div class="mb-head">
+      <h2 class="col-h"><a href="/more/">More Bananas</a></h2>
+      <a class="all-link" href="/more/">All games and experiments →</a>
+    </div>
+    <div class="mb-grid">
+      <a class="mb-card" href="/more/banana-clicker/">
+        <div class="mb-art clicker" aria-hidden="true">🍌</div>
         <div>
-          <div class="kicker">Play</div>
+          <div class="kicker">Game</div>
+          <h3>Banana Clicker</h3>
+          <p>Peel bananas for your country. <span id="peelTotal"></span></p>
+        </div>
+      </a>
+      <a class="mb-card" href="/more/banana-cube/">
+        <div class="mb-art cube" aria-hidden="true">🧩</div>
+        <div>
+          <div class="kicker">Puzzle</div>
           <h3>Banana Cube solver</h3>
           <p>Twist a 3D banana puzzle and see exactly how many moves you are from solved.</p>
         </div>
       </a>
-    </aside>
-  </div>
-
-  <section class="more">
-    <h2 class="col-h">More banana news</h2>
-    <ol id="more" class="more-list"></ol>
-    <button id="moreBtn" class="more-btn" hidden>Show more stories</button>
+    </div>
   </section>
 </Base>
 
 <script>
   import { lineChart, sparkline, barChart } from '../scripts/charts';
   import {
-    getMarket, getFeed, lookup, allSeries, money, signed, num, pctHtml, change, lastChange, sliceYears, label,
-    fmtDate, monthOnly, marketLink, esc, ago, YEAR, type Market, type Feed, type Item, type Sel,
+    getMarket, getFeed, lookup, allSeries, money, signed, num, change, lastChange, sliceYears, label,
+    fmtDate, monthOnly, marketLink, esc, ago, YEAR, type Market, type Feed, type Sel,
   } from '../scripts/market';
+  import { BUSINESS, chips, meta, link, thumb, buzzDays, tickTimes } from '../scripts/news';
 
   const $ = (s: string) => document.querySelector(s) as HTMLElement;
-  let market: Market | null = null;
+  let market: Market | null = null, feedCache: Feed | null = null;
 
   // ---------- data stories, written from the latest numbers ----------
   const pctWord = (p: number) => `${num(Math.abs(p), 1)}%`;
@@ -83,13 +96,13 @@ import Base from '../layouts/Base.astro';
         `The global benchmark for bananas imported into the US averaged ${money(g, last.y)} a tonne in ${fmtDate(last.x)}` +
         (yoy != null ? `, ${yoy >= 0 ? 'up' : 'down'} ${pctWord(yoy)} on a year earlier.` : '.') +
         (r ? ` In US shops, a pound of bananas cost ${money(r, r.pts[r.pts.length - 1].y)} in ${fmtDate(r.pts[r.pts.length - 1].x)}.` : '');
-      $('#heroMeta').innerHTML = `IMF · US BLS · <span class="mlink">See the full chart →</span>`;
+      $('#heroMeta').innerHTML = `IMF${r ? ' · US BLS' : ''} · <span class="mlink">See the full chart →</span>`;
       $('#hero').setAttribute('href', marketLink('PBANSOP'));
-      const view = sliceYears(g.pts, 3), up = view[view.length - 1].y >= view[0].y;
       const box = $('#heroChart');
       box.innerHTML = '';
-      lineChart(box, view, {
-        height: box.clientHeight - 20, color: `var(${up ? '--up' : '--down'})`, baseline: true, label: 'Global banana price, last 3 years',
+      // banana yellow, not green/red: the headline is about one month, the chart shows three years
+      lineChart(box, sliceYears(g.pts, 3), {
+        height: box.clientHeight - 20, color: 'var(--brand)', label: 'Global banana price, last 3 years',
         fmt: v => `${money(g, v)} / tonne`, axisFmt: v => money(g, v, 0), dateFmt: x => fmtDate(x),
       });
     }
@@ -99,19 +112,19 @@ import Base from '../layouts/Base.astro';
       .sort((a, b) => Math.abs(lastChange(b.pts) ?? 0) - Math.abs(lastChange(a.pts) ?? 0))[0];
     const shops = all.filter(s => s.kind === 'US shop price')
       .sort((a, b) => Math.abs(change(b.pts, YEAR) ?? 0) - Math.abs(change(a.pts, YEAR) ?? 0))[0];
-    const fill = (id: string, s: Sel | undefined, title: string, meta: string) => {
+    const fill = (id: string, s: Sel, title: string, info: string) => {
       const el = $(id);
-      if (!s) { el.hidden = true; return; }
+      el.hidden = false;
       el.setAttribute('href', marketLink(s.code));
       el.querySelector('h3')!.textContent = title;
-      el.querySelector('.meta')!.innerHTML = meta;
-      el.querySelector('.story-chart')!.innerHTML = sparkline(s.pts.slice(-24).map(p => p.y), 300, 110, true);
+      el.querySelector('.meta')!.innerHTML = info;
+      el.querySelector('.story-chart')!.innerHTML = sparkline(s.pts.slice(-24).map(p => p.y), 300, 110, true, 'var(--brand)');
     };
-    if (world) fill('#s1', world, storyTitle(world), `${esc(world.desc)} · ${money(world, world.pts[world.pts.length - 1].y)} per ${world.per}`);
+    if (world) fill('#s1', world, storyTitle(world), `${esc(world.desc)} · ${money(world, world.pts[world.pts.length - 1].y)} per ${world.per} · last 2 years`);
     if (shops) {
       const y = change(shops.pts, YEAR) ?? 0;
       fill('#s2', shops, `${shops.name} cost ${pctWord(y)} ${y >= 0 ? 'more' : 'less'} than a year ago in US shops`,
-        `US BLS · ${money(shops, shops.pts[shops.pts.length - 1].y)} per ${shops.per}`);
+        `US BLS · ${money(shops, shops.pts[shops.pts.length - 1].y)} per ${shops.per} · last 2 years`);
     }
   }
 
@@ -126,31 +139,7 @@ import Base from '../layouts/Base.astro';
     }).join('');
   }
 
-  // ---------- news ----------
-  // price chips under headlines that mention something we have data for
-  const CHIPS: [RegExp, string][] = [
-    [/\bdole\b/i, 'DOLE'], [/del monte/i, 'FDP'],
-    [/\b(price|prices|priced|cost|costs|cheap|cheaper|expensive|tariffs?|inflation)\b/i, 'PBANSOP'],
-    [/cocoa|chocolate/i, 'PCOCO'], [/coffee/i, 'PCOFFOTM'], [/sugar/i, 'PSUGAISA'], [/orange/i, 'PORANG'],
-    [/strawberr/i, 'APU0000711415'], [/lemon/i, 'APU0000711412'], [/\bapples?\b/i, 'PAPPLE'], [/\brice\b/i, 'PRICENPQ'], [/\btea\b/i, 'PTEA'],
-  ];
-  function chips(title: string) {
-    const out: string[] = [];
-    for (const [re, code] of CHIPS) {
-      if (out.length === 2 || !re.test(title)) continue;
-      const s = lookup(market, code);
-      if (!s) continue;
-      const name = s.code === 'PBANSOP' ? 'BANANAS' : s.kind === 'Stock' ? s.code : s.name.toUpperCase();
-      out.push(`<a class="chip" href="${marketLink(code)}">${esc(name)} ${pctHtml(lastChange(s.pts))}</a>`);
-    }
-    return out.length ? `<div class="chips">${out.join('')}</div>` : '';
-  }
-  const meta = (it: Item) => `<div class="meta">${it.type === 'video' ? '<span class="vid">Video</span> · ' : ''}${esc(it.source)} · <time datetime="${new Date(it.published).toISOString()}">${ago(it.published)}</time></div>`;
-  const link = (it: Item) => `<a class="hl" href="${esc(it.url)}" target="_blank" rel="noopener nofollow">${esc(it.title)}</a>`;
-
-  const BUSINESS = /\b(price|prices|market|markets|export|exports|import|imports|supply|industry|tariffs?|fairtrade|growers?|farms?|farmers|crops?|disease|shipments?|trade|retailers?|supermarkets?|sales|investors?|company|deal)\b/i;
-  let moreShown = 12, feedCache: Feed | null = null;
-
+  // ---------- news summary ----------
   function renderNews(f: Feed) {
     feedCache = f;
     const items = f.items;
@@ -159,41 +148,24 @@ import Base from '../layouts/Base.astro';
       return;
     }
     // Latest: the newest stories. Banana business: trade and price stories not already in Latest, led by one with a picture.
-    const latest = items.slice(0, 10);
+    const latest = items.slice(0, 8);
     const used = new Set(latest.map(i => i.id));
-    // lead with a story that has a picture: a business story if possible, else a video
     const pic = items.find(i => i.thumb && !used.has(i.id) && BUSINESS.test(i.title)) || items.find(i => i.thumb && !used.has(i.id));
     if (pic) used.add(pic.id);
-    let biz = items.filter(i => !used.has(i.id) && BUSINESS.test(i.title)).slice(0, pic ? 6 : 7);
-    if (!biz.length) biz = items.filter(i => !used.has(i.id)).slice(0, 7);
-    biz.forEach(i => used.add(i.id));
+    let biz = items.filter(i => !used.has(i.id) && BUSINESS.test(i.title)).slice(0, pic ? 5 : 6);
+    if (!biz.length) biz = items.filter(i => !used.has(i.id)).slice(0, 6);
     const top = (pic ? [pic] : []).concat(biz);
 
-    $('#top').innerHTML = top.map((it, i) => `<article class="t-item">
-      ${i === 0 && it.thumb ? `<a href="${esc(it.url)}" target="_blank" rel="noopener nofollow" class="t-img"><img src="${esc(it.thumb)}" alt="" loading="lazy"></a>` : ''}
-      ${link(it)}${meta(it)}${chips(it.title)}</article>`).join('');
-    $('#latestList').innerHTML = latest.map(it => `<article class="l-item">${link(it)}${meta(it)}${chips(it.title)}</article>`).join('');
-
-    const rest = items.filter(i => !used.has(i.id));
-    $('#more').innerHTML = rest.slice(0, moreShown).map(it => `<li>${link(it)}${meta(it)}</li>`).join('');
-    ($('#moreBtn') as HTMLButtonElement).hidden = rest.length <= moreShown;
-    $('.more').hidden = !rest.length;
+    $('#top').innerHTML = top.map((it, i) => `<article class="t-item">${i === 0 ? thumb(it, 't-img') : ''}${link(it)}${meta(it)}${chips(market, it.title)}</article>`).join('');
+    $('#latestList').innerHTML = latest.map(it => `<article class="l-item">${link(it)}${meta(it)}${chips(market, it.title)}</article>`).join('');
     $('#updated').textContent = `· updated ${ago(f.updated)}`;
-    renderBuzz(items);
+    barChart($('#buzz'), buzzDays(items), 110);
   }
 
-  function renderBuzz(items: Item[]) {
-    const days = [], today = new Date(); today.setHours(0, 0, 0, 0);
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today); d.setDate(d.getDate() - i);
-      const n = items.filter(it => it.published >= d.getTime() && it.published < d.getTime() + 864e5).length;
-      days.push({ label: d.toLocaleDateString('en-GB', { weekday: 'short' }), value: n,
-        tip: `<b>${n} ${n === 1 ? 'story' : 'stories'}</b><span>${d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>` });
-    }
-    barChart($('#buzz'), days, 110);
-  }
-
-  $('#moreBtn').addEventListener('click', () => { moreShown += 12; if (feedCache) renderNews(feedCache); });
+  // ---------- More Bananas ----------
+  fetch('/api/peel').then(r => r.json()).then(d => {
+    if (d.total) $('#peelTotal').textContent = `${num(d.total, 0)} peeled so far.`;
+  }).catch(() => {});
 
   getMarket().then(m => {
     market = m;
@@ -202,7 +174,7 @@ import Base from '../layouts/Base.astro';
   }).catch(() => { $('#heroText').textContent = 'Price data is unavailable right now.'; });
   getFeed().then(renderNews).catch(() => { $('#latestList').innerHTML = '<p class="empty">Couldn’t load the news. We’ll keep trying.</p>'; });
   setInterval(() => getFeed(true).then(renderNews).catch(() => {}), 60_000);
-  setInterval(() => document.querySelectorAll('time').forEach(el => (el.textContent = ago(Date.parse(el.getAttribute('datetime')!)))), 30_000);
+  tickTimes();
 </script>
 
 <style>
@@ -211,12 +183,16 @@ import Base from '../layouts/Base.astro';
   .top, .latest, .lead { min-width: 0; }
   .latest { border-left: 1px solid var(--border); padding-left: 20px; }
   .col-h { font-size: 18px; font-weight: 800; margin: 0 0 10px; }
+  .col-h a, .panel h2 a { text-decoration: none; }
+  .col-h a:hover, .panel h2 a:hover { text-decoration: underline; }
   .upd { font-size: 12px; font-weight: 500; color: var(--ink-3); }
-  .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); }
-  .home :global(.meta), .more :global(.meta), .meta { font-size: 12px; color: var(--ink-3); margin-top: 4px; font-weight: 500; }
-  .home :global(.vid), .more :global(.vid) { color: var(--down); font-weight: 700; }
+  .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--brand); }
+  .home :global(.meta), .meta { font-size: 12px; color: var(--ink-3); margin-top: 4px; font-weight: 500; }
+  .home :global(.vid) { color: var(--down); font-weight: 700; }
   .h-sub { color: var(--ink-3); font-size: 12px; font-weight: 500; }
   .empty { color: var(--ink-3); font-size: 14px; }
+  .all-link { display: inline-block; margin-top: 12px; color: var(--link); font-weight: 600; font-size: 13.5px; text-decoration: none; }
+  .all-link:hover { text-decoration: underline; }
 
   /* lead */
   .hero { display: block; text-decoration: none; text-align: center; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
@@ -229,25 +205,23 @@ import Base from '../layouts/Base.astro';
   .hero :global(.mlink) { color: var(--link); font-weight: 600; }
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; padding-top: 20px; }
   .story { text-decoration: none; display: block; }
-  .story-chart { background: var(--surface); border-radius: 10px; height: 130px; overflow: hidden; padding-top: 18px; }
+  .story-chart { background: var(--surface); border-radius: 10px; height: 130px; overflow: hidden; padding-top: 18px; margin-bottom: 10px; }
   .story-chart :global(svg) { width: 100%; height: 112px; display: block; }
-  .story h3 { font-size: 17px; font-weight: 700; margin: 10px 0 0; line-height: 1.3; }
+  .story h3 { font-size: 17px; font-weight: 700; margin: 4px 0 0; line-height: 1.3; }
   .story:hover h3 { text-decoration: underline; }
 
   /* news columns */
-  .t-item, .l-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .t-item:first-child, .l-item:first-child { padding-top: 0; }
-  .top :global(.hl), .latest :global(.hl), .more :global(.hl) { text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.3; display: block; }
+  .home :global(.t-item), .home :global(.l-item) { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .home :global(.t-item:first-child), .home :global(.l-item:first-child) { padding-top: 0; }
+  .home :global(.hl) { text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.3; display: block; }
   .latest :global(.hl) { font-size: 15.5px; font-weight: 600; }
-  .home :global(.hl:hover), .more :global(.hl:hover) { text-decoration: underline; }
+  .home :global(.hl:hover) { text-decoration: underline; }
   .top :global(.t-img) { display: block; margin-bottom: 10px; }
   .top :global(.t-img img) { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; display: block; background: var(--chip); }
   .home :global(.chips) { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
   .home :global(.chip) { font-size: 11.5px; font-weight: 700; text-decoration: none; color: var(--link); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
   .home :global(.chip:hover) { border-color: var(--link); }
   .home :global(.chip span) { font-weight: 600; margin-left: 3px; }
-  .home :global(.t-item), .home :global(.l-item) { padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .home :global(.t-item:first-child), .home :global(.l-item:first-child) { padding-top: 0; }
   .sk-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 7px; }
   .sk-item span { display: block; height: 11px; border-radius: 4px; background: var(--chip); width: 90%; }
   .sk-item span:last-child { width: 40%; height: 9px; }
@@ -264,20 +238,20 @@ import Base from '../layouts/Base.astro';
   .side :global(.tr-v b) { display: block; font-weight: 600; }
   .side :global(.tr-v span) { font-size: 11.5px; font-weight: 600; white-space: nowrap; }
   .side :global(.tr:hover .tr-n b) { text-decoration: underline; }
-  .promo { display: flex; gap: 12px; align-items: center; text-decoration: none; }
-  .promo-art { font-size: 24px; flex: none; }
-  .promo h3 { margin: 2px 0 2px; font-size: 15px; }
-  .promo p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
-  .promo:hover h3 { text-decoration: underline; }
 
-  /* more */
-  .more { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 20px; }
-  .more-list { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
-  .more-list :global(li) { break-inside: avoid; padding: 10px 0; border-bottom: 1px solid var(--border-2); }
-  .more-list :global(.hl) { font-size: 15px !important; font-weight: 600 !important; }
-  .more-btn { margin-top: 16px; font: 700 14px 'Inter', sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 9px 20px; cursor: pointer; }
-  .more-btn:hover { background: var(--chip); }
-  .more-btn[hidden] { display: none; }
+  /* More Bananas */
+  .more-bananas { margin-top: 36px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .mb-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .mb-head .all-link { margin: 0; }
+  .mb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .mb-card { display: flex; gap: 16px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-decoration: none; transition: border-color .15s, transform .15s; }
+  .mb-card:hover { border-color: var(--brand); transform: translateY(-1px); }
+  .mb-art { flex: none; width: 72px; height: 72px; border-radius: 12px; display: grid; place-items: center; font-size: 38px; }
+  .mb-art.clicker { background: radial-gradient(circle at 30% 30%, #4a3c12, #241d0b); }
+  .mb-art.cube { background: radial-gradient(circle at 30% 30%, #20324a, #121a26); }
+  .mb-card h3 { margin: 2px 0 3px; font-size: 17px; }
+  .mb-card p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+  .mb-card p span { color: var(--brand); font-weight: 600; }
 
   @media (max-width: 1240px) {
     .home { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 300px; }
@@ -293,7 +267,6 @@ import Base from '../layouts/Base.astro';
     .top, .latest { margin-bottom: 24px; }
     .hero h1 { font-size: 26px; }
     .hero p { font-size: 15px; }
-    .more-list { columns: 1; }
   }
   @media (max-width: 560px) {
     .duo { grid-template-columns: 1fr; }

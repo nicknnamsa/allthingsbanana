@@ -112,11 +112,12 @@ export function lineChart(el: HTMLElement, initial: Pt[], opts: LineOpts) {
   return { update(next: Pt[], patch?: Partial<LineOpts>) { pts = next; if (patch) o = { ...o, ...patch }; draw(); } };
 }
 
-export function sparkline(values: number[], w = 92, h = 30, area = false) {
+// color: optional CSS colour; by default green if the series ended higher than it started, else red
+export function sparkline(values: number[], w = 92, h = 30, area = false, color?: string) {
   if (values.length < 2) return '';
   const lo = Math.min(...values), hi = Math.max(...values);
   const X = (i: number) => (i / (values.length - 1)) * (w - 4) + 2, Y = (v: number) => 3 + (1 - (v - lo) / (hi - lo || 1)) * (h - 6);
-  const c = `var(${values[values.length - 1] >= values[0] ? '--up' : '--down'})`;
+  const c = color ?? `var(${values[values.length - 1] >= values[0] ? '--up' : '--down'})`;
   const pts = values.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`);
   const fill = area ? `<polygon points="${X(0)},${h} ${pts.join(' ')} ${X(values.length - 1)},${h}" fill="${c}" opacity=".12"/>` : '';
   return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${fill}<polyline fill="none" stroke="${c}" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"

@@ -4,8 +4,11 @@
 import { XMLParser } from 'fast-xml-parser';
 import { isAboutBananas } from './filter.js';
 import { refreshMarket, MARKET_EVERY_MS, MARKET_VERSION, STOCKS } from './market.js';
+import { handlePeel } from './peel.js';
+export { PeelCounter } from './peel.js';
 
 const MAX_ITEMS = 300;
+const MAX_AGE_MS = 30 * 864e5;            // drop stories older than a month (some feeds include old posts)
 const STALE_MS = 20 * 60 * 1000;          // refresh on request if the cron hasn't run for a while
 const YOUTUBE_EVERY_MS = 30 * 60 * 1000;  // each search costs 100 of the 10,000 daily quota units
 const PUBLISHER_EVERY_MS = 20 * 60 * 1000; // be polite to publishers' feeds
@@ -35,6 +38,7 @@ export default {
       else if (Date.now() - data.updated > STALE_MS) ctx.waitUntil(refresh(env));
       return Response.json(publicView(data), { headers: { 'cache-control': 'public, max-age=60' } });
     }
+    if (url.pathname === '/api/peel') return handlePeel(request, env);
     if (url.pathname === '/api/market') {
       let market = await env.FEED.get('market', 'json');
       if (!market || market.v !== MARKET_VERSION) market = await updateMarket(env, market);
@@ -89,7 +93,7 @@ async function refresh(env) {
   // merge, drop duplicates (the same story from many outlets), newest first
   const seen = new Set();
   const items = [...fresh, ...old.items]
-    .filter(it => isAboutBananas(it.title, it.allBanana))
+    .filter(it => isAboutBananas(it.title, it.allBanana) && now - it.published < MAX_AGE_MS)
     .sort((a, b) => b.published - a.published)
     .filter(it => {
       const k = it.type + ':' + it.title.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 70);

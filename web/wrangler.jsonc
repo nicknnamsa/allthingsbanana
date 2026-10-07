@@ -22,6 +22,11 @@
 		{ "pattern": "allthingsbanana.com", "custom_domain": true },
 		{ "pattern": "www.allthingsbanana.com", "custom_domain": true }
 	],
+	// Banana Clicker: one shared tally of peeled bananas per country
+	"durable_objects": {
+		"bindings": [{ "name": "PEELS", "class_name": "PeelCounter" }]
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["PeelCounter"] }],
 	"triggers": {
 		"crons": [
 			"*/10 * * * *"

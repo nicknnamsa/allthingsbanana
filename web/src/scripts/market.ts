@@ -12,11 +12,25 @@ export const STOCK_NAMES: Record<string, string> = { DOLE: 'Dole plc', FDP: 'Fre
 export const COMMODITY_ORDER = ['PBANSOP', 'PORANG', 'PAPPLE', 'PCOCO', 'PCOFFOTM', 'PSUGAISA', 'PTEA', 'PRICENPQ'];
 export const YEAR = 365.25 * 864e5;
 
-// one request per page load, shared by everything on the page
+// One request per page load, shared by everything on the page. The last answer is kept in
+// sessionStorage for a few minutes so the next page you open can show it straight away.
+function cached<T>(key: string, maxAge: number, load: () => Promise<T>): Promise<T> {
+  try {
+    const hit = JSON.parse(sessionStorage.getItem(key) || 'null');
+    if (hit && Date.now() - hit.at < maxAge) return Promise.resolve(hit.data as T);
+  } catch {}
+  return load().then(data => {
+    try { sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), data })); } catch {}
+    return data;
+  });
+}
 let marketP: Promise<Market> | null = null;
-export const getMarket = () => (marketP ??= fetch('/api/market').then(r => r.json()));
+export const getMarket = () => (marketP ??= cached('atb-market', 10 * 60e3, () => fetch('/api/market').then(r => r.json())));
 let feedP: Promise<Feed> | null = null;
-export const getFeed = (fresh = false) => (fresh || !feedP ? (feedP = fetch('/api/feed', { cache: 'no-store' }).then(r => r.json())) : feedP);
+export const getFeed = (fresh = false) =>
+  fresh || !feedP
+    ? (feedP = cached('atb-feed', fresh ? 0 : 2 * 60e3, () => fetch('/api/feed', { cache: 'no-store' }).then(r => r.json())))
+    : feedP;
 
 export const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export const num = (v: number, d: number) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });

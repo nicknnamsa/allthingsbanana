@@ -2,11 +2,12 @@
 
 The website for allthingsbanana.com.
 
-- `src/pages/`: site pages (Astro). `index.astro` is the live feed homepage.
-- `public/banana-cube/`: the 3D Banana Cube solver (a single self-contained page).
+- `src/pages/`: site pages (Astro): Home (`index.astro`), Markets, Latest News (`news/`) and More Bananas (`more/`, including the Banana Cube and Banana Clicker).
+- `src/scripts/`: shared code for charts, market data and news.
 - `worker/`: the Cloudflare Worker. It serves the site and refreshes the feed every 10 minutes.
   - `worker/index.js`: fetches news, YouTube videos and stock prices, and stores them in KV.
   - `worker/filter.js`: decides what counts as "about bananas". Edit the lists to tune it.
+  - `worker/peel.js`: the Banana Clicker's shared tally of peeled bananas per country (a Durable Object).
 
 ## Run it locally
 

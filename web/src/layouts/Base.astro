@@ -1,19 +1,17 @@
 ---
-interface Props { title: string; description: string; wide?: boolean; section?: string }
-const { title, description, wide = false, section = '' } = Astro.props;
+// bare: the page fills the full width under the header (used by the Banana Cube)
+interface Props { title: string; description: string; wide?: boolean; section?: string; bare?: boolean }
+const { title, description, wide = false, section = '', bare = false } = Astro.props;
 const path = Astro.url.pathname;
 const sections = [
   { id: 'home', href: '/', label: 'Home' },
   { id: 'markets', href: '/markets/', label: 'Markets' },
-  { id: 'softs', href: '/markets/#board', label: 'Fruit & softs' },
-  { id: 'shops', href: '/markets/#shops', label: 'US shop prices' },
-  { id: 'news', href: '/#latest', label: 'Latest news' },
-  { id: 'cube', href: '/banana-cube/', label: 'Banana Cube' },
-  { id: 'about', href: '/about/', label: 'About' },
+  { id: 'news', href: '/news/', label: 'Latest News' },
+  { id: 'more', href: '/more/', label: 'More Bananas' },
 ];
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,6 +22,8 @@ const sections = [
   <meta property="og:description" content={description}>
   <meta property="og:type" content="website">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#1d2228">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -37,12 +37,9 @@ const sections = [
         <button id="qgo" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
         <div class="qres" id="qres" hidden></div>
       </div>
-      <nav class="toplinks" aria-label="Main">
-        <a href="/#latest">News</a><a href="/markets/">Markets</a><a href="/banana-cube/">Play</a>
-      </nav>
     </div>
   </header>
-  <nav class="sections" aria-label="Sections">
+  <nav class="sections" aria-label="Main">
     <div class="wrap wide sec-in">
       {sections.map(s => <a href={s.href} class={section === s.id ? 'on' : ''}>{s.label}</a>)}
     </div>
@@ -53,12 +50,12 @@ const sections = [
     </div>
   </div>
 
-  <main class={wide ? 'wrap wide' : 'wrap'}><slot /></main>
+  <main class={bare ? 'bare' : wide ? 'wrap wide' : 'wrap'}><slot /></main>
 
   <footer class="foot">
     <div class="wrap wide foot-in">
       <span>© {new Date().getFullYear()} All Things Banana · Prices are delayed or monthly averages and are not financial advice.</span>
-      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a></span>
+      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/news/">News</a> · <a href="/more/">More Bananas</a></span>
     </div>
   </footer>
 </body>
@@ -140,7 +137,15 @@ const sections = [
     --chip: #262c33; --hover: #1b2026;
   }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
+  html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+  [hidden] { display: none !important; }
+
+  /* page changes: the header stays put while the page content cross-fades */
+  @view-transition { navigation: auto; }
+  .masthead { view-transition-name: masthead; }
+  .sections { view-transition-name: sections; }
+  .tickers { view-transition-name: tickers; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; }
   body {
     margin: 0; font-family: 'Inter', system-ui, sans-serif; color: var(--ink); background: var(--bg);
     line-height: 1.45; min-height: 100vh; display: flex; flex-direction: column; font-feature-settings: 'cv11';
@@ -160,7 +165,7 @@ const sections = [
   .mast-in { display: flex; align-items: center; gap: 24px; height: 62px; }
   .logo { font-weight: 800; font-size: 23px; letter-spacing: -0.04em; text-decoration: none; white-space: nowrap; }
   .logo span { color: var(--brand); }
-  .search { position: relative; flex: 1; max-width: 680px; display: flex; }
+  .search { position: relative; flex: 1; max-width: 640px; display: flex; margin-left: auto; }
   .search input { flex: 1; min-width: 0; height: 40px; border: none; border-radius: 999px 0 0 999px; background: var(--field); color: var(--ink);
     padding: 0 18px; font: 500 15px 'Inter', sans-serif; outline: none; }
   .search input::placeholder { color: var(--ink-3); }
@@ -176,16 +181,13 @@ const sections = [
   .qres span { font-size: 12px; color: var(--ink-3); grid-column: 1; }
   .qres em { font-style: normal; font-weight: 700; font-size: 13px; grid-column: 2; grid-row: 1 / span 2; align-self: center; }
   .qnone { padding: 14px 10px; color: var(--ink-3); font-size: 14px; }
-  .toplinks { display: flex; gap: 6px; margin-left: auto; }
-  .toplinks a { text-decoration: none; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 999px; }
-  .toplinks a:hover { background: var(--field); }
 
   .sections { background: var(--secbar); border-bottom: 2px solid var(--brand); }
-  .sec-in { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .sec-in { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
   .sec-in::-webkit-scrollbar { display: none; }
-  .sections a { text-decoration: none; font-weight: 600; font-size: 14px; padding: 13px 12px; white-space: nowrap; color: var(--ink); opacity: .85; }
-  .sections a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 4px; }
-  .sections a.on { opacity: 1; box-shadow: inset 0 -3px 0 var(--brand); }
+  .sections a { text-decoration: none; font-weight: 700; font-size: 14.5px; padding: 13px 14px; white-space: nowrap; color: var(--ink-2); }
+  .sections a:hover { color: var(--ink); }
+  .sections a.on { color: var(--ink); box-shadow: inset 0 -3px 0 var(--brand); }
 
   .tickers { border-bottom: 1px solid var(--border); background: var(--bg); }
   .tk-in { display: flex; overflow-x: auto; scrollbar-width: none; padding-top: 10px; padding-bottom: 10px; }
@@ -228,9 +230,9 @@ const sections = [
 
   @media (max-width: 760px) {
     .mast-in { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 10px; gap: 10px 16px; }
-    .search { order: 3; flex-basis: 100%; max-width: none; }
+    .search { order: 3; flex-basis: 100%; max-width: none; margin-left: 0; }
+    .sections a { padding: 12px 10px; font-size: 14px; }
     .search input { height: 38px; font-size: 14px; }
     .logo { font-size: 20px; }
-    .toplinks a { padding: 6px 8px; font-size: 13px; }
   }
 </style>

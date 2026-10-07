@@ -1,0 +1,152 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base wide section="news" title="Latest banana news · All Things Banana"
+      description="Every banana story from around the web as it happens: banana trade, prices, growers, recipes and more, updated every few minutes.">
+  <div class="news-page">
+    <section class="main">
+      <header class="head">
+        <h1>Latest banana news</h1>
+        <p class="sub" id="sub">Collecting stories…</p>
+      </header>
+      <div class="tools">
+        <div class="seg" id="filters" role="group" aria-label="Show">
+          <button data-f="all" class="on">All</button>
+          <button data-f="business">Banana business</button>
+          <button data-f="video">Videos</button>
+          <button data-f="pictures">With pictures</button>
+        </div>
+        <input id="find" type="search" placeholder="Filter headlines" aria-label="Filter headlines">
+      </div>
+      <div class="source-row" id="sourceRow" hidden>
+        Showing <b id="sourceName"></b> only · <button id="clearSource">Show all sources</button>
+      </div>
+      <div id="list" class="list">
+        {Array.from({ length: 10 }).map(() => <div class="sk-item"><span></span><span></span></div>)}
+      </div>
+      <button id="moreBtn" class="more-btn" hidden>Show more stories</button>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>Banana buzz <span class="h-sub">stories per day</span></h2>
+        <div id="buzz" class="chart-box" style="height:110px"></div>
+      </section>
+      <section class="panel">
+        <h2>Sources</h2>
+        <ol id="sources" class="sources"></ol>
+      </section>
+      <p class="note">We check Google News and produce-trade publishers every 10–20 minutes, keep stories that are really about bananas, and link straight to the original article.</p>
+    </aside>
+  </div>
+</Base>
+
+<script>
+  import { barChart } from '../../scripts/charts';
+  import { getMarket, getFeed, esc, ago, type Market, type Feed, type Item } from '../../scripts/market';
+  import { BUSINESS, chips, meta, link, thumb, buzzDays, tickTimes } from '../../scripts/news';
+
+  const $ = (s: string) => document.querySelector(s) as HTMLElement;
+  let market: Market | null = null, feed: Feed | null = null;
+  let filter = 'all', source = '', query = '', shown = 30;
+
+  function visible(items: Item[]) {
+    return items.filter(it =>
+      (filter === 'all' || (filter === 'business' && BUSINESS.test(it.title)) || (filter === 'video' && it.type === 'video') || (filter === 'pictures' && it.thumb)) &&
+      (!source || it.source === source) &&
+      (!query || it.title.toLowerCase().includes(query)));
+  }
+
+  function render() {
+    if (!feed) return;
+    const items = visible(feed.items);
+    $('#list').innerHTML = items.length
+      ? items.slice(0, shown).map(it => `<article class="row ${it.thumb ? 'has-img' : ''}">
+          <div class="body">${meta(it)}${link(it)}${chips(market, it.title)}</div>${thumb(it)}</article>`).join('')
+      : `<p class="empty">${feed.items.length ? 'No stories match.' : 'Collecting the first banana news… check back in a minute.'}</p>`;
+    ($('#moreBtn') as HTMLButtonElement).hidden = items.length <= shown;
+    $('#sourceRow').hidden = !source;
+    $('#sourceName').textContent = source;
+
+    const counts = new Map<string, number>();
+    feed.items.forEach(it => counts.set(it.source, (counts.get(it.source) || 0) + 1));
+    $('#sources').innerHTML = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 12)
+      .map(([name, n]) => `<li><button data-source="${esc(name)}" class="${name === source ? 'on' : ''}">${esc(name)}</button><span class="num">${n}</span></li>`).join('');
+    $('#sub').textContent = `${feed.items.length} stories from ${counts.size} sources · updated ${ago(feed.updated)}`;
+    barChart($('#buzz'), buzzDays(feed.items), 110);
+  }
+
+  $('#filters').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+    filter = b.dataset.f!; shown = 30;
+    $('#filters').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    render();
+  });
+  $('#find').addEventListener('input', e => { query = (e.target as HTMLInputElement).value.trim().toLowerCase(); shown = 30; render(); });
+  $('#sources').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+    source = source === b.dataset.source ? '' : b.dataset.source!; shown = 30;
+    render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  $('#clearSource').addEventListener('click', () => { source = ''; render(); });
+  $('#moreBtn').addEventListener('click', () => { shown += 30; render(); });
+
+  getMarket().then(m => { market = m; render(); }).catch(() => {});
+  getFeed().then(f => { feed = f; render(); }).catch(() => { $('#list').innerHTML = '<p class="empty">Couldn’t load the news. We’ll keep trying.</p>'; });
+  setInterval(() => getFeed(true).then(f => { feed = f; render(); }).catch(() => {}), 60_000);
+  tickTimes();
+</script>
+
+<style>
+  .news-page { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; padding-top: 24px; align-items: start; }
+  .head h1 { font-size: 30px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+  .sub { color: var(--ink-3); font-size: 13px; margin: 4px 0 0; }
+  .tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 6px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .seg { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .seg button, .more-btn { font: 600 13px 'Inter', sans-serif; color: var(--ink-2); background: transparent; border: 1px solid var(--border); padding: 6px 13px; border-radius: 999px; cursor: pointer; }
+  .seg button:hover, .more-btn:hover { color: var(--ink); background: var(--chip); }
+  .seg button.on { color: #1d1600; background: var(--brand); border-color: var(--brand); }
+  #find { height: 34px; border: 1px solid var(--border); border-radius: 999px; background: var(--field); color: var(--ink); padding: 0 14px; font: 500 13px 'Inter', sans-serif; outline: none; min-width: 200px; }
+  #find:focus { border-color: var(--brand); }
+  .source-row { font-size: 13px; color: var(--ink-2); padding: 10px 0 0; }
+  .source-row button { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
+
+  .list :global(.row) { display: flex; justify-content: space-between; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .list :global(.body) { min-width: 0; }
+  .list :global(.hl) { display: block; text-decoration: none; font-weight: 700; font-size: 18px; line-height: 1.3; margin-top: 3px; }
+  .list :global(.hl:hover) { text-decoration: underline; }
+  .list :global(.meta) { font-size: 12.5px; color: var(--ink-3); }
+  .list :global(.vid) { color: var(--down); font-weight: 700; }
+  .list :global(.thumb) { flex: none; }
+  .list :global(.thumb img) { width: 180px; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; display: block; background: var(--chip); }
+  .list :global(.chips) { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .list :global(.chip) { font-size: 11.5px; font-weight: 700; text-decoration: none; color: var(--link); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; }
+  .list :global(.chip span) { margin-left: 3px; }
+  .list :global(.empty) { color: var(--ink-3); padding: 24px 0; }
+  .more-btn { margin-top: 18px; padding: 9px 20px; font-size: 14px; }
+  .sk-item { padding: 16px 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+  .sk-item span { display: block; height: 12px; border-radius: 4px; background: var(--chip); width: 80%; }
+  .sk-item span:first-child { width: 25%; height: 9px; }
+
+  .side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 16px; }
+  .panel { background: var(--surface); border-radius: 10px; padding: 14px; }
+  .panel h2 { font-size: 16px; font-weight: 800; margin: 0 0 8px; }
+  .h-sub { color: var(--ink-3); font-size: 12px; font-weight: 500; }
+  .sources { list-style: none; margin: 0; padding: 0; }
+  .sources :global(li) { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .sources :global(li:first-child) { border-top: none; }
+  .sources :global(button) { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; padding: 0; cursor: pointer; text-align: left; }
+  .sources :global(button.on) { color: var(--brand); }
+  .sources :global(span) { color: var(--ink-3); }
+  .note { color: var(--ink-3); font-size: 12.5px; margin: 0; }
+
+  @media (max-width: 900px) {
+    .news-page { grid-template-columns: 1fr; }
+    .side { position: static; }
+  }
+  @media (max-width: 560px) {
+    .list :global(.thumb img) { width: 96px; }
+    .list :global(.hl) { font-size: 16px; }
+    #find { flex: 1; min-width: 0; }
+  }
+</style>

@@ -1,0 +1,77 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base wide section="more" title="More Bananas · games, puzzles and experiments · All Things Banana"
+      description="Banana games, puzzles and experiments: the Banana Clicker world leaderboard, the 3D Banana Cube solver and more to come.">
+  <header class="head">
+    <h1>More Bananas</h1>
+    <p>Games, puzzles and experiments. This is our banana lab: new things land here first.</p>
+  </header>
+
+  <div class="grid">
+    <a class="tile" href="/more/banana-clicker/">
+      <div class="art clicker" aria-hidden="true"><span>🍌</span></div>
+      <div class="info">
+        <div class="tags"><span class="tag live">Live</span><span class="tag">Game</span></div>
+        <h2>Banana Clicker</h2>
+        <p>Peel as many bananas as you can for your country, and watch the world leaderboard change in real time.</p>
+        <div class="stat" id="peelStat">&nbsp;</div>
+      </div>
+    </a>
+
+    <a class="tile" href="/more/banana-cube/">
+      <div class="art cube" aria-hidden="true"><span>🧩</span></div>
+      <div class="info">
+        <div class="tags"><span class="tag live">Live</span><span class="tag">Puzzle</span></div>
+        <h2>Banana Cube solver</h2>
+        <p>Twist a 3D banana puzzle, enter the position of yours, and see exactly how many moves you are from solved.</p>
+        <div class="stat">241,920 positions · never more than 14 moves</div>
+      </div>
+    </a>
+
+    <div class="tile soon">
+      <div class="art lab" aria-hidden="true"><span>🎲</span></div>
+      <div class="info">
+        <div class="tags"><span class="tag">In the lab</span><span class="tag">Experiment</span></div>
+        <h2>10,000 random twisters</h2>
+        <p>What happens when 10,000 people twist a banana cube at random? An interactive version of our experiment is on its way.</p>
+        <div class="stat">Coming soon</div>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  fetch('/api/peel').then(r => r.json()).then(d => {
+    const el = document.getElementById('peelStat')!;
+    const countries = Object.keys(d.countries || {}).length;
+    el.textContent = d.total
+      ? `${d.total.toLocaleString('en-US')} bananas peeled in ${countries} ${countries === 1 ? 'country' : 'countries'}`
+      : 'Be the first to peel a banana';
+  }).catch(() => {});
+</script>
+
+<style>
+  .head { padding: 28px 0 8px; }
+  .head h1 { font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+  .head p { color: var(--ink-2); margin: 6px 0 0; font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; margin-top: 18px; }
+  .tile { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    text-decoration: none; transition: border-color .15s, transform .15s; }
+  a.tile:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .art { height: 170px; display: grid; place-items: center; font-size: 76px; }
+  .art span { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .4)); transition: transform .25s; }
+  a.tile:hover .art span { transform: scale(1.08) rotate(-6deg); }
+  .art.clicker { background: radial-gradient(circle at 30% 25%, #5a4812, #1f190a); }
+  .art.cube { background: radial-gradient(circle at 30% 25%, #24405e, #111a25); }
+  .art.lab { background: radial-gradient(circle at 30% 25%, #33333d, #16161b); }
+  .info { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .tags { display: flex; gap: 6px; }
+  .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+  .tag.live { color: #1d1600; background: var(--brand); border-color: var(--brand); }
+  .info h2 { font-size: 20px; font-weight: 800; margin: 4px 0 0; }
+  .info p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+  .stat { margin-top: auto; padding-top: 10px; color: var(--brand); font-weight: 700; font-size: 13.5px; }
+  .soon { opacity: .75; }
+  .soon .stat { color: var(--ink-3); }
+</style>
