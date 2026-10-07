@@ -9,11 +9,11 @@ try { web = JSON.parse(readFileSync(new URL('../../../public/recipes/web.json', 
 const webSites = new Set(web.map(w => w.s)).size;
 const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as never)).length + web.filter(w => w.meals.includes(meal)).length;
 ---
-<Base wide section="recipes" title="Peelicious · banana recipes for breakfast, lunch, dinner and more · All Things Banana"
+<Base wide section="recipes" title="Banacipes · banana recipes for breakfast, lunch, dinner and more · All Things Banana"
       description={`${recipes.length} banana recipes from around the world: banana bread, pancakes, smoothies, plantain dishes, desserts and more. Filter by meal, by how ripe your bananas are, or by how much banana you want.`}>
   <header class="head">
     <div>
-      <h1>Peelicious</h1>
+      <h1>Banacipes</h1>
       <p><b>{recipes.length} banana recipes</b> of our own{web.length > 0 && <> plus <b>{web.length.toLocaleString('en-US')} more</b> from {webSites} recipe sites</>}, from breakfast to cocktails. Pick a meal, tell us how ripe your bananas are, or just browse.</p>
     </div>
     <button class="surprise" id="surprise">🎲 Surprise me</button>

@@ -1,4 +1,4 @@
-// Every Peelicious recipe. Add new ones to any of these files (or a new file) and they appear
+// Every Banacipes recipe. Add new ones to any of these files (or a new file) and they appear
 // on the site with their own page, in search and in all the filters automatically.
 import { breakfast } from './breakfast';
 import { savoury } from './savoury';

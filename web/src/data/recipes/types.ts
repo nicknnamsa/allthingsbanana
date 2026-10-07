@@ -1,4 +1,4 @@
-// The shape of a Peelicious recipe. To add one, copy any recipe in the other files in this folder.
+// The shape of a Banacipes recipe. To add one, copy any recipe in the other files in this folder.
 
 export type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'drink';
 // what the bananas should be like: green (firm, starchy), yellow (just ripe), spotty, brown (very ripe)

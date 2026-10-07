@@ -1,4 +1,4 @@
-// Finds banana recipes on other recipe sites and saves them as links for Peelicious.
+// Finds banana recipes on other recipe sites and saves them as links for Banacipes.
 //
 //   npm run crawl-recipes            (takes a while: we go slowly on purpose)
 //
@@ -8,7 +8,7 @@
 //   - reads the schema.org Recipe data the page publishes for search engines
 //   - keeps only facts and the link: name, picture, time, rating, publisher. Never their method or text.
 //   - remembers what it has seen in scripts/.recipe-crawl-cache.json, so re-runs only visit new pages
-// Output: public/recipes/web.json, loaded by the Peelicious page.
+// Output: public/recipes/web.json, loaded by the Banacipes page.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 

@@ -3,7 +3,7 @@ import { formatTime, MEALS, type Recipe } from '../data/recipes';
 interface Props { recipe: Recipe }
 const { recipe: r } = Astro.props;
 const mealLabel = (id: string) => MEALS.find(m => m.id === id)?.label ?? id;
-// everything the filters on the Peelicious page need, as data attributes
+// everything the filters on the Banacipes page need, as data attributes
 const search = [r.name, r.blurb, r.origin, ...r.ingredients].join(' ').toLowerCase();
 ---
 <a class="rc" href={`/recipes/${r.slug}/`}

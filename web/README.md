@@ -4,7 +4,7 @@ The website for allthingsbanana.com.
 
 - `src/pages/`: site pages (Astro): Home (`index.astro`), Bananalytics (`bananalytics/`), Latest News (`news/`) and More Bananas (`more/`, including the Banana Cube and Banana Clicker).
 - `src/scripts/`: shared code for charts, market data and news.
-- `src/data/recipes/`: the Peelicious banana recipes. To add one, copy any recipe in these files and change it; it gets its own page, search entry and filters automatically.
+- `src/data/recipes/`: the Banacipes banana recipes. To add one, copy any recipe in these files and change it; it gets its own page, search entry and filters automatically.
 - `worker/`: the Cloudflare Worker. It serves the site and refreshes the feed every 10 minutes.
   - `worker/index.js`: fetches news, YouTube videos and stock prices, and stores them in KV.
   - `worker/filter.js`: decides what counts as "about bananas". Edit the lists to tune it.

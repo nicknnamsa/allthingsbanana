@@ -27,9 +27,9 @@ const jsonLd = {
   author: { '@type': 'Organization', name: 'All Things Banana' },
 };
 ---
-<Base wide section="recipes" title={`${r.name} · Peelicious banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
+<Base wide section="recipes" title={`${r.name} · Banacipes banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-  <nav class="crumbs"><a href="/recipes/">Peelicious</a> › {mealLabel(r.meals[0])} › {r.name}</nav>
+  <nav class="crumbs"><a href="/recipes/">Banacipes</a> › {mealLabel(r.meals[0])} › {r.name}</nav>
 
   <article class="recipe">
     <header class="top">
