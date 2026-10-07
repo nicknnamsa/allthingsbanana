@@ -7,6 +7,9 @@ const sat = (h: { lat: number; lon: number }) => `https://www.google.com/maps/@$
 const year = fao.years[L];
 const banT = fao.world.banana.prod[L]!, plT = fao.world.plantain.prod[L]!;
 const fmtMt = (t: number) => (t / 1e6).toFixed(1);
+// FAO weighs bananas with their peel: a medium banana is about 150 g that way
+const BANANA_KG = 0.15;
+const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100) * 100;
 ---
 <Base wide section="world" image="/og/bananalytics.jpg"
       title="Banana World: where the world's bananas grow, on a map · All Things Banana"
@@ -16,9 +19,10 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
       <h1>Banana World</h1>
       <p>Where the world's bananas grow. In {year}, farms harvested <b>{fmtMt(banT)} million tonnes of bananas</b> and <b>{fmtMt(plT)} million tonnes of plantains and cooking bananas</b>.</p>
     </div>
-    <div class="counter" title="World banana production divided evenly over the year, at about 118 g per banana">
-      <span class="c-n num" id="counter">0</span>
-      <span class="c-l">bananas grown since you opened this page</span>
+    <div class="counter" title={`World banana production in ${year} spread evenly over the year, at about 150 g per banana (with peel)`}>
+      <span class="c-n num" id="counter" data-rate={perSecond}>0</span>
+      <span class="c-l">bananas harvested worldwide since you opened this page</span>
+      <span class="c-r">about {perSecond.toLocaleString('en-US')} every second</span>
     </div>
   </header>
 
@@ -93,7 +97,7 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
     <h2>About this map</h2>
     <p>Figures are the UN Food and Agriculture Organization's official statistics (FAOSTAT), reported by each country, for <b>bananas</b> (mostly dessert bananas like the Cavendish) and <b>plantains and cooking bananas</b> (like matoke). Yield is production per hectare harvested. Some small islands are shown as dots. The French overseas regions of Guadeloupe, Martinique, Réunion and French Guiana are reported separately from France.</p>
     <p><b>🛰 Where exactly?</b> switches to a map of where bananas and plantains grow <i>inside</i> each country, for 2020. It comes from IFPRI's MapSPAM, which spreads each country's official farm statistics across the land using satellite maps of cropland, terrain and growing conditions, on a roughly 10 km grid. Its totals (5.2 million hectares of bananas, 6.9 million of plantains) closely match FAO's figures for 2020.</p>
-    <p class="src">Data: FAOSTAT, Crops and livestock products, © FAO, CC BY 4.0 (updated {fao.updated}). MapSPAM 2020 v2.0 r2, © IFPRI, CC BY 4.0 (adapted: we merged its 10 km cells into 20 km cells for the web). Country borders: Natural Earth via world-atlas (public domain). Bananas-per-second assumes a medium banana of about 118 g.</p>
+    <p class="src">Data: FAOSTAT, Crops and livestock products, © FAO, CC BY 4.0 (updated {fao.updated}). MapSPAM 2020 v2.0 r2, © IFPRI, CC BY 4.0 (adapted: we merged its 10 km cells into 20 km cells for the web). Country borders: Natural Earth via world-atlas (public domain). The counter spreads the year's world banana production evenly over every second, at about 150 g per banana (FAO weighs bananas with their peel). It doesn't include plantains.</p>
   </section>
 </Base>
 
@@ -332,9 +336,8 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
   };
 
   // ---------- bananas grown since you arrived ----------
-  const L = years.length - 1;
-  const perSecond = (fao.world.banana.prod[L]! * 1000) / (365.25 * 86400) / 0.118;
-  const t0 = performance.now(), counter = $('#counter');
+  const counter = $('#counter'), perSecond = Number(counter.dataset.rate);
+  const t0 = performance.now();
   const tick = () => { counter.textContent = Math.floor(((performance.now() - t0) / 1000) * perSecond).toLocaleString('en-US'); requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
 
@@ -349,7 +352,8 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
   .head p { margin: 0; color: var(--ink-2); font-size: 15.5px; max-width: 720px; }
   .counter { text-align: right; }
   .c-n { display: block; font-size: 34px; font-weight: 900; color: var(--brand); letter-spacing: -0.02em; }
-  .c-l { font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+  .c-l { display: block; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+  .c-r { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
 
   .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .seg { display: inline-flex; background: var(--field); border-radius: 999px; padding: 3px; }
