@@ -108,35 +108,13 @@ export class Techno {
     const root = [0, 0, -2, -4][bar];                     // Am, Am, G, F, like the arpeggio
     const semi = riff[this.notes++ % riff.length] + root;
     const hz = 220 * 2 ** (semi / 12);
-    if (this.stage < 2) {
-      // a soft marimba-ish pluck while it's calm
-      const o = c.createOscillator(), g = c.createGain();
-      o.type = 'triangle'; o.frequency.value = hz * 2;
-      g.gain.setValueAtTime(0.2, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-      o.connect(g).connect(this.master);
-      o.start(t); o.stop(t + 0.26);
-      return;
-    }
-    // in the rave: a squelchy saw lead, with a bass note an octave and a fifth below from stage 3
-    const lead = c.createOscillator(), lf = c.createBiquadFilter(), lg = c.createGain();
-    lead.type = 'sawtooth'; lead.frequency.value = hz;
-    lf.type = 'lowpass'; lf.Q.value = 8;
-    lf.frequency.setValueAtTime(600 + this.stage * 600, t);
-    lf.frequency.exponentialRampToValueAtTime(5000 + this.stage * 1500, t + 0.02);
-    lf.frequency.exponentialRampToValueAtTime(400, t + 0.22);
-    lg.gain.setValueAtTime(0.13, t);
-    lg.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
-    lead.connect(lf).connect(lg).connect(this.master);
-    lead.start(t); lead.stop(t + 0.27);
-    if (this.stage >= 3) {
-      const b = c.createOscillator(), bg = c.createGain();
-      b.type = 'square'; b.frequency.value = 55 * 2 ** ((root + (semi % 12 === 0 ? 0 : 7)) / 12);
-      bg.gain.setValueAtTime(0.12, t);
-      bg.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-      b.connect(bg).connect(this.filter);
-      b.start(t); b.stop(t + 0.21);
-    }
+    // one voice all the way through: a soft marimba-ish pluck
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'triangle'; o.frequency.value = hz * 2;
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    o.connect(g).connect(this.master);
+    o.start(t); o.stop(t + 0.26);
   }
 
   private schedule() {
