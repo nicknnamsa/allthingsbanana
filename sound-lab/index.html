@@ -1,0 +1,623 @@
+<!doctype html>
+<!--
+  Banana Sound Lab: a private sketchpad for the Banana Clicker's music. NOT part of the website
+  (it lives outside web/, so Cloudflare never builds or deploys it). Open this file in Chrome.
+
+  Everything is synthesised live with Web Audio: no samples. The track is a hard-dance loop with
+  a proper arrangement (intro, drop, breakdown, build, the empty bar, drop again), a squeaky
+  rubber-banana melody doubled by a detuned saw lead, chord stabs, a clean-but-hard kick and a
+  gritty off-beat bass.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banana Sound Lab</title>
+<style>
+  :root { --bg: #14110c; --card: #1f1a12; --line: #3a3124; --ink: #fff6e0; --ink2: #cbbd9f; --ink3: #8d7f66; --y: #ffd84d; --mint: #7be0a5; --coral: #ff8f7a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 18px 40px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -.02em; }
+  h1 span { color: var(--y); }
+  .sub { color: var(--ink3); font-size: 13px; margin-top: 4px; }
+
+  .top { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; margin-top: 18px; }
+  .stage { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 42%, #3d2c06, #110d04 72%); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; align-items: center; min-height: 330px; }
+  .glow { position: absolute; inset: -30%; background: radial-gradient(circle at 50% 45%, rgba(255, 216, 77, .6), transparent 50%); opacity: 0; pointer-events: none; }
+  .section { position: relative; font-size: 13px; font-weight: 900; letter-spacing: .14em; color: var(--y); text-transform: uppercase; }
+  .spinner { position: relative; perspective: 600px; margin: auto 0; }
+  .spinner span { display: inline-block; font-size: 130px; line-height: 1; filter: drop-shadow(0 16px 26px rgba(0, 0, 0, .55)); will-change: transform; }
+  .transport { position: relative; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+  button { font: inherit; cursor: pointer; }
+  .big { font-weight: 900; font-size: 17px; background: var(--y); color: #2a2118; border: none; border-radius: 14px; padding: 12px 26px; min-width: 130px; }
+  .btn { font-weight: 700; font-size: 13.5px; background: rgba(255, 255, 255, .07); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 9px 13px; }
+  .btn:hover { border-color: var(--y); }
+  .btn.on { background: var(--y); color: #2a2118; border-color: var(--y); }
+  .btn.rec.on { background: var(--coral); border-color: var(--coral); }
+
+  .timeline { background: var(--card); border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .tl-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .lbl { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+  .bars { display: flex; gap: 3px; height: 54px; }
+  .bars div { flex: 1; border-radius: 6px; display: flex; align-items: flex-end; justify-content: center; font-size: 10px; font-weight: 800; color: rgba(0, 0, 0, .55); padding-bottom: 4px; position: relative; min-width: 0; }
+  .bars div.now { outline: 3px solid #fff; outline-offset: -3px; }
+  .s-intro { background: #6b7cff; } .s-drop { background: var(--y); } .s-breakdown { background: #b48cff; } .s-build { background: var(--coral); } .s-gap { background: #3a3124; color: var(--ink3) !important; }
+  .jump { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .share { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .share code { flex: 1; min-width: 0; font-size: 12px; background: #120f0a; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; color: var(--ink2); overflow-wrap: anywhere; }
+
+  .groups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+  .group { background: var(--card); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .group h2 { margin: 0; font-size: 15px; font-weight: 900; }
+  .group h2 small { display: block; font-size: 12px; font-weight: 500; color: var(--ink3); margin-top: 2px; }
+  .knob { display: grid; gap: 4px; }
+  .knob .row { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; font-size: 13.5px; }
+  .knob .row b { color: var(--y); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .knob .hint { font-size: 11.5px; color: var(--ink3); line-height: 1.35; }
+  input[type=range] { width: 100%; accent-color: var(--y); }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+  .seg button { font-size: 12.5px; font-weight: 700; background: rgba(255, 255, 255, .06); color: var(--ink2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; }
+  .seg button.on { background: var(--y); color: #2a2118; border-color: var(--y); }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  @media (max-width: 1000px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } .top { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .groups { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>🍌 Banana <span>Sound Lab</span></h1>
+      <div class="sub">Private sketchpad for the clicker's music. Not on the website. Everything is synthesised live; nothing is sampled.</div>
+    </div>
+    <div class="presets">
+      <span class="lbl">Presets</span>
+      <button class="btn" data-preset="anthem">Spin anthem</button>
+      <button class="btn" data-preset="hard">Harder</button>
+      <button class="btn" data-preset="house">Clean house</button>
+      <button class="btn" data-preset="silly">Max silly</button>
+    </div>
+  </header>
+
+  <div class="top">
+    <section class="stage" id="stage">
+      <div class="glow" id="glow"></div>
+      <div class="section" id="secName">Press play</div>
+      <div class="spinner" aria-hidden="true"><span id="spin">🍌</span></div>
+      <div class="transport">
+        <button class="big" id="play">▶ Play</button>
+        <button class="btn rec" id="rec" title="Record what you hear to a file">⏺ Record</button>
+      </div>
+    </section>
+
+    <section class="timeline">
+      <div class="tl-head">
+        <span class="lbl">Arrangement (one block = one bar)</span>
+        <div class="jump">
+          <span class="lbl">Jump to</span>
+          <button class="btn" data-jump="drop">Drop</button>
+          <button class="btn" data-jump="breakdown">Breakdown</button>
+          <button class="btn" data-jump="build">Build</button>
+          <button class="btn" id="loopBtn" title="Keep repeating the section you're in">🔁 Loop section</button>
+        </div>
+      </div>
+      <div class="bars" id="bars"></div>
+      <div class="share">
+        <span class="lbl" style="width:100%">Settings (copy and send these over when something sounds right)</span>
+        <code id="code"></code>
+        <button class="btn" id="copy">Copy</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="groups">
+    <section class="group">
+      <h2>Rhythm <small>The engine room</small></h2>
+      <div class="knob">
+        <div class="row"><span>Tempo</span><b id="v-bpm"></b></div>
+        <input type="range" id="k-bpm" min="120" max="170" step="1">
+        <div class="row" style="justify-content:flex-start;gap:6px"><button class="btn" id="tap">Tap tempo</button><span class="hint" id="tapInfo">Tap along to a track to match its speed</span></div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Kick hardness</span><b id="v-hard"></b></div>
+        <input type="range" id="k-hard" min="0" max="10" step="1">
+        <div class="hint">0 = clean house thump, 10 = hard-dance punch (click, deep pitch drop, longer tail). Stays clean: no fizz.</div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Bounce</span><b id="v-bounce"></b></div>
+        <input type="range" id="k-bounce" min="0" max="10" step="1">
+        <div class="hint">How hard the off-beat bass pushes back against the kick, and how deep the pump is.</div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>Synths <small>The serious production</small></h2>
+      <div class="knob">
+        <div class="row"><span>Lead brightness</span><b id="v-bright"></b></div>
+        <input type="range" id="k-bright" min="0" max="10" step="1">
+        <div class="hint">The buzzy detuned saw lead that doubles the squeak melody.</div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Layering</span></div>
+        <div class="seg" id="layering">
+          <button data-v="auto">Auto by section</button>
+          <button data-v="squeak">Squeak alone</button>
+          <button data-v="lead">Squeak + lead</button>
+          <button data-v="full">+ stabs</button>
+        </div>
+        <div class="hint">Auto: squeak alone in the intro and build, + lead in breakdowns, everything in drops.</div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Bass grit</span><b id="v-grit"></b></div>
+        <input type="range" id="k-grit" min="0" max="10" step="1">
+        <div class="hint">Distortion on the bass's mid-range. The sub underneath stays clean, so it's gritty but still deep.</div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>Structure <small>Where the tension comes from</small></h2>
+      <div class="knob">
+        <div class="row"><span>Build length</span></div>
+        <div class="seg" id="buildLen">
+          <button data-v="1">1 bar</button>
+          <button data-v="2">2 bars</button>
+          <button data-v="4">4 bars</button>
+        </div>
+        <div class="hint">Snare roll and riser before the drop. Short = punchy.</div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Drop contrast</span><b id="v-contrast"></b></div>
+        <input type="range" id="k-contrast" min="0" max="10" step="1">
+        <div class="hint">How empty the bar before the drop is. 10 = total silence, then everything at once.</div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Breakdown depth</span><b id="v-depth"></b></div>
+        <input type="range" id="k-depth" min="0" max="10" step="1">
+        <div class="hint">How far it strips back between drops. Around 4–5 never gets properly quiet.</div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>Vibe <small>Absurd source, serious production</small></h2>
+      <div class="knob">
+        <div class="row"><span>Silliness</span><b id="v-silly"></b></div>
+        <input type="range" id="k-silly" min="0" max="10" step="1">
+        <div class="hint">How loud and squeaky the rubber-banana melody is. The production stays deadly serious either way.</div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Chop rate</span></div>
+        <div class="seg" id="chop">
+          <button data-v="4">1/4</button>
+          <button data-v="8">1/8</button>
+          <button data-v="16">1/16</button>
+        </div>
+        <div class="hint">How fast the melody is chopped. The banana's spin is locked to it: half a turn per chop.</div>
+      </div>
+      <div class="knob">
+        <div class="row"><span>Volume</span><b id="v-vol"></b></div>
+        <input type="range" id="k-vol" min="0" max="10" step="1">
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+// ===================== settings =====================
+const DEFAULTS = { bpm: 145, hard: 8, bounce: 7, bright: 8, layering: 'auto', grit: 8, buildLen: 1, contrast: 10, depth: 5, silly: 7, chop: 16, vol: 7 };
+const PRESETS = {
+  anthem: { ...DEFAULTS },
+  hard: { ...DEFAULTS, bpm: 150, hard: 10, bounce: 9, grit: 10, bright: 9, depth: 4 },
+  house: { ...DEFAULTS, bpm: 126, hard: 1, bounce: 5, grit: 2, bright: 5, buildLen: 4, contrast: 4, depth: 6, silly: 4, chop: 8 },
+  silly: { ...DEFAULTS, silly: 10, chop: 16, layering: 'squeak', bright: 6 },
+};
+let S = { ...DEFAULTS };
+try { Object.assign(S, JSON.parse(localStorage.getItem('banana-sound-lab') || '{}')); } catch {}
+const save = () => { try { localStorage.setItem('banana-sound-lab', JSON.stringify(S)); } catch {} };
+
+// ===================== music =====================
+// A minor: Am F C G, one chord per bar. The melody is a 2-bar phrase in 16ths (null = rest),
+// as semitones above A. It's played at the chop rate: 1/16 uses every note, 1/8 every other, 1/4 every fourth.
+const ROOTS = [0, -4, 3, -2];
+const MELODY = [
+  12, null, 12, 15, 12, null, 10, 12,   7, null, 7, 10, 12, 15, 17, 15,
+  12, null, 12, 15, 17, 15, 12, 10,     7, 10, 12, null, 10, 7, 5, 7,
+];
+// each section's length in bars; build and gap come from the settings
+const order = () => [['drop', 8], ['breakdown', 4], ['build', S.buildLen], ...(S.contrast > 0 ? [['gap', 1]] : [])];
+
+let ctx = null, out, comp, musicBus, sectionLP, duck, verbSend, noise, recDest, recorder, chunks = [];
+let playing = false, next = 0, step = 0, timer = null;
+let sec = { name: 'intro', bar: 0, len: 4 }, loopSection = false, jumpTo = null;
+const queue = [];   // what plays when, for the visuals: { t, step, sec, chop }
+
+function setupAudio() {
+  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+  ctx = new AudioContext();
+  out = ctx.createGain();
+  comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -8; comp.knee.value = 6; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.15;
+  // the music (everything but the kick) goes through a sidechain "duck" and a section filter for breakdowns
+  musicBus = ctx.createGain();
+  duck = ctx.createGain();
+  sectionLP = ctx.createBiquadFilter(); sectionLP.type = 'lowpass'; sectionLP.frequency.value = 20000; sectionLP.Q.value = 0.8;
+  const verb = ctx.createConvolver(); verb.buffer = impulse(1.8);
+  verbSend = ctx.createGain(); verbSend.gain.value = 0.12;
+  musicBus.connect(duck).connect(sectionLP).connect(out);
+  sectionLP.connect(verbSend).connect(verb).connect(out);
+  out.connect(comp).connect(ctx.destination);
+  recDest = ctx.createMediaStreamDestination();
+  comp.connect(recDest);
+  noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  applyVolume();
+}
+function impulse(secs) {
+  const len = Math.floor(ctx.sampleRate * secs), b = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 4; }
+  return b;
+}
+const STEP = () => 60 / S.bpm / 4;
+const hz = semi => 110 * 2 ** (semi / 12);
+const curve = k => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } return c; };
+function applyVolume() { if (ctx) out.gain.setTargetAtTime((S.vol / 10) * 0.9, ctx.currentTime, 0.03); }
+
+function start() {
+  setupAudio();
+  playing = true; step = 0; queue.length = 0;
+  sec = { name: 'intro', bar: 0, len: 4 };
+  next = ctx.currentTime + 0.08;
+  timer = setInterval(schedule, 25);
+}
+function stop() { playing = false; clearInterval(timer); timer = null; }
+
+function schedule() {
+  while (next < ctx.currentTime + 0.12) {
+    const i = step % 16;
+    if (i === 0 && step > 0) advanceBar(next);
+    play(i, next);
+    queue.push({ t: next, step, sec: sec.name, bar: sec.bar, chop: i % (16 / S.chop) === 0 });
+    if (queue.length > 64) queue.shift();
+    next += STEP();
+    step++;
+  }
+}
+
+function advanceBar(t) {
+  sec.bar++;
+  if (jumpTo) { enter(jumpTo, t); jumpTo = null; return; }
+  if (sec.bar < sec.len) return;
+  if (loopSection) { sec.bar = 0; if (sec.name === 'build') riser(t, S.buildLen); return; }
+  const o = order(), idx = o.findIndex(([n]) => n === sec.name);
+  const [name] = sec.name === 'intro' ? o[0] : o[(idx + 1) % o.length];
+  enter(name, t);
+}
+function enter(name, t) {
+  const o = order(), len = name === 'intro' ? 4 : (o.find(([n]) => n === name) || [name, 1])[1];
+  sec = { name, bar: 0, len };
+  // breakdowns pull the filter down; everything else opens it again
+  const f = name === 'breakdown' ? 20000 * (500 / 20000) ** (S.depth / 10) : 20000;
+  sectionLP.frequency.setTargetAtTime(f, t, name === 'breakdown' ? 0.4 : 0.01);
+  if (name === 'build') riser(t, S.buildLen);
+  if (name === 'drop') impact(t);
+}
+
+// which melodic layers play in the current section
+function layers() {
+  if (S.layering !== 'auto') return { squeak: true, lead: S.layering !== 'squeak', stabs: S.layering === 'full' };
+  return {
+    intro: { squeak: true, lead: false, stabs: false },
+    drop: { squeak: true, lead: true, stabs: true },
+    breakdown: { squeak: true, lead: true, stabs: false },
+    build: { squeak: true, lead: false, stabs: false },
+    gap: { squeak: false, lead: false, stabs: false },
+  }[sec.name];
+}
+
+function play(i, t) {
+  const root = ROOTS[Math.floor(step / 16) % 4];
+  const L = layers(), d = S.depth / 10;
+  const n = sec.name;
+
+  if (n === 'gap') {
+    // the empty bar before the drop: at contrast 10, total silence
+    const e = 1 - S.contrast / 10;
+    if (e > 0 && i % 2 === 0) snare(t, 0.3 * e);
+    return;
+  }
+  if (n === 'build') {
+    const total = S.buildLen * 16, b = sec.bar * 16 + i, x = b / total;   // 0..1 through the build
+    const every = x < 0.5 ? 4 : x < 0.75 ? 2 : 1;
+    if (b % every === 0) snare(t, 0.18 + x * 0.45);
+    if (x < 0.5 && i % 4 === 0) kick(t, 0.8);
+    // the squeak repeats a rising note as the tension builds
+    if (i % 2 === 0 && S.silly > 0) squeak(t, hz(12 + root + Math.floor(x * 12)), STEP() * 1.5);
+    return;
+  }
+
+  // drop, breakdown, intro
+  const kickOn = n !== 'breakdown' || d < 0.3;
+  if (kickOn && i % 4 === 0) { kick(t, 1); pump(t); }
+  const bassLevel = n === 'breakdown' ? 1 - d : n === 'intro' ? 0.8 : 1;
+  if (bassLevel > 0.05) bass(t, i, root, bassLevel);
+  if (n !== 'breakdown' || d < 0.6) {
+    if (i % 4 === 2) hat(t, 0.07, 0.08);
+    if (n === 'drop' && i % 2 === 1) hat(t, 0.025, 0.03);
+  }
+  if (n === 'drop' && (i === 4 || i === 12)) clap(t);
+
+  // the melody, chopped at the chop rate
+  const every = 16 / S.chop;
+  if (i % every === 0) {
+    const note = MELODY[(Math.floor(step / 16) % 2) * 16 + i];
+    if (note != null) {
+      const len = STEP() * every * 0.85;
+      if (L.squeak && S.silly > 0) squeak(t, hz(note + root + 12), len);
+      if (L.lead) lead(t, hz(note + root), len);
+    }
+  }
+  if (L.stabs && (i === 2 || i === 6 || i === 10 || i === 14)) stab(t, root);
+}
+
+// ---------- instruments ----------
+// kick: a sine body with a pitch drop, plus a short click on top. Hardness adds punch and depth,
+// with only gentle saturation and a lowpass after it, so it never fizzes.
+function kick(t, vol) {
+  const h = S.hard / 10;
+  const body = ctx.createOscillator(), g = ctx.createGain(), sat = ctx.createWaveShaper(), lp = ctx.createBiquadFilter();
+  body.type = 'sine';
+  body.frequency.setValueAtTime(110 + h * 190, t);
+  body.frequency.exponentialRampToValueAtTime(58 - h * 10, t + 0.04 + h * 0.03);
+  body.frequency.exponentialRampToValueAtTime(42, t + 0.3);
+  sat.curve = curve(1 + h * 1.6); sat.oversample = '4x';
+  lp.type = 'lowpass'; lp.frequency.value = 3200;
+  const len = Math.min(0.22 + h * 0.18, STEP() * 3.8);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol * 0.95, t + 0.003);
+  g.gain.setValueAtTime(vol * 0.95, t + len * 0.35);
+  g.gain.exponentialRampToValueAtTime(0.0008, t + len);
+  body.connect(sat).connect(lp).connect(g).connect(out);
+  body.start(t); body.stop(t + len + 0.02);
+  // click: a few ms of filtered noise, louder when harder
+  const n = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), cg = ctx.createGain();
+  n.buffer = noise; hp.type = 'bandpass'; hp.frequency.value = 3500; hp.Q.value = 0.7;
+  cg.gain.setValueAtTime(vol * (0.12 + h * 0.4), t); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.012);
+  n.connect(hp).connect(cg).connect(out);
+  n.start(t, Math.random() * 0.5); n.stop(t + 0.015);
+}
+
+// sidechain pump: the music dips on each kick and swells back; bounce makes it deeper
+function pump(t) {
+  const depth = 0.25 + (S.bounce / 10) * 0.65;
+  duck.gain.cancelScheduledValues(t);
+  duck.gain.setValueAtTime(1 - depth, t);
+  duck.gain.linearRampToValueAtTime(1, t + STEP() * (2 + S.bounce / 5));
+}
+
+// off-beat bass: low bounce = one note on each off-beat; high bounce = rolling 16ths that swell into the kick.
+// Grit distorts a copy of the mids; the sub sine underneath stays clean.
+function bass(t, i, root, level) {
+  const b = S.bounce / 10, sub16 = i % 4;
+  const play = sub16 === 2 || (b > 0.5 && sub16 !== 0);
+  if (!play) return;
+  const f = hz(root - 12);
+  const swell = sub16 === 2 ? 1 : 0.7;
+  const vol = (0.18 + b * 0.16) * level * swell;
+  const len = STEP() * (b > 0.5 ? 0.95 : 1.8);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol * 0.6, t);
+  g.gain.linearRampToValueAtTime(vol, t + len * 0.6);
+  g.gain.linearRampToValueAtTime(0.0001, t + len);
+  // clean sub
+  const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = f;
+  const subG = ctx.createGain(); subG.gain.value = 0.9;
+  sub.connect(subG).connect(g);
+  // gritty mids
+  const gr = S.grit / 10, sh = ctx.createWaveShaper(), hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), midG = ctx.createGain();
+  sh.curve = curve(1 + gr * 9); sh.oversample = '4x';
+  hp.type = 'highpass'; hp.frequency.value = 140;
+  lp.type = 'lowpass'; lp.frequency.value = 900 + gr * 1400; lp.Q.value = 2;
+  midG.gain.value = 0.25 + gr * 0.25;
+  for (const det of [-12, 12]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * 2; o.detune.value = det; o.connect(sh); o.start(t); o.stop(t + len + 0.01); }
+  sh.connect(hp).connect(lp).connect(midG).connect(g);
+  g.connect(musicBus);
+  sub.start(t); sub.stop(t + len + 0.01);
+}
+
+// lead: a stack of detuned saws (a "supersaw"). Brightness opens its filter.
+function lead(t, f, len) {
+  const br = S.bright / 10, g = ctx.createGain(), lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.Q.value = 1.5;
+  lp.frequency.setValueAtTime(800 + br * 7000, t);
+  lp.frequency.exponentialRampToValueAtTime(500 + br * 3000, t + len);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.07 + br * 0.03, t + 0.005);
+  g.gain.setValueAtTime(0.07 + br * 0.03, t + len * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  for (const det of [-22, -11, 0, 11, 22]) {
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * 2; o.detune.value = det;
+    o.connect(lp); o.start(t); o.stop(t + len + 0.01);
+  }
+  lp.connect(g).connect(musicBus);
+}
+
+// the absurd part: a squeaky rubber-toy banana. Each note squeaks up into pitch with a wobble.
+function squeak(t, f, len) {
+  const s = S.silly / 10, o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), bp = ctx.createBiquadFilter();
+  const lfo = ctx.createOscillator(), lg = ctx.createGain();
+  o.type = 'triangle'; o2.type = 'square';
+  for (const osc of [o, o2]) {
+    osc.frequency.setValueAtTime(f * (0.7 - s * 0.15), t);
+    osc.frequency.exponentialRampToValueAtTime(f, t + 0.035);
+    osc.frequency.setValueAtTime(f, t + len * 0.7);
+    osc.frequency.exponentialRampToValueAtTime(f * 1.12, t + len);   // little upward flick at the end
+  }
+  lfo.frequency.value = 18 + s * 14; lg.gain.value = 20 + s * 45;   // cents of wobble
+  lfo.connect(lg); lg.connect(o.detune); lg.connect(o2.detune);
+  const mix = ctx.createGain(); mix.gain.value = 1;
+  const o2g = ctx.createGain(); o2g.gain.value = 0.18 + s * 0.15;
+  o.connect(mix); o2.connect(o2g).connect(mix);
+  bp.type = 'bandpass'; bp.frequency.value = f * 2; bp.Q.value = 1.2;
+  const vol = 0.08 + s * 0.16;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+  g.gain.setValueAtTime(vol, t + len * 0.75);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  mix.connect(bp).connect(g).connect(musicBus);
+  mix.connect(g);
+  for (const osc of [o, o2, lfo]) { osc.start(t); osc.stop(t + len + 0.02); }
+}
+
+// chord stabs on the off-beats: short, bright triads
+function stab(t, root) {
+  const g = ctx.createGain(), lp = ctx.createBiquadFilter(), len = STEP() * 1.3;
+  lp.type = 'lowpass'; lp.frequency.setValueAtTime(5000, t); lp.frequency.exponentialRampToValueAtTime(900, t + len);
+  g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  // Am is minor; F, C and G are major
+  for (const iv of [0, root === 0 ? 3 : 4, 7, 12]) for (const det of [-8, 8]) {
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(root + iv + 12); o.detune.value = det;
+    o.connect(lp); o.start(t); o.stop(t + len + 0.01);
+  }
+  lp.connect(g).connect(musicBus);
+}
+
+function hat(t, len, vol) {
+  const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  n.buffer = noise; f.type = 'highpass'; f.frequency.value = 8000;
+  g.gain.setValueAtTime(vol * 3, t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+  n.connect(f).connect(g).connect(musicBus);
+  n.start(t, Math.random() * 0.5); n.stop(t + len + 0.01);
+}
+function clap(t) {
+  const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  n.buffer = noise; f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 0.9;
+  g.gain.setValueAtTime(0.0001, t);
+  for (const d of [0, 0.011, 0.022]) { g.gain.setValueAtTime(0.55, t + d); g.gain.exponentialRampToValueAtTime(0.12, t + d + 0.009); }
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  n.connect(f).connect(g).connect(out);
+  n.start(t, Math.random() * 0.5); n.stop(t + 0.2);
+}
+function snare(t, vol) {
+  const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  n.buffer = noise; f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.6;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+  n.connect(f).connect(g).connect(out);
+  n.start(t, Math.random() * 0.5); n.stop(t + 0.1);
+  const o = ctx.createOscillator(), og = ctx.createGain();   // a bit of body
+  o.frequency.setValueAtTime(240, t); o.frequency.exponentialRampToValueAtTime(160, t + 0.05);
+  og.gain.setValueAtTime(vol * 0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+  o.connect(og).connect(out); o.start(t); o.stop(t + 0.07);
+}
+function riser(t, bars) {
+  const dur = bars * 16 * STEP();
+  const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  n.buffer = noise; n.loop = true; f.type = 'bandpass'; f.Q.value = 2.5;
+  f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(10000, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + dur); g.gain.setValueAtTime(0, t + dur);
+  n.connect(f).connect(g).connect(out);
+  n.start(t); n.stop(t + dur + 0.02);
+}
+function impact(t) {
+  const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  n.buffer = noise; n.loop = true; f.type = 'lowpass';
+  f.frequency.setValueAtTime(12000, t); f.frequency.exponentialRampToValueAtTime(400, t + 1.4);
+  g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+  n.connect(f).connect(g).connect(out);
+  n.start(t); n.stop(t + 1.55);
+}
+
+// ===================== recording =====================
+function toggleRecord() {
+  if (!ctx) setupAudio();
+  const btn = document.getElementById('rec');
+  if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+  chunks = [];
+  recorder = new MediaRecorder(recDest.stream);
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: recorder.mimeType }));
+    a.download = `banana-lab-${S.bpm}bpm.webm`; a.click();
+    btn.classList.remove('on'); btn.textContent = '⏺ Record';
+  };
+  recorder.start();
+  btn.classList.add('on'); btn.textContent = '■ Stop recording';
+}
+
+// ===================== UI =====================
+const $ = id => document.getElementById(id);
+const KNOBS = { bpm: v => `${v} BPM`, hard: String, bounce: String, bright: String, grit: String, contrast: String, depth: String, silly: String, vol: String };
+const SEGS = { layering: 'layering', buildLen: 'buildLen', chop: 'chop' };
+
+function show() {
+  for (const [k, fmt] of Object.entries(KNOBS)) { $('k-' + k).value = S[k]; $('v-' + k).textContent = fmt(S[k]); }
+  for (const [k, id] of Object.entries(SEGS)) for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', String(S[k]) === b.dataset.v);
+  $('code').textContent = Object.entries(S).map(([k, v]) => `${k} ${v}`).join(' · ');
+  $('loopBtn').classList.toggle('on', loopSection);
+  drawBars();
+}
+for (const k of Object.keys(KNOBS)) $('k-' + k).addEventListener('input', e => { S[k] = +e.target.value; if (k === 'vol') applyVolume(); save(); show(); });
+for (const [k, id] of Object.entries(SEGS)) $(id).addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S[k] = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v; save(); show();
+});
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { S = { ...PRESETS[b.dataset.preset] }; applyVolume(); save(); show(); }));
+document.querySelectorAll('[data-jump]').forEach(b => b.addEventListener('click', () => { if (playing) jumpTo = b.dataset.jump; }));
+$('loopBtn').addEventListener('click', () => { loopSection = !loopSection; show(); });
+$('play').addEventListener('click', () => { playing ? stop() : start(); $('play').textContent = playing ? '■ Stop' : '▶ Play'; if (!playing) $('secName').textContent = 'Press play'; });
+$('rec').addEventListener('click', toggleRecord);
+$('copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('code').textContent); $('copy').textContent = 'Copied!'; setTimeout(() => $('copy').textContent = 'Copy', 1500); } catch {} });
+addEventListener('keydown', e => { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); $('play').click(); } });
+
+// tap tempo: average of the last few taps
+let taps = [];
+$('tap').addEventListener('click', () => {
+  const now = performance.now();
+  taps = taps.filter(x => now - x < 2500); taps.push(now);
+  if (taps.length >= 3) {
+    const gaps = taps.slice(1).map((x, i) => x - taps[i]);
+    const bpm = Math.round(60000 / (gaps.reduce((a, b) => a + b) / gaps.length));
+    if (bpm >= 60 && bpm <= 220) { S.bpm = Math.min(170, Math.max(120, bpm)); $('tapInfo').textContent = `You tapped ${bpm} BPM`; save(); show(); }
+  } else $('tapInfo').textContent = 'Keep tapping…';
+});
+
+// the arrangement strip: intro, then the drop → breakdown → build → gap cycle
+function drawBars() {
+  const cyc = [['intro', 4], ...order()];
+  const now = currentPos();
+  $('bars').innerHTML = cyc.flatMap(([n, len]) => Array.from({ length: len }, (_, b) =>
+    `<div class="s-${n}${now && now.sec === n && now.bar === b ? ' now' : ''}" title="${n}">${b === 0 ? n.toUpperCase() : ''}</div>`)).join('');
+}
+function currentPos() {
+  if (!playing || !ctx) return null;
+  let last = null;
+  for (const q of queue) if (q.t <= ctx.currentTime) last = q;
+  return last;
+}
+
+// visuals: the banana turns half a turn per chop, glows on the kick
+let angle = 0, lastChopStep = -1, lastKey = '';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function frame() {
+  const p = currentPos();
+  if (p) {
+    if (p.chop && p.step !== lastChopStep && p.sec !== 'gap') { lastChopStep = p.step; angle += 180; }
+    const sinceStep = (ctx.currentTime - p.t) / STEP();
+    const onKick = p.step % 4 === 0 && p.sec !== 'gap' && !(p.sec === 'breakdown' && S.depth >= 3);
+    const bump = onKick ? Math.max(0, 1 - sinceStep * 0.8) : 0;
+    $('spin').style.transform = reduce ? '' : `rotateY(${angle}deg) scale(${1 + bump * 0.15})`;
+    $('spin').style.transition = `transform ${Math.min(0.12, STEP() * 0.9)}s linear`;
+    $('glow').style.opacity = p.sec === 'gap' ? 0 : 0.2 + bump * 0.6;
+    const key = p.sec + p.bar;
+    if (key !== lastKey) { lastKey = key; $('secName').textContent = p.sec === 'gap' ? '…' : p.sec; drawBars(); }
+  }
+  requestAnimationFrame(frame);
+}
+show();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
