@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import degrees from '../data/games/degrees.json';
 // only what the game needs in the browser
-const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s.routes }));
+const starts = degrees.starts.map(s => ({ t: s.title }));
 ---
 <Base wide section="bananadle" title="Bananadle · the daily Wikipedia puzzle · All Things Banana"
       description="Bananadle, a daily word puzzle: start on a Wikipedia article and get to Banana by naming articles each page links to, from memory. New start page every day.">
@@ -39,6 +39,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
           <h2 id="current">…</h2>
           <div class="sd-desc" id="desc"></div>
           <p class="sd-extract" id="extract"></p>
+          <div class="sd-warm" id="warm" hidden>🔥 This page links to Banana!</div>
         </div>
 
         <div id="playArea">
@@ -109,9 +110,9 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
         <h2 id="introTitle">Bananadle</h2>
         <p class="sd-today" id="introToday"></p>
         <ol class="sd-rules">
-          <li><span>🔗</span><div>Type the name of a page that <b>the page you're on links to</b>.</div></li>
-          <li><span>🧭</span><div>Hop from page to page until you land on <b>Banana</b>.</div></li>
-          <li><span>⛳</span><div><b>Par</b> is the shortest route. A wrong page is a miss; typos are free.</div></li>
+          <li><span>🔗</span><div>Type a page that <b>the page you're on links to or mentions</b>.</div></li>
+          <li><span>🧭</span><div>Hop from page to page until you reach a page that <b>links to Banana</b>, then type Banana.</div></li>
+          <li><span>⛳</span><div><b>Par is 4</b>, like a golf hole: 3 is a birdie, 2 an eagle. A wrong page is a miss; typos are free.</div></li>
         </ol>
         <p class="sd-eg">e.g. <b>Napoleon</b> → <b>Haiti</b> → <b>Banana</b></p>
         <button id="introOk" class="sd-primary sd-wide">OK, let's go</button>
@@ -121,7 +122,11 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
 </Base>
 
 <script>
-  type Start = { t: string; p: number; r: string[]; n: number | null };
+  type Start = { t: string };
+  // par is the same for every puzzle, like a golf hole
+  const PAR = 4;
+  const golf = (n: number) => n === 1 ? { name: 'Hole in one', emoji: '🎯' } : n === 2 ? { name: 'Eagle', emoji: '🦅' } : n === 3 ? { name: 'Birdie', emoji: '🐦' }
+    : n === 4 ? { name: 'Par', emoji: '🏆' } : n === 5 ? { name: 'Bogey', emoji: '🍌' } : n === 6 ? { name: 'Double bogey', emoji: '🍌' } : { name: `${n - PAR} over par`, emoji: '🍌' };
   type State = { day: number; start: string; path: string[]; misses: number; hints: number; secs: number; done: boolean; gaveUp: boolean; posted?: boolean };
 
   const STARTS: Start[] = JSON.parse(document.getElementById('degData')!.textContent!);
@@ -202,6 +207,39 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     return [...out].slice(0, 6);
   }
 
+  // the article's plain text, to check what it mentions (Wikipedia doesn't link very common things like England)
+  const textCache = new Map<string, Promise<string>>();
+  function textOf(title: string) {
+    if (!textCache.has(title)) textCache.set(title, api({ action: 'query', prop: 'extracts', explaintext: '1', titles: title })
+      .then(d => (d.query?.pages?.[0]?.extract as string) || '')
+      .catch(e => { textCache.delete(title); throw e; }));
+    return textCache.get(title)!;
+  }
+  // does the text name this article? One-word names must be capitalised ("England" counts, "water" doesn't),
+  // so ordinary words only count when they're actually linked
+  function mentions(text: string, names: string[]) {
+    return names.some(n => {
+      n = n.replace(/\s*\([^)]*\)$/, '').trim();
+      if (n.length < 3) return false;
+      const one = !/\s/.test(n);
+      const word = one ? n[0].toUpperCase() + n.slice(1) : n;
+      const re = new RegExp(`(?<![\\p{L}\\p{N}])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, one ? 'gu' : 'giu');
+      // a capital at the start of a sentence doesn't make a name ("Money is…"), so one-word names must appear mid-sentence
+      for (const m of text.matchAll(re)) if (!one || !/(^|[.!?:;]\s*|\n\s*)$/.test(text.slice(Math.max(0, m.index! - 4), m.index))) return true;
+      return false;
+    });
+  }
+  // other names for an article (its redirects: "U.S." and "USA" for United States), so mentions by those count too
+  async function otherNames(title: string) {
+    const d = await api({ action: 'query', titles: title, prop: 'redirects', rdnamespace: '0', rdlimit: 'max' });
+    return ((d.query?.pages?.[0]?.redirects || []) as { title: string }[]).map(x => x.title);
+  }
+  // does the other page link back to this one?
+  async function linksBack(other: string, here: string) {
+    const d = await api({ action: 'query', titles: other, prop: 'links', pltitles: here, redirects: '1' });
+    return !!d.query?.pages?.[0]?.links?.length;
+  }
+
   // ---------- game state ----------
   let mode: 'daily' | 'practice' = 'daily';
   let start: Start = dailyStart;
@@ -262,7 +300,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     $('whereLabel').textContent = s.path.length === 1 ? 'Start here' : "You're on";
     $('card').classList.toggle('win', s.done && !s.gaveUp);
     $('sSteps').textContent = String(steps());
-    $('sPar').textContent = String(start.p);
+    $('sPar').textContent = String(PAR);
     $('sMisses').textContent = String(s.misses);
     $('sTime').textContent = fmtTime(s.secs);
     // the route so far; tapping an earlier page rewinds to it
@@ -272,6 +310,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     }).join('') + (s.done ? '' : '<li class="ghost"><span>🍌 Banana</span></li>');
     const playing = !s.done;
     $('playArea').hidden = !playing;
+    if (!playing) $('warm').hidden = true;
     for (const id of ['hintBtn', 'giveUpBtn']) $(id).hidden = !playing;
     if (cur !== shownTitle) {
       shownTitle = cur;
@@ -283,7 +322,10 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
         const ex = (d.extract || '').split(/(?<=\.)\s+/)[0] || '';
         $('extract').textContent = ex.length > 200 ? ex.slice(0, 197) + '…' : ex;
       });
-      if (playing) linksOf(cur).catch(() => {});   // start loading, so the first guess is quick
+      if (playing) { linksOf(cur).catch(() => {}); textOf(cur).catch(() => {}); }   // start loading, so the first guess is quick
+      // one step from winning? say so, so the last move isn't a blind guess
+      $('warm').hidden = true;
+      if (playing) nearBanana().then(set => { if (shownTitle === cur && !s.done) $('warm').hidden = !set.has(cur); }).catch(() => {});
     }
     renderStreak();
   }
@@ -292,7 +334,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     $('feedback').innerHTML = `<div class="msg ${kind}">${html}</div>`;
   }
 
-  function move(to: string) {
+  function move(to: string, how: 'link' | 'mention' | 'back' = 'link') {
     s.path.push(to);
     $('hintBox').hidden = true;
     if (to === TARGET) {
@@ -301,7 +343,8 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       return;
     }
     save(); render();
-    say(`✓ <b>${esc(s.path[s.path.length - 2])}</b> links to <b>${esc(to)}</b>`, 'ok');
+    const prev = esc(s.path[s.path.length - 2]), here = esc(to);
+    say(how === 'mention' ? `✓ <b>${prev}</b> mentions <b>${here}</b>` : how === 'back' ? `✓ <b>${here}</b> links to <b>${prev}</b>` : `✓ <b>${prev}</b> links to <b>${here}</b>`, 'ok');
   }
 
   // going back to an earlier page undoes the steps after it
@@ -327,12 +370,27 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       // 2. another name for an article (a redirect, like "Dubya")
       let real: string | null = null, ambiguous = false;
       if (!hit) {
-        const d = await api({ action: 'query', titles: g, redirects: '1', prop: 'pageprops', ppprop: 'disambiguation' });
-        const p = d.query?.pages?.[0];
+        // Wikipedia titles are case-sensitive after the first letter, so also try Title Case ("satoshi nakamoto")
+        const titleCase = g.replace(/(^|\s)(\p{Ll})/gu, (_, sp, c) => sp + c.toUpperCase());
+        const d = await api({ action: 'query', titles: [...new Set([g, titleCase])].join('|'), redirects: '1', prop: 'pageprops', ppprop: 'disambiguation' });
+        let p = (d.query?.pages || []).find((x: any) => !x.missing && !x.invalid);
+        if (!p) {
+          // last try: a search result whose title is exactly what was typed, ignoring case and accents
+          const sr = await api({ action: 'query', list: 'search', srsearch: g, srlimit: '5', srprop: '' });
+          const exact = (sr.query?.search || []).find((x: any) => key(x.title) === k);
+          if (exact) p = (await api({ action: 'query', titles: exact.title, redirects: '1', prop: 'pageprops', ppprop: 'disambiguation' })).query?.pages?.[0];
+        }
         if (p && !p.missing && !p.invalid) { real = p.title; ambiguous = p.pageprops?.disambiguation !== undefined; hit = links.get(key(p.title)); }
       }
       if (hit) { input().value = ''; move(hit); return; }
-      // 3. a word with several meanings ("Greek", "Mercury"): offer the meanings this page does link to (not a miss)
+      // 3. not linked, but connected another way: the page mentions it, or it links back here.
+      // (The last step must be a real link: Banana mentions or links back to far too much.)
+      if (real && !ambiguous && real !== TARGET) {
+        const text = await textOf(from);
+        if (mentions(text, [real, g]) || mentions(text, await otherNames(real))) { input().value = ''; move(real, 'mention'); return; }
+        if (await linksBack(real, from)) { input().value = ''; move(real, 'back'); return; }
+      }
+      // 4. a word with several meanings ("Greek", "Mercury"): offer the meanings this page does link to (not a miss)
       const meanings = await meaningsOf(g, real, ambiguous, links);
       if (meanings.length) {
         say(`Which one? ${meanings.map(t => `<button class="sugg" data-t="${esc(t)}">${esc(t)}</button>`).join(' ')} <span class="free">no miss</span>`);
@@ -344,10 +402,12 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       }
       if (real) {
         s.misses++; save(); render();
-        say(`✗ <b>${esc(from)}</b> doesn't link to <b>${esc(real)}</b>`, 'miss');
+        say(real === TARGET
+          ? `✗ So close! To finish, the page has to <b>link</b> to Banana, and <b>${esc(from)}</b> doesn't.`
+          : `✗ <b>${esc(from)}</b> doesn't link to or mention <b>${esc(real)}</b>`, 'miss');
         return;
       }
-      // 4. not an article: suggest the nearest spelling (a typo isn't a miss)
+      // 5. not an article: suggest the nearest spelling (a typo isn't a miss)
       let near = '', best = 99;
       for (const [lk, title] of links) {
         if (Math.abs(lk.length - k.length) > 2) continue;
@@ -356,8 +416,16 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
       }
       let suggest = best <= Math.max(1, Math.floor(k.length / 6)) ? near : '';
       if (!suggest) {
+        // Wikipedia's own spelling suggestion first, otherwise the top search result if it looks like what was typed
         const d = await api({ action: 'query', list: 'search', srsearch: g, srlimit: '1', srinfo: 'suggestion', srprop: '' });
-        suggest = d.query?.search?.[0]?.title || d.query?.searchinfo?.suggestion || '';
+        const spelled = d.query?.searchinfo?.suggestion as string | undefined;
+        const top = d.query?.search?.[0]?.title as string | undefined;
+        if (spelled) {
+          const sp = await api({ action: 'query', titles: spelled, redirects: '1' });
+          const p = sp.query?.pages?.[0];
+          if (p && !p.missing && !p.invalid) suggest = p.title;
+        }
+        if (!suggest && top && distance(key(top), k) <= Math.max(2, Math.floor(k.length / 3))) suggest = top;
       }
       say(suggest
         ? `No page called “${esc(g)}”. Did you mean <button class="sugg" data-t="${esc(suggest)}">${esc(suggest)}</button>? <span class="free">no miss</span>`
@@ -402,7 +470,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     showDone();
     if (mode !== 'daily') return;
     const hist = store.get<Record<number, { steps: number; solved: boolean; par: number }>>('atb-deg-history', {});
-    hist[today] = { steps: steps(), solved: !s.gaveUp, par: start.p };
+    hist[today] = { steps: steps(), solved: !s.gaveUp, par: PAR };
     store.set('atb-deg-history', hist);
     renderStreak();
     if (!s.posted) {
@@ -416,14 +484,21 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
   function showDone() {
     $('done').hidden = false;
     $('feedback').innerHTML = '';
-    const over = steps() - start.p;
-    $('doneEmoji').textContent = s.gaveUp ? '🙈' : over <= 0 ? '🏆' : '🍌';
-    $('doneTitle').textContent = s.gaveUp ? 'So close. Banana got away.' : over <= 0 ? `Par! Banana in ${plural(steps(), 'step')}` : `Banana in ${plural(steps(), 'step')}`;
+    const g = golf(steps());
+    $('doneEmoji').textContent = s.gaveUp ? '🙈' : g.emoji;
+    $('doneTitle').textContent = s.gaveUp ? 'So close. Banana got away.' : `${g.name}! Banana in ${plural(steps(), 'step')}`;
     $('doneSub').textContent = s.gaveUp
-      ? 'Here’s one way there.'
-      : `${over <= 0 ? 'As short as it gets.' : `${plural(over, 'step')} over par.`} ${plural(s.misses, 'miss', 'misses')} · ${fmtTime(s.secs)}`;
-    const others = start.n && start.n > 1 ? ` (one of ${start.n})` : '';
-    $('best').innerHTML = `Shortest route${others}: ${start.r.map(t => `<a href="${wikiUrl(t)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(' → ')}`;
+      ? 'Tomorrow’s a new page.'
+      : `Par is ${PAR}. ${plural(s.misses, 'miss', 'misses')} · ${fmtTime(s.secs)}`;
+    const route = s.path.map(t => `<a href="${wikiUrl(t)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(' → ');
+    $('best').innerHTML = `Your route: ${route}`;
+    if (s.gaveUp) {
+      // a nudge for next time: some pages that are one step from Banana
+      nearBanana().then(near => {
+        const from = [...near].filter(t => /^(Ecuador|Costa Rica|Colombia|Panama|Fruit|Banana republic|Caribbean|Jamaica|Uganda|Potassium|Smoothie|Plantain)$/.test(t));
+        $('best').innerHTML = `Your route: ${route}<br>Tip: pages like ${from.slice(0, 5).map(t => `<b>${esc(t)}</b>`).join(', ')} link straight to Banana.`;
+      }).catch(() => {});
+    }
     $('practiceBtn').textContent = mode === 'daily' ? 'Practice round' : 'Another round';
     if (mode === 'daily') fetch(`/api/degrees?day=${today}`).then(r => r.json()).then(showWorld).catch(() => {});
     else $('world').hidden = true;
@@ -440,13 +515,13 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
     const top = Math.max(6, mine, ...Object.keys(w.steps).map(Number));
     $('hist').innerHTML = Array.from({ length: top }, (_, i) => i + 1).map(k => {
       const n = w.steps[k] || 0;
-      return `<div class="bar${k === mine ? ' me' : ''}"><span class="k">${k === 10 ? '10+' : k}${k === start.p ? ' <em>par</em>' : ''}</span><span class="track"><i style="width:${n ? Math.max(4, (n / max) * 100) : 0}%"></i></span><span class="n">${n}</span></div>`;
+      return `<div class="bar${k === mine ? ' me' : ''}"><span class="k">${k === 10 ? '10+' : k}${k === PAR ? ' <em>par</em>' : ''}</span><span class="track"><i style="width:${n ? Math.max(4, (n / max) * 100) : 0}%"></i></span><span class="n">${n}</span></div>`;
     }).join('');
   }
 
   function shareText() {
     const head = mode === 'daily' ? `🍌 Bananadle #${today}` : '🍌 Bananadle (practice)';
-    const line = s.gaveUp ? `${start.t} → ❌ gave up` : `${start.t} → Banana in ${plural(steps(), 'step')} (par ${start.p})`;
+    const line = s.gaveUp ? `${start.t} → ❌ gave up` : `${start.t} → Banana in ${plural(steps(), 'step')} · ${golf(steps()).name} ${golf(steps()).emoji}`;
     const squares = s.gaveUp ? '' : '\n' + '🟨'.repeat(Math.max(0, steps() - 1)) + '🍌' + (s.misses ? ` ${'❌'.repeat(Math.min(s.misses, 8))}` : '') + (s.hints ? ` ${'💡'.repeat(Math.min(s.hints, 5))}` : '');
     return `${head}\n${line}${squares}\n⏱ ${fmtTime(s.secs)}\nhttps://allthingsbanana.com/bananadle/`;
   }
@@ -549,6 +624,7 @@ const starts = degrees.starts.map(s => ({ t: s.title, p: s.par, r: s.route, n: s
   .sd-card h2 { font-size: 40px; font-weight: 900; letter-spacing: -0.03em; margin: 6px 0 8px; line-height: 1.1; color: var(--p-ink); overflow-wrap: anywhere; }
   .sd-desc { display: inline-block; font-size: 13.5px; font-weight: 700; color: var(--p-lilac-ink); background: var(--p-lilac); border-radius: 999px; padding: 3px 12px; min-height: 1.4em; }
   .sd-desc:empty { visibility: hidden; }
+  .sd-warm { display: inline-block; margin-top: 12px; font-size: 14px; font-weight: 800; color: #8a3b00; background: var(--p-yellow); border-radius: 999px; padding: 5px 14px; animation: sd-pop .3s ease-out; }
   .sd-extract { color: var(--p-ink-2); font-size: 14.5px; line-height: 1.5; margin: 10px auto 0; max-width: 560px; min-height: 1.5em; }
 
   .sd-guess { display: flex; gap: 8px; margin-top: 16px; }
