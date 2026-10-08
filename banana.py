@@ -1,8 +1,8 @@
-"""Banana cube (2x2x3 cuboid) solver: a Python port of the solver in index.html.
+"""Banana cube (2x2x3 cuboid) solver: a Python port of the solver in web/src/pages/more/banana-cube.astro.
 
 States are integers in [0, 1_935_360): corner permutation (8!) x middle-piece
 permutation (4!) x one shared middle-piece orientation bit. Indices match
-index.html exactly, so a state from the notebook means the same thing in the app.
+the website's solver exactly, so a state from the notebook means the same thing on the site.
 
     import banana
     B = banana.load()           # builds (~1s) or reads the cached tables
@@ -41,7 +41,7 @@ _LAYER = {
     "F": lambda p: p[2] == 1, "B": lambda p: p[2] == -1,
 }
 
-# Same order as index.html: U U' U2 E E' E2 D D' D2 R2 L2 F2 B2
+# Same order as the website's solver: U U' U2 E E' E2 D D' D2 R2 L2 F2 B2
 MOVES = []
 for face, base in [("U", -1), ("E", 1), ("D", 1)]:
     MOVES += [(face, "y", base, face), (face + "'", "y", -base, face), (face + "2", "y", 2, face)]

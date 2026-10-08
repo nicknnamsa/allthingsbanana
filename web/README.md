@@ -2,13 +2,16 @@
 
 The website for allthingsbanana.com.
 
-- `src/pages/`: site pages (Astro): Home (`index.astro`), Bananalytics (`bananalytics/`), Latest News (`news/`) and More Bananas (`more/`, including the Banana Cube and Banana Clicker).
+- `src/pages/`: site pages (Astro): Home (`index.astro`), Bananadle (`bananadle.astro`), Banacipes (`recipes/`), Bananalytics and Banana World (`bananalytics/`), More Bananas (`more/`: the Banana Clicker and Banana Cube), plus news (`news/`) and topic hubs (`topics/`).
 - `src/scripts/`: shared code for charts, market data and news.
 - `src/data/recipes/`: the Banacipes banana recipes. To add one, copy any recipe in these files and change it; it gets its own page, search entry and filters automatically.
 - `worker/`: the Cloudflare Worker. It serves the site and refreshes the feed every 10 minutes.
   - `worker/index.js`: fetches news, YouTube videos and stock prices, and stores them in KV.
   - `worker/filter.js`: decides what counts as "about bananas". Edit the lists to tune it.
   - `worker/peel.js`: the Banana Clicker's shared tally of peeled bananas per country (a Durable Object).
+  - `worker/degrees.js`: Bananadle's anonymous daily scores (a Durable Object).
+  - `worker/visits.js`: anonymous page views per day, for the popularity chart (a Durable Object).
+- `scripts/`: data pipelines, run by hand when the data needs refreshing: `build-fao` (FAOSTAT), `build-spam` (MapSPAM), `build-nutrition` (USDA FoodData Central), `build-degrees` (Bananadle's start pages) and `crawl-recipes`.
 
 ## Run it locally
 
