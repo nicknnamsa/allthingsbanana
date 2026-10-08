@@ -1,0 +1,75 @@
+---
+// Banana popularity: page views per day across the whole site, for the last 14 days (from /api/visits).
+// theme: 'light' for Bananadle's cream cards, 'dark' for the rest of the site.
+interface Props { theme?: 'light' | 'dark' }
+const { theme = 'dark' } = Astro.props;
+---
+<section class={`pop ${theme}`} data-pop hidden>
+  <div class="pop-head">
+    <h3>🍌 Banana popularity</h3>
+    <span class="pop-sub">Page views per day, whole site</span>
+  </div>
+  <div class="pop-big"><b data-today>–</b> today <span data-total></span></div>
+  <div class="pop-chart">
+    <svg data-svg viewBox="0 0 228 84" preserveAspectRatio="none" role="img" aria-label="Page views per day for the last 14 days"></svg>
+    <div class="pop-tip" data-tip hidden></div>
+  </div>
+  <div class="pop-axis"><span data-first></span><span>Today</span></div>
+  <ul class="sr-only" data-list></ul>
+</section>
+
+<script>
+  type Day = { day: string; views: number };
+  const fmtDay = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+  for (const box of document.querySelectorAll<HTMLElement>('[data-pop]')) {
+    fetch('/api/visits?days=14').then(r => r.json()).then((days: Day[]) => {
+      if (!Array.isArray(days) || !days.length) return;
+      const q = (s: string) => box.querySelector<HTMLElement>(`[data-${s}]`)!;
+      const W = 228, H = 84, gap = 2, bw = (W - gap * (days.length - 1)) / days.length;
+      const max = Math.max(1, ...days.map(d => d.views));
+      const total = days.reduce((a, d) => a + d.views, 0);
+      q('today').textContent = days[days.length - 1].views.toLocaleString('en-US');
+      q('total').textContent = `· ${total.toLocaleString('en-US')} in 2 weeks`;
+      q('first').textContent = fmtDay(days[0].day);
+      // bars with 4px rounded tops, anchored to the baseline; a full-height invisible rect over each one is the hover target
+      q('svg').innerHTML = `<line x1="0" x2="${W}" y1="${H - 0.5}" y2="${H - 0.5}" class="base"/>` + days.map((d, i) => {
+        const x = i * (bw + gap), h = d.views ? Math.max(3, (d.views / max) * (H - 6)) : 0, y = H - h, r = Math.min(4, bw / 2, h);
+        const path = h ? `M${x},${H} V${y + r} Q${x},${y} ${x + r},${y} H${x + bw - r} Q${x + bw},${y} ${x + bw},${y + r} V${H} Z` : '';
+        return `<g data-i="${i}"><path d="${path}" class="${i === days.length - 1 ? 'bar today' : 'bar'}"/><rect x="${x - gap / 2}" y="0" width="${bw + gap}" height="${H}" fill="transparent"/></g>`;
+      }).join('');
+      q('list').innerHTML = days.map(d => `<li>${fmtDay(d.day)}: ${d.views} page views</li>`).join('');
+      const tip = q('tip'), svg = q('svg');
+      const show = (i: number) => {
+        const d = days[i];
+        tip.innerHTML = `<b>${d.views.toLocaleString('en-US')}</b> ${d.views === 1 ? 'view' : 'views'}<br>${i === days.length - 1 ? 'Today' : fmtDay(d.day)}`;
+        tip.hidden = false;
+        tip.style.left = `${((i * (bw + gap) + bw / 2) / W) * 100}%`;
+        svg.querySelectorAll('g').forEach((g, j) => g.classList.toggle('hover', j === i));
+      };
+      svg.addEventListener('pointermove', e => { const g = (e.target as Element).closest('g[data-i]'); if (g) show(+g.getAttribute('data-i')!); });
+      svg.addEventListener('pointerleave', () => { tip.hidden = true; svg.querySelectorAll('g').forEach(g => g.classList.remove('hover')); });
+      box.hidden = false;
+    }).catch(() => {});
+  }
+</script>
+
+<style>
+  .pop { border-radius: 18px; padding: 14px 16px 12px; }
+  .pop.dark { margin-top: 16px; }
+  .pop.light { background: #fffaf0; color: #2a2118; --pop-bar: #b8860b; --pop-today: #2a2118; --pop-muted: #988b78; --pop-base: #eadfca; --pop-tip: #2a2118; --pop-tip-ink: #fff; }
+  .pop.dark { background: var(--surface); border: 1px solid var(--border); color: var(--ink); --pop-bar: #a87a00; --pop-today: #ffd84d; --pop-muted: var(--ink-3); --pop-base: var(--border); --pop-tip: #f4efe4; --pop-tip-ink: #1d1600; }
+  .pop-head h3 { margin: 0; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--pop-muted); }
+  .pop-sub { font-size: 11.5px; color: var(--pop-muted); }
+  .pop-big { margin: 6px 0 8px; font-size: 13px; color: var(--pop-muted); font-weight: 600; }
+  .pop-big b { font-size: 24px; font-weight: 900; color: var(--pop-today); margin-right: 2px; font-variant-numeric: tabular-nums; }
+  .pop-chart { position: relative; }
+  .pop-chart svg { display: block; width: 100%; height: 84px; overflow: visible; touch-action: none; }
+  .pop-chart :global(.bar) { fill: var(--pop-bar); }
+  .pop-chart :global(.bar.today) { fill: var(--pop-today); }
+  .pop-chart :global(g.hover .bar) { opacity: .75; }
+  .pop-chart :global(.base) { stroke: var(--pop-base); stroke-width: 1; }
+  .pop-tip { position: absolute; bottom: calc(100% + 6px); transform: translateX(-50%); background: var(--pop-tip); color: var(--pop-tip-ink); font-size: 12px; line-height: 1.35; border-radius: 8px; padding: 5px 9px; white-space: nowrap; pointer-events: none; text-align: center; }
+  .pop-axis { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--pop-muted); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>

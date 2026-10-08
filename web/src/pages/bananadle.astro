@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import PopularityChart from '../components/PopularityChart.astro';
 import degrees from '../data/games/degrees.json';
 // only what the game needs in the browser
 const starts = degrees.starts.map(s => ({ t: s.title }));
@@ -96,6 +97,7 @@ const starts = degrees.starts.map(s => ({ t: s.title }));
             <div><b id="pars">0</b><span>on par</span></div>
           </div>
         </div>
+        <PopularityChart theme="light" />
         <a class="sd-mini sd-peels" href="/more/banana-clicker/" id="peelCard" hidden>
           <h3>Banana Clicker <span>top peelers</span></h3>
           <ol id="peelList"></ol>

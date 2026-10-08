@@ -8,6 +8,8 @@ import { handlePeel } from './peel.js';
 export { PeelCounter } from './peel.js';
 import { handleDegrees } from './degrees.js';
 export { DegreesStats } from './degrees.js';
+import { handleVisits } from './visits.js';
+export { VisitCounter } from './visits.js';
 
 const MAX_ITEMS = 300;
 const MAX_AGE_MS = 30 * 864e5;            // drop stories older than a month (some feeds include old posts)
@@ -46,6 +48,7 @@ export default {
     }
     if (url.pathname === '/api/peel') return handlePeel(request, env);
     if (url.pathname === '/api/degrees') return handleDegrees(request, env);
+    if (url.pathname === '/api/visits') return handleVisits(request, env);
     if (url.pathname === '/api/market') {
       let market = await env.FEED.get('market', 'json');
       if (!market || market.v !== MARKET_VERSION) market = await updateMarket(env, market);

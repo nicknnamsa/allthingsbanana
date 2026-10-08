@@ -81,6 +81,9 @@ const sections = [
   import { getMarket, getFeed, allSeries, lookup, label, tickerCode, money, signed, lastChange, marketLink, esc, ago, type Sel, type Feed } from '../scripts/market';
   import { sparkline } from '../scripts/charts';
 
+  // ---------- banana popularity: one anonymous page view per page ----------
+  if (!navigator.webdriver) fetch('/api/visits', { method: 'POST', keepalive: true }).catch(() => {});   // skips automated browsers
+
   // ---------- ticker strip ----------
   const TICKERS = ['PBANSOP', 'APU0000711211', 'PORANG', 'PCOCO', 'PCOFFOTM', 'PSUGAISA', 'DOLE', 'FDP'];
   Promise.all([getMarket(), getFeed().catch(() => null)]).then(([m, f]) => {

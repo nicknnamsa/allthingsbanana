@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PopularityChart from '../../components/PopularityChart.astro';
 ---
 <Base image="/og/clicker.jpg" wide section="more" title="Banana Clicker · peel bananas for your country · All Things Banana"
       description="Click the banana to peel it. Keep clicking and the page descends into a banana rave. Every banana you peel counts for your country on the live world leaderboard.">
@@ -73,6 +74,7 @@ import Base from '../../layouts/Base.astro';
       <h2>World leaderboard <span class="live"><i></i>live</span></h2>
       <ol id="leaders" class="leaders"><li class="empty">Loading…</li></ol>
       <p class="note">Your country comes from your connection, as seen by our host, Cloudflare. We only store a total per country, nothing about you. One click is one banana, however hyped you are.</p>
+      <PopularityChart />
     </aside>
   </div>
 </Base>
