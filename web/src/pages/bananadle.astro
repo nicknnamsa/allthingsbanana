@@ -203,8 +203,19 @@ const starts = degrees.starts.map(s => ({ t: s.title }));
   async function meaningsOf(g: string, real: string | null, ambiguous: boolean, links: Map<string, string>) {
     const k = key(g), linked = new Set(links.values()), out = new Set<string>();
     for (const t of linked) if (key(t.replace(/\s*\([^)]*\)$/, '')) === k) out.add(t);
-    if (real && ambiguous) for (const t of (await linksOf(real)).values()) if (linked.has(t)) out.add(t);
-    return [...out].slice(0, 6);
+    if (real && ambiguous) {
+      // the meanings listed on the "may refer to" page that this page links to or mentions
+      const text = await textOf(current());
+      // (a bare mention of "Greek" can't tell "Greek (play)" from "Greek (opera)", so those need a real link)
+      const base = (t: string) => key(t.replace(/\s*\([^)]*\)$/, ''));
+      for (const t of new Set((await linksOf(real)).values())) if (t !== TARGET && (linked.has(t) || (base(t) !== k && mentions(text, [t])))) out.add(t);
+    }
+    // drop options that are themselves "may refer to" pages; shortest (usually the main meaning) first
+    const list = [...out].filter(t => !/\(disambiguation\)$/.test(t)).sort((a, b) => a.length - b.length).slice(0, 12);
+    if (!list.length) return list;
+    const d = await api({ action: 'query', titles: list.join('|'), prop: 'pageprops', ppprop: 'disambiguation' });
+    const vague = new Set((d.query?.pages || []).filter((p: any) => p.pageprops?.disambiguation !== undefined).map((p: any) => p.title));
+    return list.filter(t => !vague.has(t)).slice(0, 6);
   }
 
   // the article's plain text, to check what it mentions (Wikipedia doesn't link very common things like England)
