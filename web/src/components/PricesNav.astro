@@ -1,0 +1,18 @@
+---
+// Prices and the Banana World map are two views of one section
+interface Props { on: 'prices' | 'map' }
+const { on } = Astro.props;
+---
+<nav class="pnav" aria-label="Prices section">
+  <a href="/bananalytics/" class={on === 'prices' ? 'on' : ''} aria-current={on === 'prices' ? 'page' : undefined}>Prices</a>
+  <a href="/bananalytics/world/" class={on === 'map' ? 'on' : ''} aria-current={on === 'map' ? 'page' : undefined}>Banana World map</a>
+</nav>
+
+<style>
+  .pnav { display: inline-flex; margin-top: 26px; }
+  .pnav a { font: 700 15px var(--text); padding: 0 16px; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; color: var(--ink); border: 2px solid var(--ink); margin-left: -2px; background: var(--card); }
+  .pnav a:first-child { margin-left: 0; border-radius: var(--r-ctl) 0 0 var(--r-ctl); }
+  .pnav a:last-child { border-radius: 0 var(--r-ctl) var(--r-ctl) 0; }
+  .pnav a.on { background: var(--ink); color: var(--paper); }
+  .pnav a:not(.on):hover { background: var(--paper-2); }
+</style>
