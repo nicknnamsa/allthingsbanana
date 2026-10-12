@@ -1,0 +1,151 @@
+/* All Things Banana: the crate-label design system (see DESIGN.md at the repo root).
+   Light ("crate in daylight") by default, dark ("warehouse at night") from the system setting or the toggle. */
+
+:root {
+  --paper: #FBF4E2; --paper-2: #F4EAD0; --card: #FFFDF6;
+  --ink: #231A10; --ink-2: #5A4730; --ink-3: #7A6548;
+  --line: #E2D3AE; --line-2: #ECE1C4;
+  --banana: #FFD23F;            /* fills only, always with ink text */
+  --banana-ink: #8A5A00;        /* banana-gold that's readable as text on paper */
+  --leaf: #2F6B22; --spot: #7A4520; --stamp: #B42E1A;
+  --on-banana: #231A10;
+  /* the ripeness scale: green → yellow → spotted → brown */
+  --r1: #4E8A2E; --r2: #8DB33A; --r3: #C9CC3F; --r4: #FFD23F; --r5: #F4BC2C; --r6: #D9952B; --r7: #7A4520;
+  --display: 'Alfa Slab One', Georgia, serif;
+  --text: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --t-hero: clamp(38px, 7vw, 66px); --t-1: clamp(30px, 4.6vw, 46px); --t-2: clamp(23px, 3vw, 30px); --t-3: 19px;
+  --t-body: 16.5px; --t-small: 14px; --t-label: 12.5px;
+  --r-ctl: 8px;
+
+  /* names older page styles use, mapped onto the palette */
+  --bg: var(--paper); --surface: var(--card); --border: var(--line); --border-2: var(--line-2);
+  --brand: var(--banana); --brand-ink: var(--banana-ink); --link: var(--spot);
+  --up: var(--leaf); --down: var(--stamp); --series: var(--banana-ink);
+  --chip: var(--paper-2); --field: var(--paper-2); --hover: var(--paper-2); --card-solid: var(--card); --shadow: none;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #16110A; --paper-2: #1E170E; --card: #211910;
+    --ink: #F7ECD2; --ink-2: #D3C09A; --ink-3: #A99572;
+    --line: #3B2F1F; --line-2: #2E2416;
+    --banana-ink: #FFD23F; --leaf: #86CC72; --spot: #D29A66; --stamp: #FF8266;
+    --link: var(--banana); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #16110A; --paper-2: #1E170E; --card: #211910;
+  --ink: #F7ECD2; --ink-2: #D3C09A; --ink-3: #A99572;
+  --line: #3B2F1F; --line-2: #2E2416;
+  --banana-ink: #FFD23F; --leaf: #86CC72; --spot: #D29A66; --stamp: #FF8266;
+  --link: var(--banana); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; background: var(--paper); }
+[hidden] { display: none !important; }
+body {
+  margin: 0; font: 400 var(--t-body)/1.55 var(--text); color: var(--ink); background: var(--paper);
+  min-height: 100vh; display: flex; flex-direction: column; font-synthesis: none;
+}
+main { flex: 1; width: 100%; }
+a { color: inherit; }
+h1, h2 { font-family: var(--display); font-weight: 400; letter-spacing: 0; line-height: 1.08; }
+h3 { line-height: 1.25; }
+button, input, select, textarea { font-family: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-3); }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 16px; }
+.wrap.wide { max-width: 1240px; }
+:focus-visible { outline: 3px solid var(--banana-ink); outline-offset: 2px; }
+
+/* ---------- building blocks ---------- */
+
+/* the crate label: double rule, notched corners. One per page, for the main thing. */
+.crate { position: relative; background: var(--card); border: 2px solid var(--ink); outline: 2px solid var(--ink); outline-offset: 4px; margin: 6px; padding: 22px 26px 22px; }
+.crate::before, .crate::after { content: ''; position: absolute; width: 14px; height: 14px; background: var(--paper); border: 0 solid var(--ink); }
+.crate::before { top: -9px; left: -9px; border-radius: 0 0 14px 0; border-width: 0 2px 2px 0; }
+.crate::after { bottom: -9px; right: -9px; border-radius: 14px 0 0 0; border-width: 2px 0 0 2px; }
+.crate-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+
+/* small letter-spaced label: max one per block */
+.label { font: 700 var(--t-label)/1.2 var(--text); letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+
+/* a ruled box, the everyday container */
+.box { border: 2px solid var(--ink); background: var(--card); }
+.box-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 2px solid var(--ink); }
+.box-head h2 { font-size: 21px; margin: 0; }
+.box-head a { font-size: var(--t-small); font-weight: 600; padding: 12px 0; margin: -12px 0; }
+
+/* the only round thing: a fruit sticker */
+.sticker { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 82px; height: 58px; border-radius: 50%;
+  background: var(--banana); color: var(--on-banana); border: 2px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); transform: rotate(-8deg);
+  font: 700 10.5px/1.1 var(--text); letter-spacing: .08em; text-transform: uppercase; }
+.sticker b { font: 400 23px/1 var(--display); letter-spacing: 0; }
+
+/* rubber stamp for results */
+.stamp { display: inline-block; font: 400 26px/1 var(--display); color: var(--stamp); border: 3px solid currentColor; padding: 7px 14px 5px; transform: rotate(-4deg); letter-spacing: .04em; text-transform: uppercase; }
+.stamp.good { color: var(--leaf); }
+@media (prefers-reduced-motion: no-preference) { .stamp.thump { animation: thump .35s cubic-bezier(.2, 1.6, .4, 1) both; } }
+@keyframes thump { from { transform: rotate(-4deg) scale(1.8); opacity: 0; } }
+
+/* buttons: ink for the main action, banana for the other */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: var(--r-ctl);
+  font: 700 16px/1 var(--text); text-decoration: none; cursor: pointer; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); }
+.btn.banana { background: var(--banana); color: var(--on-banana); }
+.btn.plain { background: transparent; color: var(--ink); }
+.btn:hover { transform: translateY(-1px); }
+.btn:disabled { opacity: .5; cursor: default; transform: none; }
+.link-btn { background: none; border: none; padding: 10px 4px; font: 600 var(--t-small) var(--text); color: var(--ink-2); cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.link-btn:hover { color: var(--ink); text-decoration-color: var(--banana-ink); }
+
+/* the signature: a 7-step ripeness scale used as a progress bar */
+.ripe-scale { display: grid; grid-template-columns: repeat(7, 1fr); height: 22px; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; }
+.ripe-scale i { position: relative; border-right: 2px solid var(--ink); }
+.ripe-scale i:last-child { border-right: 0; }
+.ripe-scale i:nth-child(1) { background: var(--r1); } .ripe-scale i:nth-child(2) { background: var(--r2); } .ripe-scale i:nth-child(3) { background: var(--r3); }
+.ripe-scale i:nth-child(4) { background: var(--r4); } .ripe-scale i:nth-child(5) { background: var(--r5); } .ripe-scale i:nth-child(6) { background: var(--r6); }
+.ripe-scale i:nth-child(7) { background: var(--r7); }
+.ripe-scale i:nth-child(5)::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 40%, #5a3416 0 2.5px, transparent 3px), radial-gradient(circle at 70% 65%, #5a3416 0 2px, transparent 2.5px); }
+.ripe-scale i:nth-child(6)::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 25% 35%, #4a2a10 0 3px, transparent 3.5px), radial-gradient(circle at 60% 70%, #4a2a10 0 2.5px, transparent 3px), radial-gradient(circle at 82% 30%, #4a2a10 0 2px, transparent 2.5px); }
+.ripe-scale i.off { background: var(--paper-2); }
+.ripe-scale i.off::after { display: none; }
+@media (prefers-reduced-motion: no-preference) { .ripe-scale i { transition: background-color .3s; } }
+.ripe-marks { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+.ripe-marks .par { color: var(--ink); font-weight: 700; }
+
+/* ---------- charts (shared by Prices, home and Banana World) ---------- */
+.chart { position: relative; }
+.chart svg { display: block; overflow: visible; touch-action: pan-y; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { fill: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart .line { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .base { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 4; opacity: .7; }
+.chart .cross { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .dot { fill: var(--series); stroke: var(--card); stroke-width: 2; }
+.chart .bar path { fill: var(--series); opacity: .85; }
+.chart .bar.on path { opacity: 1; }
+.chart-tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--paper); border-radius: 6px;
+  padding: 6px 10px; font-size: 12.5px; white-space: nowrap; display: flex; flex-direction: column; line-height: 1.35; z-index: 2; }
+.chart-tip b { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.chart-tip span { opacity: .8; }
+.chart-tip[hidden] { display: none; }
+
+.prose { padding: 32px 0 16px; }
+.prose h1 { font-size: var(--t-1); margin: 0 0 14px; }
+.prose p, .prose li { color: var(--ink-2); font-size: 16.5px; }
+.prose a { color: var(--ink); text-decoration-color: var(--banana-ink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+/* page transitions: a quick cross-fade, header stays put */
+@view-transition { navigation: auto; }
+.mast { view-transition-name: mast; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .16s; }
+
+/* everyone who asked for less motion gets none, including older page animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

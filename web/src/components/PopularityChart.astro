@@ -1,12 +1,11 @@
 ---
 // Banana popularity: page views per day across the whole site, for the last 14 days (from /api/visits).
-// theme: 'light' for Bananadle's cream cards, 'dark' for the rest of the site.
-interface Props { theme?: 'light' | 'dark' }
-const { theme = 'dark' } = Astro.props;
+// (theme is accepted for older call sites; the site's colours now handle light and dark)
+interface Props { theme?: string }
 ---
-<section class={`pop ${theme}`} data-pop hidden>
+<section class="pop box" data-pop hidden>
   <div class="pop-head">
-    <h3>🍌 Banana popularity</h3>
+    <h3>Banana popularity</h3>
     <span class="pop-sub">Page views per day, whole site</span>
   </div>
   <div class="pop-big"><b data-today>–</b> today <span data-total></span></div>
@@ -55,21 +54,17 @@ const { theme = 'dark' } = Astro.props;
 </script>
 
 <style>
-  .pop { border-radius: 18px; padding: 14px 16px 12px; }
-  .pop.dark { margin-top: 16px; }
-  .pop.light { background: #fffaf0; color: #2a2118; --pop-bar: #b8860b; --pop-today: #2a2118; --pop-muted: #988b78; --pop-base: #eadfca; --pop-tip: #2a2118; --pop-tip-ink: #fff; }
-  .pop.dark { background: var(--surface); border: 1px solid var(--border); color: var(--ink); --pop-bar: #a87a00; --pop-today: #ffd84d; --pop-muted: var(--ink-3); --pop-base: var(--border); --pop-tip: #f4efe4; --pop-tip-ink: #1d1600; }
-  .pop-head h3 { margin: 0; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--pop-muted); }
-  .pop-sub { font-size: 11.5px; color: var(--pop-muted); }
-  .pop-big { margin: 6px 0 8px; font-size: 13px; color: var(--pop-muted); font-weight: 600; }
-  .pop-big b { font-size: 24px; font-weight: 900; color: var(--pop-today); margin-right: 2px; font-variant-numeric: tabular-nums; }
+  .pop { padding: 12px 14px 10px; --pop-bar: var(--banana-ink); --pop-today: var(--ink); }
+  .pop-head h3 { margin: 0; font: 700 15.5px var(--text); }
+  .pop-sub { font-size: 13px; color: var(--ink-3); }
+  .pop-big { margin: 6px 0 8px; font-size: 14px; color: var(--ink-2); }
+  .pop-big b { font: 400 26px/1 var(--display); color: var(--ink); margin-right: 2px; font-variant-numeric: tabular-nums; }
   .pop-chart { position: relative; }
   .pop-chart svg { display: block; width: 100%; height: 84px; overflow: visible; touch-action: none; }
   .pop-chart :global(.bar) { fill: var(--pop-bar); }
   .pop-chart :global(.bar.today) { fill: var(--pop-today); }
   .pop-chart :global(g.hover .bar) { opacity: .75; }
-  .pop-chart :global(.base) { stroke: var(--pop-base); stroke-width: 1; }
-  .pop-tip { position: absolute; bottom: calc(100% + 6px); transform: translateX(-50%); background: var(--pop-tip); color: var(--pop-tip-ink); font-size: 12px; line-height: 1.35; border-radius: 8px; padding: 5px 9px; white-space: nowrap; pointer-events: none; text-align: center; }
-  .pop-axis { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--pop-muted); }
-  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .pop-chart :global(.base) { stroke: var(--ink); stroke-width: 2; }
+  .pop-tip { position: absolute; bottom: calc(100% + 6px); transform: translateX(-50%); background: var(--ink); color: var(--paper); font-size: 13px; line-height: 1.35; border-radius: 6px; padding: 5px 9px; white-space: nowrap; pointer-events: none; text-align: center; }
+  .pop-axis { display: flex; justify-content: space-between; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 </style>

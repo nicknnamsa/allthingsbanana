@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base image="/og/bananalytics.jpg" wide section="bananalytics" title="Bananalytics · banana prices, charts and statistics · All Things Banana"
+<Base image="/og/bananalytics.jpg" wide section="prices" ticker title="Bananalytics · banana prices, charts and statistics · All Things Banana"
       description="Banana price charts and statistics: the global banana benchmark, US shop prices, fruit and soft commodities and banana company stocks.">
   <header class="page-head">
     <h1>Bananalytics</h1>
@@ -240,7 +240,7 @@ import Base from '../../layouts/Base.astro';
 <style>
   .page-head { padding: 24px 0 4px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
   .page-head h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
-  .page-head h1::first-letter { color: var(--brand); }
+  .page-head h1::first-letter { color: var(--brand-ink); }
   .page-head p { margin: 0; color: var(--ink-3); font-size: 14px; }
   .world-link { margin-left: auto; color: #1d1600; background: var(--brand); font-weight: 800; font-size: 13.5px; text-decoration: none; border-radius: 999px; padding: 7px 14px; }
   .world-link:hover { filter: brightness(1.06); }
@@ -272,7 +272,7 @@ import Base from '../../layouts/Base.astro';
   .kstats :global(.rng) { min-width: 0; flex: 1; justify-content: flex-end; }
 
   .seg { display: inline-flex; gap: 4px; }
-  .seg button { font: 600 13px 'Inter', sans-serif; color: var(--ink-2); background: transparent; border: 1px solid transparent; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+  .seg button { font: 600 13px var(--text); color: var(--ink-2); background: transparent; border: 1px solid transparent; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
   .seg button:hover { color: var(--ink); background: var(--chip); }
   .seg button.on { color: var(--ink); border-color: var(--ink-3); }
 

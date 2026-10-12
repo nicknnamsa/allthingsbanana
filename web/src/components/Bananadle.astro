@@ -1,0 +1,153 @@
+---
+// Today's Bananadle, playable wherever it's placed: 'home' (compact, top of the home page) or 'page' (/bananadle/).
+// The game itself lives in src/scripts/bananadle.ts.
+import degrees from '../data/games/degrees.json';
+interface Props { variant?: 'home' | 'page' }
+const { variant = 'home' } = Astro.props;
+const starts = degrees.starts.map(s => ({ t: s.title }));
+---
+<section class={`crate bd bd-${variant}`} data-bananadle data-variant={variant} aria-label="Bananadle, today's puzzle">
+  <script type="application/json" data-bd="starts" set:html={JSON.stringify(starts)} />
+  <span class="sticker bd-sticker" aria-hidden="true">Par<b>4</b></span>
+  <div class="crate-top"><span class="label" data-bd="kick">Bananadle</span><span class="bd-no" data-bd="no"></span></div>
+
+  <div class="bd-where" data-bd="where">Start here</div>
+  <h2 class="bd-current" data-bd="current">&nbsp;</h2>
+  <p class="bd-about"><span data-bd="desc"></span> <span data-bd="extract"></span></p>
+  <p class="bd-warm" data-bd="warm" hidden>This page links to Banana. You know what to do.</p>
+  <p class="bd-intro">Get to <b>Banana</b> by naming pages this one links to or mentions. From memory. <span data-bd="tried"></span></p>
+
+  <form class="bd-guess" data-bd="form" autocomplete="off">
+    <input data-bd="input" type="text" placeholder="England? Napoleon? Fruit?" aria-label="Your guess: a page this one links to or mentions" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+    <button class="btn" data-bd="go" type="submit">Go</button>
+  </form>
+  <div class="bd-feedback" data-bd="feedback" aria-live="polite"></div>
+
+  <ol class="bd-trail" data-bd="path" aria-label="Your route"></ol>
+
+  <div class="bd-ripe">
+    <div class="bd-ripe-head"><span data-bd="stepsLine"></span><span>Perfectly ripe at par</span></div>
+    <div class="ripe-scale" data-bd="scale" role="img"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="ripe-marks" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span class="par">4 · par</span><span>5</span><span>6</span><span>7+</span></div>
+  </div>
+
+  <div class="bd-hint" data-bd="hintBox" hidden></div>
+
+  <div class="bd-done" data-bd="done" hidden>
+    <div class="bd-result">
+      <span class="stamp thump" data-bd="stamp"></span>
+      <div><p class="bd-done-title" data-bd="doneTitle"></p><p class="bd-done-sub" data-bd="doneSub"></p></div>
+    </div>
+    <p class="bd-route" data-bd="route"></p>
+    <p class="bd-next" data-bd="next">Next crate in <b data-bd="countdown"></b>. Same time tomorrow.</p>
+    <div class="bd-done-btns">
+      <button class="btn" type="button" data-bd="share">Share result</button>
+      {variant === 'home'
+        ? <a class="btn plain" href="/bananadle/">How did everyone do?</a>
+        : null}
+    </div>
+  </div>
+
+  <div class="bd-foot">
+    <span class="bd-stats" data-bd="stats"></span>
+    <span class="bd-tools">
+      <button class="link-btn" type="button" data-bd="howBtn" aria-expanded="false">How to play</button>
+      <button class="link-btn" type="button" data-bd="hintBtn">Hint</button>
+      <button class="link-btn" type="button" data-bd="giveUpBtn">Give up</button>
+      {variant === 'page' && <button class="link-btn" type="button" data-bd="modeBtn">Practice round</button>}
+    </span>
+  </div>
+  <div class="bd-how" data-bd="how" hidden>
+    <ol>
+      <li>Type a page that <b>the page you're on links to or mentions</b>. "England" from Queen Victoria works.</li>
+      <li>Hop page to page until you reach one that <b>links to Banana</b>, then type Banana.</li>
+      <li><b>Par is 4.</b> Three is a birdie, two an eagle. A real page that isn't connected is a miss; typos are free.</li>
+      <li>Tap an earlier page in your route to go back. It undoes the steps after it.</li>
+    </ol>
+    <p>Example: <b>Napoleon</b> → <b>Haiti</b> → <b>Banana</b>. One crate a day, the same one for everyone.</p>
+  </div>
+  <p class="bd-credit">Page titles and summaries come live from <a href="https://en.wikipedia.org/" rel="noopener" target="_blank">Wikipedia</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener" target="_blank">CC BY-SA 4.0</a>).</p>
+</section>
+
+<script>
+  import { mountBananadle } from '../scripts/bananadle';
+  document.querySelectorAll<HTMLElement>('[data-bananadle]').forEach(mountBananadle);
+</script>
+
+<style is:global>
+  .bd { padding-top: 18px; }
+  .bd-sticker { position: absolute; top: -22px; right: 18px; z-index: 1; }
+  .bd .crate-top { padding-right: 96px; }
+  .bd-no { font: 400 19px/1 var(--display); }
+  .bd-where { margin-top: 18px; font: 600 var(--t-small) var(--text); color: var(--ink-3); }
+  .bd-current { font-size: var(--t-hero); margin: 2px 0 6px; overflow-wrap: anywhere; }
+  .bd-about { margin: 0; color: var(--ink-2); font-size: 15.5px; min-height: 1.5em; max-width: 62ch; }
+  .bd-about [data-bd="desc"] { font-weight: 600; color: var(--ink); }
+  .bd-warm { display: inline-block; margin: 10px 0 0; padding: 4px 12px; background: var(--banana); color: var(--on-banana); font-weight: 700; font-size: 15px; border: 2px solid var(--ink); }
+  .bd-intro { margin: 14px 0 0; font-size: 15.5px; color: var(--ink-2); }
+  .bd-intro b { color: var(--ink); }
+  .is-done .bd-intro, .is-done .bd-about [data-bd="extract"] { display: none; }
+
+  .bd-guess { display: flex; gap: 8px; margin-top: 14px; }
+  .bd-guess input { flex: 1; min-width: 0; height: 52px; font: 500 18px var(--text); color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 0 14px; outline: none; }
+  .bd-guess input::placeholder { color: var(--ink-3); }
+  .bd-guess input:focus { box-shadow: 0 0 0 3px var(--banana); }
+  .bd-guess .btn { min-height: 52px; min-width: 76px; font-size: 17px; }
+
+  .bd-feedback { min-height: 8px; }
+  .bd-feedback .msg { margin: 10px 0 0; padding: 9px 12px; font-size: 15px; line-height: 1.5; border-left: 4px solid var(--ink-3); background: var(--paper-2); }
+  .bd-feedback .msg b { font-weight: 700; }
+  .bd-feedback .msg.ok { border-left-color: var(--leaf); }
+  .bd-feedback .msg.miss { border-left-color: var(--stamp); }
+  @media (prefers-reduced-motion: no-preference) { .bd-feedback .msg.miss { animation: bd-shake .3s; } }
+  @keyframes bd-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .bd .free { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+  .bd .sugg { font: 600 15px var(--text); color: var(--ink); background: var(--card); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 6px 11px; margin: 3px 2px; min-height: 40px; cursor: pointer; }
+  .bd .sugg:hover { background: var(--banana); color: var(--on-banana); }
+
+  .bd-trail { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0; margin: 14px 0 0; }
+  .bd-trail li { display: flex; align-items: center; gap: 6px; }
+  .bd-trail li + li::before { content: '→'; color: var(--ink-3); font-weight: 700; }
+  .bd-trail button, .bd-trail span { font: 600 14px var(--text); color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 5px 10px; min-height: 38px; display: inline-flex; align-items: center; }
+  .bd-trail button { cursor: pointer; }
+  .bd-trail button:hover { background: var(--paper-2); text-decoration: line-through; }
+  .bd-trail .here { background: var(--ink); color: var(--paper); }
+  .bd-trail .goal span { border-style: dashed; color: var(--ink-3); background: none; }
+
+  .bd-ripe { margin-top: 16px; }
+  .bd-ripe-head { display: flex; justify-content: space-between; gap: 10px; font-size: var(--t-small); color: var(--ink-2); margin-bottom: 5px; }
+  .bd-ripe-head span:first-child { font-weight: 700; color: var(--ink); }
+
+  .bd-hint { margin-top: 12px; padding: 9px 12px; font-size: 15px; border: 2px dashed var(--ink); }
+
+  .bd-done { margin-top: 18px; padding-top: 16px; border-top: 2px solid var(--ink); }
+  .bd-result { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .bd-result .stamp { font-size: 30px; }
+  .bd-done-title { margin: 0; font: 400 var(--t-2)/1.1 var(--display); }
+  .bd-done-sub { margin: 4px 0 0; color: var(--ink-2); font-size: 15px; }
+  .bd-route { margin: 12px 0 0; font-size: 15px; color: var(--ink-2); line-height: 1.6; }
+  .bd-route a { color: var(--ink); font-weight: 600; text-decoration-color: var(--banana-ink); text-underline-offset: 3px; }
+  .bd-next { margin: 10px 0 0; font-size: 15.5px; }
+  .bd-next b { font-family: var(--display); font-weight: 400; font-size: 19px; }
+  .bd-done-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+  .bd-foot { display: flex; justify-content: space-between; align-items: center; gap: 4px 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 8px; border-top: 2px solid var(--line); }
+  .bd-stats { font-size: var(--t-small); color: var(--ink-2); }
+  .bd-stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .bd-tools { display: flex; flex-wrap: wrap; gap: 0 10px; }
+  .bd-tools .link-btn { min-height: 44px; }
+  .bd-how { margin-top: 6px; padding: 12px 14px; background: var(--paper-2); font-size: 15px; }
+  .bd-how ol { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 4px; }
+  .bd-how p { margin: 0; color: var(--ink-2); }
+  .bd-credit { margin: 12px 0 0; font-size: 13px; color: var(--ink-3); }
+  .bd-credit a { color: var(--ink-3); }
+
+  @media (max-width: 600px) {
+    .crate.bd { padding: 16px 14px 14px; }
+    .bd-sticker { right: 8px; top: -24px; width: 72px; height: 52px; }
+    .bd-sticker b { font-size: 20px; }
+    .bd .crate-top { padding-right: 70px; }
+    .bd-current { font-size: clamp(32px, 10vw, 44px); }
+    .bd-ripe-head span:last-child { display: none; }
+  }
+</style>

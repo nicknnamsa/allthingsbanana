@@ -103,13 +103,13 @@ import Base from '../../layouts/Base.astro';
   .sub { color: var(--ink-3); font-size: 13px; margin: 4px 0 0; }
   .tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 6px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
   .seg { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-  .seg button, .more-btn { font: 600 13px 'Inter', sans-serif; color: var(--ink-2); background: transparent; border: 1px solid var(--border); padding: 6px 13px; border-radius: 999px; cursor: pointer; }
+  .seg button, .more-btn { font: 600 13px var(--text); color: var(--ink-2); background: transparent; border: 1px solid var(--border); padding: 6px 13px; border-radius: 999px; cursor: pointer; }
   .seg button:hover, .more-btn:hover { color: var(--ink); background: var(--chip); }
   .seg button.on { color: #1d1600; background: var(--brand); border-color: var(--brand); }
-  #find { height: 34px; border: 1px solid var(--border); border-radius: 999px; background: var(--field); color: var(--ink); padding: 0 14px; font: 500 13px 'Inter', sans-serif; outline: none; min-width: 200px; }
+  #find { height: 34px; border: 1px solid var(--border); border-radius: 999px; background: var(--field); color: var(--ink); padding: 0 14px; font: 500 13px var(--text); outline: none; min-width: 200px; }
   #find:focus { border-color: var(--brand); }
   .source-row { font-size: 13px; color: var(--ink-2); padding: 10px 0 0; }
-  .source-row button { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
+  .source-row button { font: 600 13px var(--text); color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
 
   .list :global(.row) { display: flex; justify-content: space-between; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--border); }
   .list :global(.body) { min-width: 0; }
@@ -135,8 +135,8 @@ import Base from '../../layouts/Base.astro';
   .sources { list-style: none; margin: 0; padding: 0; }
   .sources :global(li) { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
   .sources :global(li:first-child) { border-top: none; }
-  .sources :global(button) { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; padding: 0; cursor: pointer; text-align: left; }
-  .sources :global(button.on) { color: var(--brand); }
+  .sources :global(button) { font: 600 13px var(--text); color: var(--link); background: none; border: none; padding: 0; cursor: pointer; text-align: left; }
+  .sources :global(button.on) { color: var(--brand-ink); }
   .sources :global(span) { color: var(--ink-3); }
   .note { color: var(--ink-3); font-size: 12.5px; margin: 0; }
 

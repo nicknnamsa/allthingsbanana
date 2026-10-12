@@ -175,7 +175,7 @@ const jsonLd = {
   .m-dessert { background: radial-gradient(circle at 30% 25%, #6a2b54, #260f1f); }
   .m-drink { background: radial-gradient(circle at 30% 25%, #1f4b6e, #0c1c29); }
   .tags { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-  .tags a { color: var(--brand); text-decoration: none; }
+  .tags a { color: var(--brand-ink); text-decoration: none; }
   .tags span { color: var(--ink-3); }
   h1 { font-size: 38px; font-weight: 900; letter-spacing: -0.03em; margin: 6px 0 6px; line-height: 1.1; }
   .blurb { font-size: 17px; color: var(--ink-2); margin: 0; }
@@ -197,7 +197,7 @@ const jsonLd = {
   .cols { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 36px; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
   .col-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
   .col-head h2 { font-size: 20px; font-weight: 800; margin: 0; }
-  .link { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
+  .link { font: 600 13px var(--text); color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
   .ings ul { list-style: none; margin: 0; padding: 0; }
   .ings li { border-bottom: 1px solid var(--border-2); }
   .ings label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 2px; cursor: pointer; font-size: 15px; }
@@ -205,13 +205,13 @@ const jsonLd = {
   .ings input:checked + span { color: var(--ink-3); text-decoration: line-through; }
   .method ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
   .method li { counter-increment: step; }
-  .method li button { display: grid; grid-template-columns: 34px 1fr; gap: 12px; width: 100%; text-align: left; font: 500 15.5px/1.55 'Inter', sans-serif; color: var(--ink);
+  .method li button { display: grid; grid-template-columns: 34px 1fr; gap: 12px; width: 100%; text-align: left; font: 500 15.5px/1.55 var(--text); color: var(--ink);
     background: none; border: none; border-bottom: 1px solid var(--border-2); padding: 12px 2px; cursor: pointer; }
   .method li button::before { content: counter(step); display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #1d1600; font-weight: 800; font-size: 14px; }
   .method li.done button { color: var(--ink-3); }
   .method li.done button::before { content: '✓'; background: var(--chip); color: var(--up); }
   .tip { margin-top: 16px; background: color-mix(in srgb, var(--brand) 12%, transparent); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 14.5px; }
-  .tip b { color: var(--brand); margin-right: 6px; }
+  .tip b { color: var(--brand-ink); margin-right: 6px; }
   .note { color: var(--ink-3); font-size: 12.5px; }
   .hub { display: block; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; color: var(--link); font-weight: 600; text-decoration: none; font-size: 14.5px; }
   .hub:hover { border-color: var(--brand); }

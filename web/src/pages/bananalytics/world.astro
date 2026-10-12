@@ -11,7 +11,7 @@ const fmtMt = (t: number) => (t / 1e6).toFixed(1);
 const BANANA_KG = 0.15;
 const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100) * 100;
 ---
-<Base wide section="world" image="/og/bananalytics.jpg"
+<Base wide section="prices" image="/og/bananalytics.jpg"
       title="Banana World: where the world's bananas grow, on a map · All Things Banana"
       description={`An interactive map of banana and plantain farming in every country, 1961–${year}: production, area harvested and yield, from the UN's FAOSTAT data.`}>
   <header class="head">
@@ -348,18 +348,18 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding: 22px 0 12px; flex-wrap: wrap; }
   .back { color: var(--link); text-decoration: none; font-size: 13px; font-weight: 600; }
   .head h1 { margin: 4px 0 4px; font-size: 36px; font-weight: 900; letter-spacing: -0.03em; }
-  .head h1::first-letter { color: var(--brand); }
+  .head h1::first-letter { color: var(--brand-ink); }
   .head p { margin: 0; color: var(--ink-2); font-size: 15.5px; max-width: 720px; }
   .counter { text-align: right; }
-  .c-n { display: block; font-size: 34px; font-weight: 900; color: var(--brand); letter-spacing: -0.02em; }
+  .c-n { display: block; font-size: 34px; font-weight: 900; color: var(--brand-ink); letter-spacing: -0.02em; }
   .c-l { display: block; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
   .c-r { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
 
   .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .seg { display: inline-flex; background: var(--field); border-radius: 999px; padding: 3px; }
-  .seg button { font: 700 13px 'Inter', sans-serif; color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+  .seg button { font: 700 13px var(--text); color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
   .seg button.on { background: var(--brand); color: #1d1600; }
-  .layer-btn { font: 700 13px 'Inter', sans-serif; color: var(--ink); background: var(--field); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  .layer-btn { font: 700 13px var(--text); color: var(--ink); background: var(--field); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
   .layer-btn:hover { border-color: var(--brand); }
   .layer-btn.on { background: #1f3b2a; border-color: #5cc46e; color: #c9f5cf; }
   .map.dim :global(.cty) { fill: #262b33 !important; }
@@ -401,7 +401,7 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
   .card h2 { font-size: 17px; font-weight: 800; margin: 0; }
   .p-top { display: flex; justify-content: space-between; align-items: baseline; }
-  .link { font: 600 13px 'Inter', sans-serif; color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
+  .link { font: 600 13px var(--text); color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
   .p-sub { color: var(--ink-3); font-size: 12.5px; margin: 2px 0 10px; }
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
   .stats div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
@@ -409,9 +409,9 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .stats dd { margin: 2px 0 0; font-weight: 800; font-size: 16px; }
   .p-note { margin: 8px 0 0; color: var(--ink-2); font-size: 13px; }
   .top { list-style: none; margin: 8px 0 0; padding: 0; }
-  .top :global(button) { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; width: 100%; text-align: left; font: 600 13.5px 'Inter', sans-serif; color: var(--ink); background: none; border: none; border-bottom: 1px solid var(--border); padding: 7px 2px; cursor: pointer; }
-  .top :global(button:hover) { color: var(--brand); }
-  .top :global(li.sel button) { color: var(--brand); }
+  .top :global(button) { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; width: 100%; text-align: left; font: 600 13.5px var(--text); color: var(--ink); background: none; border: none; border-bottom: 1px solid var(--border); padding: 7px 2px; cursor: pointer; }
+  .top :global(button:hover) { color: var(--brand-ink); }
+  .top :global(li.sel button) { color: var(--brand-ink); }
   .top :global(span) { color: var(--ink-3); font-size: 12px; }
   .top :global(b) { font-weight: 700; }
 
@@ -423,7 +423,7 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .spot-go { text-align: left; background: none; border: none; padding: 0; cursor: pointer; color: var(--ink); font: inherit; }
   .spot-go b { display: block; font-size: 15px; }
   .spot-go span { color: var(--ink-3); font-size: 13px; }
-  .spot-go:hover b { color: var(--brand); }
+  .spot-go:hover b { color: var(--brand-ink); }
   .spot-meta { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
   .dotb, .dotp { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .dotb { background: rgb(255, 214, 60); } .dotp { background: rgb(120, 220, 110); }
