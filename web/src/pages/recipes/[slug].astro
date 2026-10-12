@@ -61,7 +61,9 @@ const jsonLd = {
             <img src={photo.src} alt={r.name} width={photo.w} height={photo.h} fetchpriority="high">
             <figcaption>Illustrative photo, not made from this recipe: <a href={photo.page} rel="nofollow noopener" target="_blank">{photo.author}</a>, <a href={photo.licenseUrl} rel="license nofollow noopener" target="_blank">{photo.license}</a>, via {photo.source}.</figcaption>
           </figure>
-        : <div class={`art m-${r.meals[0]}`} aria-hidden="true"><span>{r.emoji}</span></div>}
+        : <div class="art" style={`background:${({ green: 'var(--r1)', yellow: 'var(--r4)', spotty: 'var(--r5)', brown: 'var(--r7)' } as Record<string, string>)[r.ripeness[0]] ?? 'var(--r4)'}`} aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z" fill="#FFD23F" stroke="#231A10" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 8.5 4.6 4.4l3 1.3" fill="none" stroke="#231A10" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>}
       <div class="intro">
         <div class="tags">
           {r.meals.map(m => <a href={`/recipes/?meal=${m}`}>{mealLabel(m)}</a>)}
@@ -77,7 +79,7 @@ const jsonLd = {
         </dl>
         <div class="row">
           <span class="meter" title={`Banana-o-meter: ${r.level} out of 5`}>
-            <b>Banana-o-meter</b> {[1, 2, 3, 4, 5].map(i => <i class={i <= r.level ? 'on' : ''}>🍌</i>)}
+            <b>Banana-o-meter</b> <span class="pips" aria-label={`${r.level} of 5`}>{[1, 2, 3, 4, 5].map(i => <i class={i <= r.level ? 'on' : ''}></i>)}</span>
           </span>
           <span class="ripeness">
             <b>Best with</b>
@@ -116,7 +118,7 @@ const jsonLd = {
           {r.steps.map(s => <li><button>{s}</button></li>)}
         </ol>
         {r.tip && <aside class="tip"><b>Tip</b> {r.tip}</aside>}
-        {/banana-bread/.test(r.slug) && <a class="hub" href="/topics/banana-bread/">🍞 Everything about banana bread: history, the science of ripeness and the internet's favourite recipes →</a>}
+        {/banana-bread/.test(r.slug) && <a class="hub" href="/topics/banana-bread/">Everything about banana bread: history, the science of ripeness and the internet's favourite recipes →</a>}
         <p class="note">Tap a step to mark it done.</p>
       </section>
     </div>
@@ -147,93 +149,88 @@ const jsonLd = {
 </script>
 
 <style>
-  .crumbs { padding-top: 18px; font-size: 13px; color: var(--ink-3); }
-  .crumbs a { color: var(--link); text-decoration: none; }
-  .top { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; margin-top: 14px; align-items: start; }
-  .art { aspect-ratio: 1; border-radius: 16px; display: grid; place-items: center; font-size: 120px; }
-  .art span { filter: drop-shadow(0 12px 24px rgba(0, 0, 0, .4)); }
+  .crumbs { padding-top: 22px; font-size: 14.5px; color: var(--ink-2); }
+  .crumbs a { color: var(--ink); text-decoration-color: var(--banana-ink); text-underline-offset: 3px; }
+  .top { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 30px; margin-top: 16px; align-items: start; }
+  .art { aspect-ratio: 1; display: grid; place-items: center; border: 2px solid var(--ink); }
+  .art svg { width: 45%; transform: rotate(-8deg); }
   .photo { margin: 0; }
-  .photo img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 16px; background: var(--chip); }
-  .photo figcaption { margin-top: 6px; font-size: 11px; line-height: 1.4; color: var(--ink-3); }
+  .photo img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border: 2px solid var(--ink); background: var(--paper-2); }
+  .photo figcaption { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--ink-3); }
   .photo figcaption a { color: var(--ink-3); }
-  .nutrition { margin-top: 26px; }
-  .nutrition .per { font-size: 12.5px; color: var(--ink-3); }
-  .kcal { font-size: 14px; color: var(--ink-2); margin: 2px 0 8px; }
-  .kcal b { font-size: 30px; font-weight: 900; color: var(--ink); letter-spacing: -0.02em; margin-right: 2px; }
-  .nutrition table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
-  .nutrition th, .nutrition td { padding: 7px 2px; border-bottom: 1px solid var(--border-2); }
+  .nutrition { margin-top: 28px; }
+  .nutrition .per { font-size: 14px; color: var(--ink-2); }
+  .kcal { font-size: 15px; color: var(--ink-2); margin: 2px 0 8px; }
+  .kcal b { font: 400 34px/1 var(--display); color: var(--ink); margin-right: 2px; }
+  .nutrition table { width: 100%; border-collapse: collapse; font-size: 15.5px; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+  .nutrition th, .nutrition td { padding: 8px 2px; border-bottom: 1px solid var(--line); }
   .nutrition th { text-align: left; font-weight: 600; }
   .nutrition td { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
-  .nutrition tr.sub th { font-weight: 500; color: var(--ink-3); padding-left: 14px; }
+  .nutrition tr.sub th { font-weight: 500; color: var(--ink-2); padding-left: 14px; }
   .nutrition tr.sub td { font-weight: 500; color: var(--ink-2); }
-  .nut-note { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; margin: 10px 0 0; }
-  .nut-note a { color: var(--link); }
-  .m-breakfast { background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); }
-  .m-lunch { background: radial-gradient(circle at 30% 25%, #2f5a24, #12210d); }
-  .m-dinner { background: radial-gradient(circle at 30% 25%, #6a2a1e, #26100b); }
-  .m-snack { background: radial-gradient(circle at 30% 25%, #6e4a17, #2b1b07); }
-  .m-dessert { background: radial-gradient(circle at 30% 25%, #6a2b54, #260f1f); }
-  .m-drink { background: radial-gradient(circle at 30% 25%, #1f4b6e, #0c1c29); }
-  .tags { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-  .tags a { color: var(--brand-ink); text-decoration: none; }
-  .tags span { color: var(--ink-3); }
-  h1 { font-size: 38px; font-weight: 900; letter-spacing: -0.03em; margin: 6px 0 6px; line-height: 1.1; }
-  .blurb { font-size: 17px; color: var(--ink-2); margin: 0; }
-  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 18px 0 0; }
-  .facts div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
-  .facts dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
-  .facts dd { margin: 2px 0 0; font-weight: 700; font-size: 14.5px; }
+  .nut-note { font-size: 14px; color: var(--ink-3); line-height: 1.5; margin: 10px 0 0; }
+  .nut-note a { color: var(--ink-2); }
+  .tags { display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 15px; font-weight: 600; }
+  .tags a { color: var(--ink); text-decoration-color: var(--banana-ink); text-underline-offset: 3px; }
+  .tags span { color: var(--ink-2); font-weight: 500; }
+  h1 { font-size: var(--t-1); margin: 8px 0 8px; }
+  .blurb { font-size: 18px; color: var(--ink-2); margin: 0; }
+  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0 0; border: 2px solid var(--ink); background: var(--card); }
+  .facts div { padding: 10px 12px; border-right: 2px solid var(--ink); }
+  .facts div:last-child { border-right: 0; }
+  .facts dt { font: 700 var(--t-label) var(--text); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+  .facts dd { margin: 2px 0 0; font: 400 20px/1.2 var(--display); }
   .cap { text-transform: capitalize; }
-  .row { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; margin-top: 14px; font-size: 13px; }
-  .row b { color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-right: 6px; }
-  .meter i { font-style: normal; font-size: 16px; opacity: .22; filter: grayscale(1); }
-  .meter i.on { opacity: 1; filter: none; }
-  .ripe-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px 3px 4px; margin-right: 6px; font-weight: 600; }
-  .ripe-chip:hover { border-color: var(--brand); }
-  .ripe-chip i { width: 16px; height: 16px; border-radius: 50%; }
+  .row { display: flex; gap: 10px 24px; flex-wrap: wrap; align-items: center; margin-top: 16px; font-size: 15px; }
+  .row b { font-weight: 700; margin-right: 8px; }
+  .meter { display: inline-flex; align-items: center; }
+  .ripe-chip { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 4px 10px 4px 5px; margin-right: 6px; font-weight: 600; min-height: 40px; }
+  .ripe-chip:hover { background: var(--paper-2); }
+  .ripe-chip i { width: 26px; height: 26px; border: 2px solid var(--ink); border-radius: 50%; }
   .diet { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-  .diet span { font-size: 12px; font-weight: 700; color: var(--up); border: 1px solid color-mix(in srgb, var(--up) 45%, transparent); border-radius: 999px; padding: 2px 10px; }
+  .diet span { font-size: 14px; font-weight: 700; color: var(--leaf); border: 2px solid currentColor; border-radius: var(--r-ctl); padding: 2px 10px; }
 
-  .cols { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 36px; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
+  .cols { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 40px; margin-top: 32px; padding-top: 22px; border-top: 2px solid var(--ink); }
   .col-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .col-head h2 { font-size: 20px; font-weight: 800; margin: 0; }
-  .link { font: 600 13px var(--text); color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
+  .col-head h2 { font-size: var(--t-2); margin: 0; }
+  .link { font: 600 15px var(--text); color: var(--ink-2); background: none; border: none; cursor: pointer; padding: 10px 0; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
   .ings ul { list-style: none; margin: 0; padding: 0; }
-  .ings li { border-bottom: 1px solid var(--border-2); }
-  .ings label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 2px; cursor: pointer; font-size: 15px; }
-  .ings input { width: 18px; height: 18px; margin-top: 2px; accent-color: #f2b81f; flex: none; }
+  .ings li { border-bottom: 1px solid var(--line); }
+  .ings label { display: flex; gap: 12px; align-items: flex-start; padding: 11px 2px; cursor: pointer; font-size: 16px; min-height: 44px; }
+  .ings input { width: 22px; height: 22px; margin-top: 1px; accent-color: var(--leaf); flex: none; }
   .ings input:checked + span { color: var(--ink-3); text-decoration: line-through; }
   .method ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
   .method li { counter-increment: step; }
-  .method li button { display: grid; grid-template-columns: 34px 1fr; gap: 12px; width: 100%; text-align: left; font: 500 15.5px/1.55 var(--text); color: var(--ink);
-    background: none; border: none; border-bottom: 1px solid var(--border-2); padding: 12px 2px; cursor: pointer; }
-  .method li button::before { content: counter(step); display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #1d1600; font-weight: 800; font-size: 14px; }
+  .method li button { display: grid; grid-template-columns: 38px 1fr; gap: 12px; width: 100%; text-align: left; font: 400 16.5px/1.55 var(--text); color: var(--ink);
+    background: none; border: none; border-bottom: 1px solid var(--line); padding: 13px 2px; cursor: pointer; }
+  .method li button::before { content: counter(step); display: grid; place-items: center; width: 34px; height: 34px; border: 2px solid var(--ink); border-radius: 50%; background: var(--banana); color: #231A10; font: 400 17px var(--display); }
   .method li.done button { color: var(--ink-3); }
-  .method li.done button::before { content: '✓'; background: var(--chip); color: var(--up); }
-  .tip { margin-top: 16px; background: color-mix(in srgb, var(--brand) 12%, transparent); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; padding: 12px 14px; font-size: 14.5px; }
-  .tip b { color: var(--brand-ink); margin-right: 6px; }
-  .note { color: var(--ink-3); font-size: 12.5px; }
-  .hub { display: block; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; color: var(--link); font-weight: 600; text-decoration: none; font-size: 14.5px; }
-  .hub:hover { border-color: var(--brand); }
+  .method li.done button::before { content: '✓'; background: var(--paper-2); color: var(--leaf); font-family: var(--text); font-weight: 700; }
+  .tip { margin-top: 18px; border: 2px dashed var(--ink); padding: 12px 14px; font-size: 16px; }
+  .tip b { margin-right: 6px; }
+  .note { color: var(--ink-3); font-size: 14px; }
+  .hub { display: block; margin-top: 18px; padding: 12px 14px; border: 2px solid var(--ink); color: var(--ink); font-weight: 600; text-decoration: none; font-size: 16px; background: var(--card); }
+  .hub:hover { background: var(--paper-2); }
 
-  .more { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
-  .more-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
-  .more-head h2 { font-size: 20px; font-weight: 800; margin: 0; }
-  .more-head a { color: var(--link); text-decoration: none; font-weight: 600; font-size: 14px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .more { margin-top: 44px; padding-top: 20px; border-top: 2px solid var(--ink); }
+  .more-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+  .more-head h2 { font-size: var(--t-2); margin: 0; }
+  .more-head a { color: var(--ink); font-weight: 600; font-size: 15px; text-decoration-color: var(--banana-ink); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 
   @media (max-width: 860px) {
     .top { grid-template-columns: 1fr; }
-    .art { aspect-ratio: auto; height: 180px; font-size: 90px; }
+    .art { aspect-ratio: auto; height: 200px; }
+    .art svg { width: 110px; }
     .photo img { aspect-ratio: 3 / 2; }
     .cols { grid-template-columns: 1fr; }
     .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    h1 { font-size: 30px; }
+    .facts div:nth-child(2) { border-right: 0; }
+    .facts div:nth-child(-n+2) { border-bottom: 2px solid var(--ink); }
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   }
   @media print {
-    :global(.masthead), :global(.sections), :global(.tickers), :global(.foot), .crumbs, .art, .photo, .more, .link, .note { display: none !important; }
-    :global(:root) { --bg: #fff; --surface: #fff; --ink: #000; --ink-2: #222; --ink-3: #555; --border: #ccc; --border-2: #ddd; --brand: #000; }
-    :global(body) { background: #fff; color: #000; }
+    :global(.mast), :global(.board-strip), :global(.foot), .crumbs, .art, .photo, .more, .link, .note { display: none !important; }
+    :global(:root) { --paper: #fff; --card: #fff; --ink: #000; --ink-2: #222; --ink-3: #555; --line: #ccc; }
   }
 </style>

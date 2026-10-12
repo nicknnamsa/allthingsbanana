@@ -16,15 +16,14 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
       <h1>Banacipes</h1>
       <p><b>{recipes.length} banana recipes</b> of our own{web.length > 0 && <> plus <b>{web.length.toLocaleString('en-US')} more</b> from {webSites} recipe sites</>}, from breakfast to cocktails. Pick a meal, tell us how ripe your bananas are, or just browse.</p>
     </div>
-    <button class="surprise" id="surprise">🎲 Surprise me</button>
+    <button class="btn banana" id="surprise">Surprise me</button>
   </header>
 
   <section class="ripe" aria-label="How ripe are your bananas?">
     <h2>What are your bananas like?</h2>
     <div class="ripe-row" id="ripe">
       {RIPENESS.map(r => (
-        <button data-ripe={r.id} aria-pressed="false">
-          <span class="swatch" style={`background:${r.colour}`}></span>
+        <button data-ripe={r.id} aria-pressed="false" class={`seg-${r.id}`}>
           <b>{r.label}</b><span class="ripe-hint">{r.hint}</span>
         </button>
       ))}
@@ -33,19 +32,19 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
 
   <div class="tools">
     <div class="meals" id="meals" role="group" aria-label="Meal">
-      <button data-meal="" class="on">All <span>{(recipes.length + web.length).toLocaleString('en-US')}</span></button>
-      {MEALS.map(m => <button data-meal={m.id}>{m.label} <span>{count(m.id)}</span></button>)}
+      <button data-meal="" class="tog on">All <span class="n">{(recipes.length + web.length).toLocaleString('en-US')}</span></button>
+      {MEALS.map(m => <button class="tog" data-meal={m.id}>{m.label} <span class="n">{count(m.id)}</span></button>)}
     </div>
     <div class="row2">
       <input id="find" type="search" placeholder="Search recipes or ingredients (e.g. oats, coconut, chocolate)" aria-label="Search recipes">
       <div class="toggles" id="diet" role="group" aria-label="Diet and time">
-        <button data-diet="vegan">Vegan</button>
-        <button data-diet="gluten-free">Gluten-free</button>
-        <button data-diet="no-bake">No oven</button>
-        <button data-quick="30">Under 30 min</button>
+        <button class="tog" data-diet="vegan">Vegan</button>
+        <button class="tog" data-diet="gluten-free">Gluten-free</button>
+        <button class="tog" data-diet="no-bake">No oven</button>
+        <button class="tog" data-quick="30">Under 30 min</button>
       </div>
       <div class="src" id="src" role="group" aria-label="Whose recipes" hidden={web.length === 0}>
-        <button data-src="" class="on">All</button><button data-src="ours">Ours</button><button data-src="web">Other sites</button>
+        <button class="tog on" data-src="">All</button><button class="tog" data-src="ours">Ours</button><button class="tog" data-src="web">Other sites</button>
       </div>
       <label class="sort">Sort
         <select id="sort">
@@ -61,18 +60,19 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
 
   <p class="status" id="status" aria-live="polite"></p>
   <h2 class="sec-h" id="ourHead">Our recipes</h2>
-  <div class="grid" id="grid">
+  <div class="grid clip" id="grid">
     {recipes.map(r => <RecipeCard recipe={r} />)}
   </div>
+  <button class="btn plain more-ours" id="moreOurs" type="button">Show all {recipes.length} of ours</button>
   <section class="web" id="web" hidden>
     <div class="web-head"><h2 class="sec-h">From around the web</h2><span id="webCount"></span></div>
     <div class="grid" id="webGrid"></div>
-    <button id="webMore" class="more-btn" hidden>Show more recipes</button>
+    <button id="webMore" class="btn plain more-btn" hidden>Show more recipes</button>
     <p class="web-note">These link to recipes on other sites. We show the name, photo, time and rating each site publishes; the full recipe is on their site.</p>
   </section>
   <div class="none" id="none" hidden>
     <p>No recipes match all of that.</p>
-    <button id="clear">Clear filters</button>
+    <button class="btn banana" id="clear">Clear filters</button>
   </div>
 </Base>
 
@@ -84,7 +84,7 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
 
   // ---------- recipes from other sites ----------
   type Web = { n: string; u: string; s: string; i?: string; m?: number; meals: string[]; d: string[]; l: number; r?: number; c?: number; k?: string };
-  let web: Web[] = [], webShown = 24;
+  let web: Web[] = [], webShown = 24, showAllOurs = false;
   const MEAL_LABEL: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks', dessert: 'Desserts', drink: 'Drinks' };
   // other sites don't say how ripe the bananas should be, so match on the kind of dish
   const RIPE_HINT: Record<string, RegExp> = {
@@ -106,7 +106,7 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
         <h3>${esc(w.n)}</h3>
         <div class="wc-src">on ${esc(w.s)} ↗</div>
         <div class="wc-foot">
-          <span class="meter">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= w.l ? 'on' : ''}">🍌</i>`).join('')}</span>
+          <span class="pips" aria-label="Banana-o-meter ${w.l} of 5">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= w.l ? 'on' : ''}"></i>`).join('')}</span>
           <span>${w.r ? `★ ${w.r.toFixed(1)}${w.c ? ` <small>(${w.c.toLocaleString('en-US')})</small>` : ''}` : ''}${w.r && w.m ? ' · ' : ''}${fmtMins(w.m)}</span>
         </div>
       </div></a>`;
@@ -159,6 +159,9 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
     };
     [...cards].sort(by[state.sort]).forEach(c => grid.append(c));
     $('#ourHead').hidden = !shown.length || !web.length;
+    const filtering = !!(state.meal || state.ripe || state.diet.size || state.quick || state.q || state.src === 'web');
+    grid.classList.toggle('clip', !filtering && !showAllOurs);
+    $('#moreOurs').hidden = filtering || showAllOurs || state.src === 'web';
 
     // other sites: filtered, sorted, then shown a page at a time
     const webList = state.src === 'ours' ? [] : web.filter(w =>
@@ -195,6 +198,7 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
     writeUrl();
   }
   const reset = () => { webShown = 24; apply(); };
+  $('#moreOurs').addEventListener('click', () => { showAllOurs = true; apply(); });
 
   $('#meals').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { state.meal = b.dataset.meal || ''; reset(); } });
   $('#ripe').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { state.ripe = state.ripe === b.dataset.ripe ? '' : b.dataset.ripe!; reset(); } });
@@ -221,78 +225,76 @@ const count = (meal: string) => recipes.filter(r => r.meals.includes(meal as nev
 </script>
 
 <style>
-  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding: 26px 0 6px; flex-wrap: wrap; }
-  .head h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -0.03em; }
-  .head h1::first-letter { color: var(--brand-ink); }
-  .head p { margin: 6px 0 0; color: var(--ink-2); max-width: 640px; font-size: 15.5px; }
-  .surprise { font: 800 14px var(--text); color: #1d1600; background: var(--brand); border: none; border-radius: 999px; padding: 10px 18px; cursor: pointer; }
-  .surprise:hover { filter: brightness(1.06); }
+  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding: 34px 0 6px; flex-wrap: wrap; }
+  .head h1 { margin: 0; font-size: var(--t-1); }
+  .head p { margin: 8px 0 0; color: var(--ink-2); max-width: 640px; }
+  .head p b { color: var(--ink); }
 
-  .ripe { margin-top: 18px; }
-  .ripe h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin: 0 0 8px; }
-  .ripe-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-  .ripe-row button { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 0 10px; align-items: center; text-align: left;
-    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
-  .ripe-row button:hover { border-color: var(--ink-3); }
-  .ripe-row button.on { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
-  .swatch { grid-row: 1 / span 2; width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .2); }
-  .ripe-row b { font-size: 14px; }
-  .ripe-hint { font-size: 12px; color: var(--ink-3); }
+  /* the ripeness scale as a picker: green → yellow → spotty → brown */
+  .ripe { margin-top: 22px; }
+  .ripe h2 { font: 400 21px var(--display); margin: 0 0 8px; }
+  .ripe-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 2px solid var(--ink); }
+  .ripe-row button { position: relative; display: flex; flex-direction: column; gap: 2px; text-align: left; font: inherit; border: 0; border-right: 2px solid var(--ink); padding: 12px 14px; cursor: pointer; min-height: 64px; color: var(--ink); }
+  .ripe-row button:last-child { border-right: 0; }
+  .seg-green { background: var(--r1); color: #fff !important; }
+  .seg-yellow { background: var(--r4); color: #231A10 !important; }
+  .seg-spotty { background: var(--r5) radial-gradient(circle at 80% 30%, #5a3416 0 3px, transparent 3.5px), radial-gradient(circle at 90% 70%, #5a3416 0 2.5px, transparent 3px); background-color: var(--r5); color: #231A10 !important; }
+  .seg-brown { background: var(--r7); color: #fff !important; }
+  .ripe-row b { font-size: 17px; }
+  .ripe-hint { font-size: 14px; opacity: .92; }
+  .ripe-row button.on { box-shadow: inset 0 0 0 4px var(--ink), inset 0 0 0 7px var(--paper); }
+  .ripe-row button.on b::after { content: ' ✓'; }
 
-  .tools { margin-top: 16px; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px;
-    position: sticky; top: 0; z-index: 5; background: var(--bg); }
+  .tools { margin-top: 18px; padding: 12px 0; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); display: flex; flex-direction: column; gap: 10px;
+    position: sticky; top: 0; z-index: 5; background: var(--paper); }
   .meals { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
   .meals::-webkit-scrollbar { display: none; }
-  .meals button, .toggles button { font: 700 13.5px var(--text); color: var(--ink-2); background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
-  .meals button span { color: var(--ink-3); font-weight: 600; margin-left: 2px; }
-  .meals button:hover, .toggles button:hover { color: var(--ink); background: var(--chip); }
-  .meals button.on { color: #1d1600; background: var(--brand); border-color: var(--brand); }
-  .meals button.on span { color: #5a4100; }
-  .toggles button.on { color: var(--ink); border-color: var(--brand); background: color-mix(in srgb, var(--brand) 14%, transparent); }
-  .row2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  #find { flex: 1; min-width: 220px; height: 36px; border: 1px solid var(--border); border-radius: 999px; background: var(--field); color: var(--ink); padding: 0 16px; font: 500 14px var(--text); outline: none; }
-  #find:focus { border-color: var(--brand); }
+  .row2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #find { flex: 1; min-width: 220px; height: 44px; border: 2px solid var(--ink); border-radius: var(--r-ctl); background: var(--card); color: var(--ink); padding: 0 14px; font: 500 16px var(--text); outline: none; }
+  #find:focus { box-shadow: 0 0 0 3px var(--banana); }
   .toggles { display: flex; gap: 6px; flex-wrap: wrap; }
-  .sort { font-size: 13px; color: var(--ink-3); font-weight: 600; display: flex; align-items: center; gap: 6px; }
-  .sort select { font: 600 13px var(--text); color: var(--ink); background: var(--field); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+  .src { display: inline-flex; gap: 0; }
+  .src .tog { border-radius: 0; margin-left: -2px; }
+  .src .tog:first-child { border-radius: var(--r-ctl) 0 0 var(--r-ctl); margin-left: 0; }
+  .src .tog:last-child { border-radius: 0 var(--r-ctl) var(--r-ctl) 0; }
+  .sort { font-size: 15px; color: var(--ink-2); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .sort select { font: 600 15px var(--text); color: var(--ink); background: var(--card); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 0 8px; height: 40px; }
 
-  .src { display: inline-flex; background: var(--field); border-radius: 999px; padding: 3px; }
-  .src button { font: 700 12.5px var(--text); color: var(--ink-2); background: none; border: none; border-radius: 999px; padding: 5px 11px; cursor: pointer; }
-  .src button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
-  .status { color: var(--ink-3); font-size: 13px; margin: 14px 0 10px; }
-  .sec-h { font-size: 19px; font-weight: 800; margin: 6px 0 12px; }
-  .web { margin-top: 34px; }
-  .web-head { display: flex; align-items: baseline; gap: 12px; }
-  .web-head span { color: var(--ink-3); font-size: 13px; }
-  .web-note { color: var(--ink-3); font-size: 12.5px; margin-top: 14px; }
-  .more-btn { display: block; margin: 18px auto 0; font: 700 14px var(--text); color: var(--ink); background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 10px 22px; cursor: pointer; }
-  .more-btn:hover { background: var(--chip); }
-  .web :global(.wc) { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; transition: border-color .15s, transform .15s; }
-  .web :global(.wc:hover) { border-color: var(--brand); transform: translateY(-2px); }
-  .web :global(.wc-art) { height: 150px; background: var(--chip); }
+  .status { color: var(--ink-2); font-size: 15px; margin: 14px 0 10px; }
+  .sec-h { font-size: var(--t-2); margin: 6px 0 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .more-ours { display: none; margin: 16px auto 0; }
+  .web { margin-top: 40px; }
+  .web-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .web-head span { color: var(--ink-2); font-size: 15px; }
+  .web-note { color: var(--ink-3); font-size: 14px; margin-top: 14px; }
+  .more-btn { display: flex; margin: 18px auto 0; }
+  .web :global(.wc) { display: flex; flex-direction: column; background: var(--card); border: 2px solid var(--ink); text-decoration: none; color: var(--ink); min-width: 0; }
+  .web :global(.wc:hover h3) { text-decoration: underline; text-decoration-color: var(--banana-ink); }
+  .web :global(.wc-art) { height: 150px; background: var(--paper-2); border-bottom: 2px solid var(--ink); overflow: hidden; }
   .web :global(.wc-art img) { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .web :global(.wc-art.noimg) { display: grid; place-items: center; background: radial-gradient(circle at 30% 25%, #4a3c12, #1f190a); }
-  .web :global(.wc-art.noimg::after) { content: '🍌'; font-size: 48px; }
+  .web :global(.wc-art.noimg) { background: var(--r4); }
   .web :global(.wc-body) { padding: 11px 13px 13px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
-  .web :global(.wc-tags) { display: flex; gap: 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--brand-ink); }
-  .web :global(.wc h3) { margin: 2px 0 0; font-size: 15.5px; font-weight: 800; line-height: 1.25; }
-  .web :global(.wc-src) { color: var(--link); font-size: 12.5px; font-weight: 600; }
-  .web :global(.wc-foot) { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .web :global(.wc-tags) { display: flex; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .web :global(.wc-tags span + span::before) { content: '· '; }
+  .web :global(.wc h3) { margin: 2px 0 0; font: 700 16.5px/1.3 var(--text); }
+  .web :global(.wc-src) { color: var(--ink-2); font-size: 14px; }
+  .web :global(.wc-foot) { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
   .web :global(.wc-foot small) { font-weight: 500; }
-  .web :global(.meter i) { font-style: normal; font-size: 12px; opacity: .22; filter: grayscale(1); }
-  .web :global(.meter i.on) { opacity: 1; filter: none; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
   .none { text-align: center; padding: 40px 0; color: var(--ink-2); }
-  .none button { font: 700 14px var(--text); color: #1d1600; background: var(--brand); border: none; border-radius: 999px; padding: 9px 18px; cursor: pointer; }
 
-  @media (max-width: 860px) { .ripe-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 560px) {
+  @media (max-width: 860px) { .ripe-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ripe-row button:nth-child(2) { border-right: 0; } .ripe-row button:nth-child(-n+2) { border-bottom: 2px solid var(--ink); } }
+  @media (max-width: 600px) {
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .grid.clip > :global(.rc:nth-child(n+9)) { display: none; }
+    .more-ours { display: flex; }
+    .more-ours[hidden] { display: none; }
     .web :global(.wc-art) { height: 96px; }
-    .web :global(.wc h3) { font-size: 13.5px; }
-    .web :global(.wc-foot) { flex-wrap: wrap; font-size: 11px; }
-    .head h1 { font-size: 28px; }
+    .web :global(.wc h3) { font-size: 15px; }
+    .web :global(.wc-foot) { flex-wrap: wrap; font-size: 12.5px; }
+    .web :global(.wc-src) { font-size: 12.5px; }
     .ripe-hint { display: none; }
+    .ripe-row button { min-height: 52px; }
     .tools { position: static; }
   }
 </style>

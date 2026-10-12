@@ -149,3 +149,14 @@ button, input, select, textarea { font-family: inherit; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* Banana-o-meter: how much banana is in it, 1-5 */
+.pips { display: inline-flex; gap: 3px; align-items: center; }
+.pips i { width: 15px; height: 9px; border: 2px solid var(--ink); border-radius: 999px 999px 999px 999px / 999px 999px 999px 999px; background: transparent; transform: rotate(-12deg); }
+.pips i.on { background: var(--banana); }
+
+/* toggle chips (filters) */
+.tog { font: 600 15px var(--text); color: var(--ink); background: var(--card); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 6px 12px; min-height: 40px; cursor: pointer; white-space: nowrap; }
+.tog:hover { background: var(--paper-2); }
+.tog.on, .tog[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.tog .n { font-weight: 500; opacity: .75; margin-left: 3px; }

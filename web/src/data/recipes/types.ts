@@ -38,8 +38,8 @@ export const MEALS: { id: Meal; label: string }[] = [
   { id: 'drink', label: 'Drinks' },
 ];
 export const RIPENESS: { id: Ripeness; label: string; hint: string; colour: string }[] = [
-  { id: 'green', label: 'Green', hint: 'firm and starchy: fry, boil or curry them', colour: '#8fbf3a' },
-  { id: 'yellow', label: 'Yellow', hint: 'just ripe: slice, grill or caramelise', colour: '#f2d23a' },
-  { id: 'spotty', label: 'Spotty', hint: 'sweet and soft: smoothies, pancakes, baking', colour: '#e3b01f' },
-  { id: 'brown', label: 'Brown', hint: 'very sweet: perfect for banana bread', colour: '#8a5a1c' },
+  { id: 'green', label: 'Green', hint: 'firm and starchy: fry, boil or curry them', colour: '#4E8A2E' },
+  { id: 'yellow', label: 'Yellow', hint: 'just ripe: slice, grill or caramelise', colour: '#FFD23F' },
+  { id: 'spotty', label: 'Spotty', hint: 'sweet and soft: smoothies, pancakes, baking', colour: '#F4BC2C' },
+  { id: 'brown', label: 'Brown', hint: 'very sweet: perfect for banana bread', colour: '#7A4520' },
 ];
