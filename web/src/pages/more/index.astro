@@ -1,88 +1,75 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base wide section="more" title="More Bananas · games, puzzles and experiments · All Things Banana"
-      description="Banana games, puzzles and experiments: Bananadle, the Banana Clicker world leaderboard, the 3D Banana Cube solver and more to come.">
+<Base wide section="more" title="All banana games · Bananadle, the Banana Clicker and the Banana Cube · All Things Banana"
+      description="Every banana game on the site: Bananadle, the daily Wikipedia puzzle; the Banana Clicker world league; and the Banana Cube, a 3D puzzle solver.">
   <header class="head">
-    <h1>More Bananas</h1>
-    <p>Games, puzzles and experiments. This is our banana lab: new things land here first.</p>
+    <h1>All the games</h1>
+    <p>Three ways to waste time on bananas. One of them resets every day.</p>
   </header>
 
-  <div class="grid">
-    <a class="tile" href="/bananadle/">
-      <div class="art degrees" aria-hidden="true"><span>🧠</span></div>
-      <div class="info">
-        <div class="tags"><span class="tag live">New</span><span class="tag">Daily puzzle</span></div>
-        <h2>Bananadle</h2>
-        <p>Start on a random Wikipedia article and reach Banana by naming the pages it links to, all from memory. A new start every day.</p>
-        <div class="stat">Today: can you make par?</div>
-      </div>
-    </a>
-
-    <a class="tile" href="/more/banana-clicker/">
-      <div class="art clicker" aria-hidden="true"><span>🍌</span></div>
-      <div class="info">
-        <div class="tags"><span class="tag live">Live</span><span class="tag">Game</span></div>
-        <h2>Banana Clicker</h2>
-        <p>Peel as many bananas as you can for your country, and watch the world leaderboard change in real time.</p>
-        <div class="stat" id="peelStat">&nbsp;</div>
-      </div>
-    </a>
-
-    <a class="tile" href="/more/banana-cube/">
-      <div class="art cube" aria-hidden="true"><span>🧩</span></div>
-      <div class="info">
-        <div class="tags"><span class="tag live">Live</span><span class="tag">Puzzle</span></div>
-        <h2>Banana Cube solver</h2>
-        <p>Twist a 3D banana puzzle, enter the position of yours, and see exactly how many moves you are from solved.</p>
-        <div class="stat">241,920 positions · never more than 14 moves</div>
-      </div>
-    </a>
-
-    <div class="tile soon">
-      <div class="art lab" aria-hidden="true"><span>🎲</span></div>
-      <div class="info">
-        <div class="tags"><span class="tag">In the lab</span><span class="tag">Experiment</span></div>
-        <h2>10,000 random twisters</h2>
-        <p>What happens when 10,000 people twist a banana cube at random? An interactive version of our experiment is on its way.</p>
-        <div class="stat">Coming soon</div>
-      </div>
-    </div>
-  </div>
+  <ol class="games">
+    <li>
+      <a href="/bananadle/">
+        <span class="num">1</span>
+        <span class="txt">
+          <b>Bananadle</b>
+          <span>Start on today's Wikipedia page and reach Banana by naming pages it links to or mentions, from memory. Par is 4.</span>
+          <em>New crate every day</em>
+        </span>
+        <span class="go">Play →</span>
+      </a>
+    </li>
+    <li>
+      <a href="/more/banana-clicker/">
+        <span class="num">2</span>
+        <span class="txt">
+          <b>Banana Clicker</b>
+          <span>Peel bananas for your country and climb the world league. Keep going and the page turns into a rave.</span>
+          <em id="peelStat">A crate of 100 a day</em>
+        </span>
+        <span class="go">Peel →</span>
+      </a>
+    </li>
+    <li>
+      <a href="/more/banana-cube/">
+        <span class="num">3</span>
+        <span class="txt">
+          <b>Banana Cube</b>
+          <span>A 3D solver for a banana-shaped twisty puzzle. Enter your position and it tells you the fewest moves to solved.</span>
+          <em>241,920 positions, never more than 14 moves</em>
+        </span>
+        <span class="go">Twist →</span>
+      </a>
+    </li>
+  </ol>
 </Base>
 
 <script>
   fetch('/api/peel').then(r => r.json()).then(d => {
-    const el = document.getElementById('peelStat')!;
     const countries = Object.keys(d.countries || {}).length;
-    el.textContent = d.total
-      ? `${d.total.toLocaleString('en-US')} bananas peeled in ${countries} ${countries === 1 ? 'country' : 'countries'}`
-      : 'Be the first to peel a banana';
+    if (d.total) document.getElementById('peelStat')!.textContent = `${d.total.toLocaleString('en-US')} bananas peeled in ${countries} ${countries === 1 ? 'country' : 'countries'} so far`;
   }).catch(() => {});
 </script>
 
 <style>
-  .head { padding: 28px 0 8px; }
-  .head h1 { font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
-  .head p { color: var(--ink-2); margin: 6px 0 0; font-size: 16px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; margin-top: 18px; }
-  .tile { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
-    text-decoration: none; transition: border-color .15s, transform .15s; }
-  a.tile:hover { border-color: var(--brand); transform: translateY(-2px); }
-  .art { height: 170px; display: grid; place-items: center; font-size: 76px; }
-  .art span { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .4)); transition: transform .25s; }
-  a.tile:hover .art span { transform: scale(1.08) rotate(-6deg); }
-  .art.clicker { background: radial-gradient(circle at 30% 25%, #5a4812, #1f190a); }
-  .art.cube { background: radial-gradient(circle at 30% 25%, #24405e, #111a25); }
-  .art.degrees { background: radial-gradient(circle at 30% 25%, #3d2d5e, #16111f); }
-  .art.lab { background: radial-gradient(circle at 30% 25%, #33333d, #16161b); }
-  .info { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .tags { display: flex; gap: 6px; }
-  .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
-  .tag.live { color: #1d1600; background: var(--brand); border-color: var(--brand); }
-  .info h2 { font-size: 20px; font-weight: 800; margin: 4px 0 0; }
-  .info p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
-  .stat { margin-top: auto; padding-top: 10px; color: var(--brand-ink); font-weight: 700; font-size: 13.5px; }
-  .soon { opacity: .75; }
-  .soon .stat { color: var(--ink-3); }
+  .head { padding: 34px 0 14px; border-bottom: 2px solid var(--ink); }
+  .head h1 { margin: 0; font-size: var(--t-1); }
+  .head p { margin: 6px 0 0; color: var(--ink-2); }
+  .games { list-style: none; margin: 0; padding: 0; }
+  .games li { border-bottom: 2px solid var(--ink); }
+  .games a { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 22px 4px; text-decoration: none; color: var(--ink); }
+  .games a:hover { background: var(--paper-2); }
+  .games a:hover b { text-decoration: underline; text-decoration-color: var(--banana-ink); text-underline-offset: 4px; }
+  .num { width: 56px; height: 56px; border: 2px solid var(--ink); border-radius: 50%; background: var(--banana); color: #231A10; display: grid; place-items: center; font: 400 26px var(--display); transform: rotate(-6deg); }
+  .txt { display: flex; flex-direction: column; gap: 4px; }
+  .txt b { font: 400 var(--t-2)/1.1 var(--display); }
+  .txt span { color: var(--ink-2); max-width: 64ch; }
+  .txt em { font-style: normal; font-weight: 700; font-size: 15px; color: var(--banana-ink); }
+  .go { font-weight: 700; font-size: 16px; white-space: nowrap; }
+  @media (max-width: 600px) {
+    .games a { grid-template-columns: 48px minmax(0, 1fr); gap: 14px; padding: 18px 2px; }
+    .num { width: 44px; height: 44px; font-size: 21px; }
+    .go { display: none; }
+  }
 </style>

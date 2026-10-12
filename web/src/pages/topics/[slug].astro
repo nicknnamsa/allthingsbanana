@@ -52,7 +52,6 @@ const jsonLd = [
   <nav class="crumbs"><a href="/topics/">Topics</a> › {t.title}</nav>
 
   <header class="hero">
-    <div class="art" aria-hidden="true">{t.emoji}</div>
     <div>
       <div class="kicker">Banana topic</div>
       <h1>{t.title}</h1>
@@ -171,8 +170,8 @@ const jsonLd = [
           <ul class="related">
             {related.map(r => (
               <li>{live.has(r!.slug)
-                ? <a href={`/topics/${r!.slug}/`}><span>{r!.emoji}</span>{r!.title}</a>
-                : <span class="soon"><span>{r!.emoji}</span>{r!.title} <em>coming soon</em></span>}</li>
+                ? <a href={`/topics/${r!.slug}/`}>{r!.title}</a>
+                : <span class="soon">{r!.title} <em>coming soon</em></span>}</li>
             ))}
           </ul>
         </section>
@@ -209,104 +208,101 @@ const jsonLd = [
 </script>
 
 <style>
-  .crumbs { padding-top: 18px; font-size: 13px; color: var(--ink-3); }
-  .crumbs a { color: var(--link); text-decoration: none; }
-  .hero { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 26px; align-items: center; margin-top: 14px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .crumbs { padding-top: 22px; font-size: 14.5px; color: var(--ink-2); }
+  .crumbs a { color: var(--ink); text-decoration-color: var(--banana-ink); text-underline-offset: 3px; }
+  .hero { margin-top: 14px; padding-bottom: 20px; border-bottom: 2px solid var(--ink); }
   .art { width: 140px; height: 140px; border-radius: 28px; display: grid; place-items: center; font-size: 76px; background: radial-gradient(circle at 30% 25%, #6b4f12, #2a1f08); }
-  .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--brand-ink); }
-  h1 { font-size: 46px; font-weight: 900; letter-spacing: -0.035em; margin: 2px 0 6px; line-height: 1.05; }
-  .tagline { margin: 0; color: var(--ink-2); font-size: 17px; max-width: 720px; }
+  .kicker { font: 700 var(--t-label) var(--text); text-transform: uppercase; letter-spacing: .12em; }
+  h1 { font-size: var(--t-hero); margin: 4px 0 8px; }
+  .tagline { margin: 0; color: var(--ink-2); font-size: 18px; max-width: 720px; }
   .jump { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
-  .jump a { font-size: 13px; font-weight: 600; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
-  .jump a:hover { color: var(--ink); border-color: var(--brand); }
+  .jump a { font-size: 15px; font-weight: 600; color: var(--ink); text-decoration: none; border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 0 12px; min-height: 40px; display: inline-flex; align-items: center; background: var(--card); }
+  .jump a:hover { background: var(--paper-2); }
 
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; margin-top: 26px; align-items: start; }
   .main { display: flex; flex-direction: column; gap: 40px; min-width: 0; }
-  h2 { font-size: 22px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.015em; }
+  h2 { font-size: var(--t-2); margin: 0 0 12px; }
   .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-  .sec-head a { color: var(--link); font-weight: 600; font-size: 14px; text-decoration: none; white-space: nowrap; }
+  .sec-head a { color: var(--ink); font-weight: 600; font-size: 15px; white-space: nowrap; text-decoration-color: var(--banana-ink); }
   .web-h { margin-top: 28px; }
   .sub { color: var(--ink-3); font-size: 13.5px; margin: -6px 0 12px; }
   .muted { color: var(--ink-3); font-size: 14px; }
   .muted :global(a) { color: var(--link); }
 
   .answer p { font-size: 17.5px; line-height: 1.65; color: var(--ink); margin: 0 0 14px; max-width: 720px; }
-  .answer :global(sup), .facts sup, .tip :global(sup), .faq :global(sup) { font-size: 11px; margin-left: 1px; }
-  .answer :global(sup a), .facts sup a, .tip :global(sup a), .faq :global(sup a) { color: var(--brand-ink); text-decoration: none; font-weight: 700; }
+  .answer :global(sup), .facts sup, .tip :global(sup), .faq :global(sup) { font-size: 13px; margin-left: 1px; }
+  .answer :global(sup a), .facts sup a, .tip :global(sup a), .faq :global(sup a) { color: var(--banana-ink); text-decoration: none; font-weight: 700; display: inline-block; min-width: 22px; padding: 4px 2px; text-align: center; }
   .checked { font-size: 13px !important; color: var(--ink-3) !important; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-  .wc { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; text-decoration: none; transition: border-color .15s, transform .15s; }
-  .wc:hover { border-color: var(--brand); transform: translateY(-2px); }
-  .wc-art { height: 140px; background: var(--chip); }
+  .wc { display: flex; flex-direction: column; background: var(--card); border: 2px solid var(--ink); overflow: hidden; text-decoration: none; color: var(--ink); }
+  .wc:hover h3 { text-decoration: underline; text-decoration-color: var(--banana-ink); }
+  .wc-art { height: 140px; background: var(--paper-2); border-bottom: 2px solid var(--ink); }
   .wc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .wc-art.noimg { display: grid; place-items: center; background: radial-gradient(circle at 30% 25%, #4a3c12, #1f190a); }
-  .wc-art.noimg::after { content: '🍌'; font-size: 44px; }
+  .wc-art.noimg { background: var(--r4); }
   .wc-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
-  .wc h3 { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.25; }
-  .wc-src { color: var(--link); font-size: 12.5px; font-weight: 600; }
-  .wc-foot { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .wc h3 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.3; }
+  .wc-src { color: var(--ink-2); font-size: 14px; }
+  .wc-foot { margin-top: auto; padding-top: 8px; display: flex; justify-content: space-between; font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
   .wc-foot small { font-weight: 500; }
 
-  .news-list :global(.n-item) { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .news-list :global(.n-item img) { width: 110px; height: 70px; object-fit: cover; border-radius: 8px; flex: none; }
+  .news-list :global(.n-item) { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .news-list :global(.n-item img) { width: 110px; height: 70px; object-fit: cover; border: 2px solid var(--ink); flex: none; }
   .news-list :global(.n-item a) { font-weight: 700; font-size: 16px; text-decoration: none; line-height: 1.3; }
   .news-list :global(.n-item a:hover) { text-decoration: underline; }
-  .news-list :global(.meta) { color: var(--ink-3); font-size: 12.5px; margin-top: 4px; }
+  .news-list :global(.meta) { color: var(--ink-3); font-size: 14px; margin-top: 4px; }
 
-  .faq { border-bottom: 1px solid var(--border); }
+  .faq { border-bottom: 1px solid var(--line); }
   .faq summary { cursor: pointer; padding: 14px 0; font-weight: 700; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
   .faq summary::-webkit-details-marker { display: none; }
-  .faq summary::after { content: '+'; color: var(--brand-ink); font-size: 20px; line-height: 1; }
+  .faq summary::after { content: '+'; font: 400 24px/1 var(--display); }
   .faq[open] summary::after { content: '−'; }
   .faq p { margin: 0 0 14px; color: var(--ink-2); font-size: 15.5px; line-height: 1.55; }
 
   .links { list-style: none; margin: 0; padding: 0; counter-reset: link; }
-  .links li { counter-increment: link; position: relative; padding: 12px 0 12px 44px; border-bottom: 1px solid var(--border); }
-  .links li::before { content: counter(link); position: absolute; left: 0; top: 13px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--chip); color: var(--brand-ink); font-weight: 800; font-size: 13px; }
+  .links li { counter-increment: link; position: relative; padding: 12px 0 12px 44px; border-bottom: 1px solid var(--line); }
+  .links li::before { content: counter(link); position: absolute; left: 0; top: 11px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--banana); color: #231A10; border: 2px solid var(--ink); font: 400 15px var(--display); }
   .links a { text-decoration: none; font-size: 16px; }
   .links a b { font-weight: 700; }
-  .links a span { color: var(--link); font-size: 13px; font-weight: 600; margin-left: 6px; }
+  .links a span { color: var(--ink-2); font-size: 14px; font-weight: 600; margin-left: 6px; }
   .links a:hover b { text-decoration: underline; }
-  .links p { margin: 3px 0 0; color: var(--ink-2); font-size: 14px; }
+  .links p { margin: 3px 0 0; color: var(--ink-2); font-size: 15px; }
 
-  .sources ol { margin: 0; padding-left: 22px; color: var(--ink-3); font-size: 13.5px; }
+  .sources ol { margin: 0; padding-left: 22px; color: var(--ink-2); font-size: 14.5px; }
   .sources li { margin-bottom: 6px; scroll-margin-top: 20px; }
   .sources li:target { color: var(--ink); }
-  .sources a { color: var(--link); }
+  .sources a { color: var(--ink); }
 
   .rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
-  .card h2 { font-size: 15.5px; margin-bottom: 8px; }
+  .card { background: var(--card); border: 2px solid var(--ink); padding: 14px 16px; }
+  .card h2 { font-size: 21px; margin-bottom: 8px; }
   .facts { margin: 0; }
-  .facts div { padding: 8px 0; border-top: 1px solid var(--border); }
+  .facts div { padding: 8px 0; border-top: 1px solid var(--line); }
   .facts div:first-child { border-top: none; padding-top: 0; }
-  .facts dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
-  .facts dd { margin: 2px 0 0; font-weight: 700; font-size: 14.5px; }
-  .big { font-size: 34px; font-weight: 900; color: var(--brand-ink); letter-spacing: -0.02em; }
-  .small { font-size: 12.5px; color: var(--ink-2); margin: 4px 0 0; }
+  .facts dt { font: 700 var(--t-label) var(--text); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-2); }
+  .facts dd { margin: 2px 0 0; font-weight: 700; font-size: 16px; }
+  .big { font: 400 38px/1.1 var(--display); }
+  .small { font-size: 14px; color: var(--ink-2); margin: 4px 0 0; }
   .small :global(a) { color: var(--link); }
-  .tip { border-left: 3px solid var(--brand); }
-  .tip p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+  .tip { border-style: dashed; }
+  .tip p { margin: 0; font-size: 15.5px; color: var(--ink-2); line-height: 1.5; }
   .related { list-style: none; margin: 0; padding: 0; }
-  .related li { padding: 6px 0; font-size: 14px; font-weight: 600; }
-  .related a { text-decoration: none; color: var(--link); }
+  .related li { padding: 4px 0; font-size: 15px; font-weight: 600; }
+  .related a { color: var(--ink); display: inline-flex; min-height: 36px; align-items: center; text-decoration-color: var(--banana-ink); }
   .related span span { margin-right: 8px; }
   .related a span { margin-right: 8px; }
   .soon { color: var(--ink-3); }
-  .soon em { font-style: normal; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin-left: 4px; }
+  .soon em { font-style: normal; font-size: 12.5px; margin-left: 4px; }
 
   @media (max-width: 960px) {
     .layout { grid-template-columns: 1fr; }
     .rail { position: static; }
   }
   @media (max-width: 560px) {
-    .hero { grid-template-columns: 1fr; }
-    .art { width: 90px; height: 90px; font-size: 48px; border-radius: 20px; }
-    h1 { font-size: 34px; }
+    h1 { font-size: 40px; }
     .answer p { font-size: 16px; }
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .wc-art { height: 96px; }
-    .wc h3 { font-size: 13.5px; }
+    .wc h3 { font-size: 15px; }
   }
 </style>

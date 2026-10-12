@@ -6,7 +6,7 @@ import Base from '../../layouts/Base.astro';
 <div class="cube-app">
 <div id="app">
   <main id="stage">
-    <div class="brand">🍌 Banana Cube <small>2×2×3 solver</small></div>
+    <h1 class="brand">Banana Cube <small>a 2×2×3 puzzle solver</small></h1>
     <div class="toast" id="toast"></div>
     <div class="hint-chip" id="chip">Drag to look around · <b>U</b> stem end (left) · <b>D</b> tip end · <b>E</b> middle</div>
     <div class="loading" id="loading">Mapping all 241,920 banana positions…</div>
@@ -743,7 +743,7 @@ function renderStatus(idx, d) {
   $('#ringArc').setAttribute('stroke', d === 0 ? 'var(--good)' : d <= 4 ? 'var(--good)' : d <= 9 ? 'var(--accent)' : 'var(--bad)');
   let below = 0; for (let i = 0; i < d; i++) below += S.counts[i];
   const pct = (below / S.total) * 100;
-  $('#headline').textContent = d === 0 ? 'Solved! 🍌' : d === 1 ? '1 move from solved' : `${d} moves from solved`;
+  $('#headline').textContent = d === 0 ? 'Solved.' : d === 1 ? '1 move from solved' : `${d} moves from solved`;
   $('#meta').textContent = d === 0
     ? 'A perfect banana. Scramble it or enter your position.'
     : `Harder than ${pct < 1 ? pct.toFixed(2) : Math.round(pct)}% of all positions. The worst case is ${S.maxD}.`;
@@ -842,7 +842,7 @@ let spin = null;
 function celebrate() {
   $('#distCard').classList.remove('solved-pop'); void $('#distCard').offsetWidth; $('#distCard').classList.add('solved-pop');
   spin = { t0: performance.now(), dur: 1300 };
-  toast('Solved! 🍌');
+  toast('Solved.');
 }
 
 // ---------- loop ----------
@@ -900,11 +900,10 @@ renderer.setAnimationLoop(now => {
 .cube-app #stage { position: relative; min-height: 0; }
 .cube-app #stage canvas { display: block; width: 100%; height: 100%; outline: none; }
 .cube-app .brand {
-    position: absolute; top: 20px; left: 24px; display: flex; align-items: center; gap: 10px;
-    font-family: var(--text); font-weight: 600; font-size: 22px; color: inherit; text-decoration: none; z-index: 2;
+    position: absolute; top: 20px; left: 24px; display: flex; align-items: baseline; gap: 10px; margin: 0;
+    font-family: var(--display); font-weight: 400; font-size: 26px; color: inherit; text-decoration: none; z-index: 2;
   }
-.cube-app .brand small { font-family: var(--text); font-weight: 700; font-size: 13px; color: var(--ink-2);
-    background: var(--card); border: 1px solid var(--border); padding: 3px 10px; border-radius: 99px; }
+.cube-app .brand small { font-family: var(--text); font-weight: 600; font-size: 14px; color: var(--ink-2); }
 .cube-app .hint-chip {
     position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
     background: var(--card-solid); border: 1px solid var(--border); box-shadow: var(--shadow);
