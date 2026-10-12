@@ -8,22 +8,20 @@ import PopularityChart from '../../components/PopularityChart.astro';
   <div id="chant" class="chant" aria-hidden="true"></div>
   <div id="stageCall" class="stage-call" aria-hidden="true"></div>
 
-  <nav class="crumbs"><a href="/more/">More Bananas</a> › Banana Clicker</nav>
-
+  <h1 class="sr-only">Banana Clicker: peel bananas for your country</h1>
   <div class="game">
-    <section class="play" id="play">
+    <section class="crate play" id="play">
+      <div class="crate-top"><span class="label">Banana Clicker · world league</span><span class="lvl" id="levelBadge">Level 1</span></div>
+
       <div class="scores">
         <div><span class="lbl">You've peeled</span><b class="num" id="mine">0</b></div>
-        <div><span class="lbl" id="countryLbl">Your country</span><b class="num" id="ours">—</b></div>
-        <div><span class="lbl">The whole world</span><b class="num" id="world">—</b></div>
+        <div><span class="lbl" id="countryLbl">Your country</span><b class="num" id="ours">–</b></div>
+        <div><span class="lbl">The whole world</span><b class="num" id="world">–</b></div>
       </div>
 
       <div class="hype">
-        <div class="hype-top">
-          <span class="stage-name" id="stageName">Chill</span>
-          <span class="hype-next" id="hypeNext">Keep peeling…</span>
-        </div>
-        <div class="hype-bar"><i id="hypeFill"></i></div>
+        <div class="hype-top"><span class="stage-name" id="stageName">Chill</span><span class="hype-next" id="hypeNext">Keep peeling…</span></div>
+        <div class="ripe-scale" id="hypeScale" role="img" aria-label="How hyped the page is"><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i></div>
       </div>
 
       <div class="banana-zone">
@@ -41,12 +39,12 @@ import PopularityChart from '../../components/PopularityChart.astro';
               </defs>
               <g id="whole">
                 <path d="M100 34 C122 34 133 82 131 156 L69 156 C67 82 78 34 100 34 Z" fill="url(#fleshG)"/>
-                <path d="M68 150 C66 214 78 270 100 296 C122 270 134 214 132 150 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/>
+                <path d="M68 150 C66 214 78 270 100 296 C122 270 134 214 132 150 Z" fill="url(#peelG)" stroke="#231A10" stroke-width="3"/>
                 <path d="M86 160 C84 210 90 250 100 280" stroke="#c9970f" stroke-width="2" fill="none" opacity=".5"/>
                 <circle cx="100" cy="297" r="6" fill="#4b3420"/>
-                <g class="flap left"><path d="M100 26 C82 28 68 62 67 152 L101 152 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/></g>
+                <g class="flap left"><path d="M100 26 C82 28 68 62 67 152 L101 152 Z" fill="url(#peelG)" stroke="#231A10" stroke-width="3"/></g>
                 <g class="flap right">
-                  <path d="M100 26 C118 28 132 62 133 152 L99 152 Z" fill="url(#peelG)" stroke="#b8860b" stroke-width="2"/>
+                  <path d="M100 26 C118 28 132 62 133 152 L99 152 Z" fill="url(#peelG)" stroke="#231A10" stroke-width="3"/>
                   <rect x="94" y="8" width="12" height="22" rx="3" fill="#7a4b22"/>
                 </g>
               </g>
@@ -55,25 +53,34 @@ import PopularityChart from '../../components/PopularityChart.astro';
         </button>
       </div>
 
+      <div class="goal">
+        <div class="goal-top"><span id="goalText">Today's crate: 0 of 100 bananas</span><span class="goal-reset" id="goalReset">Resets at midnight</span></div>
+        <div class="goal-bar"><i id="goalFill"></i></div>
+      </div>
       <div class="level">
-        <span id="levelName">Level 1 · Banana Rookie</span>
+        <span id="levelName">Banana Rookie</span> · <span class="level-next" id="levelNext"></span>
         <div class="level-bar"><i id="levelFill"></i></div>
-        <span class="level-next" id="levelNext"></span>
       </div>
 
       <div class="controls">
-        <button id="soundBtn" aria-pressed="true">🔊 Sound on</button>
-        <button id="calmBtn" aria-pressed="false">Calm mode: off</button>
+        <button class="btn plain small" id="soundBtn" aria-pressed="true"></button>
+        <button class="btn plain small" id="calmBtn" aria-pressed="false"></button>
       </div>
-      <p class="hint">Click, tap or press <kbd>Space</kbd>. Keep going and see what happens. <span class="warn">Gets loud and flashy.</span></p>
+      <p class="hint">Click, tap or press <kbd>Space</kbd>. Keep going and see what happens. It gets loud and flashy (calm mode turns that off).</p>
       <div id="pops" class="pops" aria-hidden="true"></div>
       <div id="toast" class="toast" aria-live="polite"></div>
     </section>
 
-    <aside class="board">
-      <h2>World leaderboard <span class="live"><i></i>live</span></h2>
-      <ol id="leaders" class="leaders"><li class="empty">Loading…</li></ol>
-      <p class="note">Your country comes from your connection, as seen by our host, Cloudflare. We only store a total per country, nothing about you. One click is one banana, however hyped you are.</p>
+    <aside class="side">
+      <section class="box board">
+        <div class="box-head"><h2>World league</h2><span class="live"><i></i>live</span></div>
+        <p class="rival" id="rival">Bananas peeled, by country.</p>
+        <ol id="leaders" class="leaders"><li class="empty">Loading…</li></ol>
+        <div class="board-foot">
+          <button class="btn banana" id="shareBtn" type="button">Rally your country</button>
+          <p class="note">Your country comes from your connection, as Cloudflare sees it. We store a total per country, nothing about you. One click is one banana, however hyped you are.</p>
+        </div>
+      </section>
       <PopularityChart />
     </aside>
   </div>
@@ -92,6 +99,14 @@ import PopularityChart from '../../components/PopularityChart.astro';
   const nameOf = (c: string) => (c === 'XX' ? 'Unknown' : (() => { try { return regionName.of(c) || c; } catch { return c; } })());
   const flag = (c: string) => (c === 'XX' ? '🏳️' : String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))));
   const lastIndex = <T,>(a: T[], f: (x: T) => boolean) => { for (let i = a.length - 1; i >= 0; i--) if (f(a[i])) return i; return -1; };
+  const ICON = {
+    on: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke-linecap="round"/></svg>',
+    off: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m17 9 5 6m0-6-5 6" stroke-linecap="round"/></svg>',
+  };
+  // today's crate: a daily goal of 100 bananas, reset at the player's midnight
+  const GOAL = 100;
+  const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+  let daily = (() => { try { const v = JSON.parse(store.get('atb-peel-day') || 'null'); return v && v.day === dayKey() ? v : { day: dayKey(), n: 0 }; } catch { return { day: dayKey(), n: 0 }; } })();
 
   // ---------- stages: how deep into the rave you are ----------
   const STAGES = [
@@ -127,15 +142,28 @@ import PopularityChart from '../../components/PopularityChart.astro';
   function renderScores() {
     $('#mine').textContent = fmt(mine);
     const li = lastIndex(LEVELS, l => mine >= l.at), cur = LEVELS[li], next = LEVELS[li + 1];
-    $('#levelName').textContent = `Level ${li + 1} · ${cur.name}`;
+    $('#levelBadge').textContent = `Level ${li + 1}`;
+    $('#levelName').textContent = cur.name;
     $('#levelFill').style.width = next ? `${((mine - cur.at) / (next.at - cur.at)) * 100}%` : '100%';
     $('#levelNext').textContent = next ? `${fmt(next.at - mine)} to ${next.name}` : 'Maximum banana';
+    if (daily.day !== dayKey()) daily = { day: dayKey(), n: 0 };
+    $('#goalText').textContent = daily.n >= GOAL ? `Today's crate is full: ${fmt(daily.n)} bananas.` : `Today's crate: ${daily.n} of ${GOAL} bananas`;
+    $('#goalReset').textContent = daily.n >= GOAL ? 'Back tomorrow for another' : 'Resets at midnight';
+    $('#goalFill').style.width = `${Math.min(100, (daily.n / GOAL) * 100)}%`;
+    $('.goal').classList.toggle('full', daily.n >= GOAL);
     if (!tally) return;
     const yours = tally.country, total = tally.total + pending, ours = (tally.countries[yours] || 0) + pending;
     $('#world').textContent = fmt(total);
     $('#ours').textContent = fmt(ours);
     $('#countryLbl').textContent = `${flag(yours)} ${nameOf(yours)}`;
     const rows = Object.entries({ ...tally.countries, [yours]: ours }).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+    // the line that makes it personal: where your country stands and who's next
+    const me = rows.findIndex(r => r[0] === yours), mineName = yours && yours !== 'XX' ? nameOf(yours) : null;
+    $('#rival').textContent = !mineName ? `${fmt(total)} bananas peeled in ${rows.length} ${rows.length === 1 ? 'country' : 'countries'}.`
+      : me === 0 ? (rows[1] ? `${mineName} leads. ${nameOf(rows[1][0])} is ${fmt(rows[0][1] - rows[1][1])} bananas behind. They know.` : `${mineName} leads, unopposed. For now.`)
+      : me > 0 ? `${mineName} is #${me + 1}, ${fmt(rows[me - 1][1] - rows[me][1] + 1)} bananas from passing ${nameOf(rows[me - 1][0])}.`
+      : `${mineName} hasn't peeled a banana yet. Start something.`;
+    rank = me >= 0 ? me + 1 : 0; ourName = mineName; ourCount = ours; ourFlag = flag(yours);
     const top = rows[0]?.[1] || 1;
     $('#leaders').innerHTML = rows.length ? rows.slice(0, 15).map(([c, n], i) => `
       <li class="${c === yours ? 'you' : ''}">
@@ -144,6 +172,21 @@ import PopularityChart from '../../components/PopularityChart.astro';
         <span class="bar" style="width:${Math.max(2, (n / top) * 100)}%"></span>
       </li>`).join('') : '<li class="empty">No bananas peeled yet. Be the first!</li>';
   }
+
+  let rank = 0, ourName: string | null = null, ourCount = 0, ourFlag = '';
+  // ---------- share: rally your country ----------
+  $('#shareBtn').addEventListener('click', async () => {
+    const url = 'https://allthingsbanana.com/more/banana-clicker/';
+    const text = ourName && rank
+      ? `🍌 Banana Clicker: ${ourFlag} ${ourName} is #${rank} with ${fmt(ourCount)} bananas peeled. I've peeled ${fmt(mine)}. Help: ${url}`
+      : `🍌 Banana Clicker: I've peeled ${fmt(mine)} bananas. Beat that: ${url}`;
+    try {
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ text }); return; }
+      await navigator.clipboard.writeText(text);
+      $('#shareBtn').textContent = 'Copied. Paste it everywhere.';
+      setTimeout(() => ($('#shareBtn').textContent = 'Rally your country'), 2200);
+    } catch {}
+  });
 
   // ---------- feedback ----------
   function toast(text: string) {
@@ -201,10 +244,14 @@ import PopularityChart from '../../components/PopularityChart.astro';
     hype = Math.min(MAX_HYPE, hype + 1);
     mine++; pending++;
     store.set('atb-peeled', String(mine));
+    if (daily.day !== dayKey()) daily = { day: dayKey(), n: 0 };
+    daily.n++;
+    store.set('atb-peel-day', JSON.stringify(daily));
 
     const before = lastIndex(LEVELS, l => mine - 1 >= l.at), after = lastIndex(LEVELS, l => mine >= l.at);
-    if (after > before) toast(`Level up! You're now a ${LEVELS[after].name} 🍌`);
-    else if ([25, 50, 100, 200, 300, 500, 1000].includes(combo)) toast(`${combo} combo! 🔥`);
+    if (after > before) toast(`Level up: ${LEVELS[after].name}`);
+    else if (daily.n === GOAL) toast(`Today's crate is full. Same time tomorrow?`);
+    else if ([25, 50, 100, 200, 300, 500, 1000].includes(combo)) toast(`${combo} in a row`);
     else if (mine % 100 === 0) toast(`${fmt(mine)} bananas peeled!`);
 
     peelAnimation();
@@ -238,7 +285,7 @@ import PopularityChart from '../../components/PopularityChart.astro';
   const shown = new Map<string, string>();
   const setText = (sel: string, v: string) => { if (shown.get(sel) !== v) { shown.set(sel, v); $(sel).textContent = v; } };
   const setStyle = (sel: string, v: string) => { if (shown.get(sel) !== v) { shown.set(sel, v); $(sel).style.width = v; } };
-  const spinner = $('#spinner'), chantEl = $('#chant');
+  const spinner = $('#spinner'), chantEl = $('#chant'), hypeSegs = [...document.querySelectorAll('#hypeScale i')];
   const chants = ['BA', 'NA', 'NA'];
   let lastBeat = -1;
   function frame(now: number) {
@@ -258,7 +305,8 @@ import PopularityChart from '../../components/PopularityChart.astro';
 
     const next = STAGES[stage + 1];
     setText('#stageName', STAGES[stage].name);
-    setStyle('#hypeFill', `${Math.min(100, (hype / MAX_HYPE) * 100).toFixed(1)}%`);
+    const lit = Math.min(7, Math.ceil((hype / MAX_HYPE) * 7));
+    if (shown.get('lit') !== String(lit)) { shown.set('lit', String(lit)); hypeSegs.forEach((seg, i) => seg.classList.toggle('off', i >= lit)); }
     setText('#hypeNext', next ? `${Math.ceil(next.at - hype)} more to ${next.name}` : 'MAXIMUM BANANA');
 
     const beat = music.beat(now);
@@ -283,7 +331,7 @@ import PopularityChart from '../../components/PopularityChart.astro';
 
   // ---------- sound and calm mode ----------
   function syncButtons() {
-    $('#soundBtn').textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
+    $('#soundBtn').innerHTML = `${muted ? ICON.off : ICON.on} Sound ${muted ? 'off' : 'on'}`;
     $('#soundBtn').setAttribute('aria-pressed', String(!muted));
     $('#calmBtn').textContent = `Calm mode: ${calm ? 'on' : 'off'}`;
     $('#calmBtn').setAttribute('aria-pressed', String(calm));
@@ -310,7 +358,7 @@ import PopularityChart from '../../components/PopularityChart.astro';
     try { tally = await (await fetch('/api/peel')).json(); renderScores(); } catch {}
   }
   setInterval(flush, 1500);
-  setInterval(refresh, 5000);
+  setInterval(() => { if (!document.hidden) refresh(); }, 10_000);   // no refreshes in background tabs
   addEventListener('pagehide', () => {
     if (pending) navigator.sendBeacon('/api/peel', new Blob([JSON.stringify({ n: Math.min(pending, 60) })], { type: 'application/json' }));
   });
@@ -322,38 +370,34 @@ import PopularityChart from '../../components/PopularityChart.astro';
   /* the rave layer covers the whole page, under the game itself */
   .rave { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 40; pointer-events: none; opacity: 0; transition: opacity .4s; }
   .chant, .stage-call { position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 41; pointer-events: none; opacity: 0;
-    font-weight: 900; letter-spacing: -0.04em; color: #ffe066; text-shadow: 0 0 30px rgba(255, 200, 0, .7), 0 6px 0 #8a5a1c; white-space: nowrap; }
-  .chant { font-size: min(34vw, 420px); color: rgba(255, 224, 102, .18); text-shadow: none; }
+    font-family: var(--display); color: #FFD23F; text-shadow: 0 0 30px rgba(255, 200, 0, .6), 0 6px 0 #7A4520; white-space: nowrap; }
+  .chant { font-size: min(34vw, 420px); color: rgba(255, 210, 63, .18); text-shadow: none; }
   .stage-call { z-index: 60; font-size: clamp(36px, 8vw, 96px); top: 30%; }
 
-  .crumbs { padding-top: 18px; font-size: 13px; color: var(--ink-3); }
-  .crumbs a { color: var(--link); text-decoration: none; }
-  .game { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; padding-top: 12px; align-items: start; }
-  .play { position: relative; z-index: 45; background: radial-gradient(700px 420px at 50% 55%, #3a2f0e, var(--surface) 70%); border: 1px solid var(--border); border-radius: 16px;
-    padding: 20px 20px 22px; display: flex; flex-direction: column; align-items: center; overflow: hidden; user-select: none; -webkit-user-select: none;
-    transition: background .6s, border-color .6s; }
+  .game { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 30px; padding-top: 34px; align-items: start; }
+  .play { position: relative; z-index: 45; display: flex; flex-direction: column; align-items: center; overflow: hidden; user-select: none; -webkit-user-select: none;
+    background: radial-gradient(520px 360px at 50% 52%, color-mix(in srgb, var(--banana) 30%, var(--card)), var(--card) 70%); transition: background .6s; }
+  .play .crate-top { width: 100%; }
+  .lvl { font: 400 19px/1 var(--display); }
   /* deeper in, the game box melts into the rave */
-  :global(body[data-rave="3"]) .play, :global(body[data-rave="4"]) .play, :global(body[data-rave="5"]) .play { background: rgba(0, 0, 0, .25); border-color: transparent; overflow: visible; }
+  :global(body[data-rave="3"]) .play, :global(body[data-rave="4"]) .play, :global(body[data-rave="5"]) .play { background: rgba(0, 0, 0, .25); overflow: visible; }
 
-  .scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 10px; text-align: center; }
-  .scores div { background: rgba(0, 0, 0, .3); border-radius: 12px; padding: 10px 6px; }
-  .lbl { display: block; font-size: 12px; color: var(--ink-3); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .scores b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
-  #mine { color: var(--brand-ink); }
+  .scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; text-align: center; border: 2px solid var(--ink); margin-top: 16px; background: var(--card); }
+  .scores div { padding: 10px 6px; border-right: 2px solid var(--ink); min-width: 0; }
+  .scores div:last-child { border-right: 0; }
+  .lbl { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scores b { display: block; font: 400 30px/1.15 var(--display); }
 
-  .hype { width: 100%; margin-top: 14px; }
-  .hype-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; margin-bottom: 5px; }
-  .stage-name { font-weight: 900; letter-spacing: .02em; text-transform: uppercase; color: var(--brand-ink); }
-  .hype-next { color: var(--ink-3); font-weight: 600; }
-  .hype-bar, .level-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .08); overflow: hidden; }
-  .hype-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #f2b81f, #ff7a18, #ff2e88, #8b5cf6, #22d3ee); background-size: 420px 100%; transition: width .15s; }
+  .hype { width: 100%; margin-top: 16px; }
+  .hype-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; margin-bottom: 5px; }
+  .stage-name { font: 700 var(--t-label) var(--text); letter-spacing: .12em; text-transform: uppercase; }
+  .hype-next { color: var(--ink-2); }
 
-  .banana-zone { position: relative; margin-top: 10px; }
-  .combo { position: absolute; right: -36px; top: 30px; z-index: 2; font-weight: 900; font-size: 28px; color: #ff7a18; text-shadow: 0 2px 10px rgba(0, 0, 0, .5); transform: rotate(10deg); }
+  .banana-zone { position: relative; margin-top: 6px; }
+  .combo { position: absolute; right: -40px; top: 30px; z-index: 2; font: 400 30px/1 var(--display); color: var(--stamp); transform: rotate(10deg); }
   .banana-btn { background: none; border: none; cursor: pointer; padding: 10px; border-radius: 50%; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-  .banana-btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 6px; }
   .spinner { display: block; transform: rotate(-12deg); will-change: transform; }
-  .banana-btn svg { display: block; filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .45)); transition: transform .12s; }
+  .banana-btn svg { display: block; filter: drop-shadow(0 14px 18px rgba(35, 26, 16, .3)); transition: transform .12s; }
   .banana-btn:hover svg { transform: scale(1.02); }
   /* a drop shadow is expensive to redraw on a spinning banana, so it goes once the banana starts moving */
   :global(body[data-rave]:not([data-rave="0"])) .banana-btn svg { filter: none; }
@@ -363,49 +407,57 @@ import PopularityChart from '../../components/PopularityChart.astro';
   .flap.left { transform-origin: 0% 100%; }
   .flap.right { transform-origin: 100% 100%; }
 
-  .level { width: 100%; max-width: 420px; text-align: center; font-size: 12.5px; font-weight: 700; color: var(--ink-2); margin-top: 8px; }
-  .level-bar { height: 5px; margin: 6px 0 4px; }
-  .level-bar i { display: block; height: 100%; width: 0; background: var(--brand); border-radius: inherit; transition: width .2s; }
-  .level-next { color: var(--ink-3); font-weight: 600; font-size: 11.5px; }
-  .controls { display: flex; gap: 8px; margin-top: 14px; }
-  .controls button { font: 600 12.5px var(--text); color: var(--ink-2); background: rgba(0, 0, 0, .3); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
-  .controls button:hover { color: var(--ink); }
-  .hint { color: var(--ink-3); font-size: 12.5px; margin: 10px 0 0; text-align: center; }
-  .warn { color: var(--ink-2); }
-  kbd { font: 600 11px var(--text); background: var(--chip); border-radius: 4px; padding: 1px 6px; }
+  .goal, .level { width: 100%; max-width: 460px; }
+  .goal-top { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; font-weight: 700; }
+  .goal-reset { font-weight: 500; color: var(--ink-2); font-size: 14px; }
+  .goal-bar, .level-bar { border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: var(--paper); margin-top: 5px; }
+  .goal-bar { height: 16px; }
+  .goal-bar i, .level-bar i { display: block; height: 100%; width: 0; background: var(--banana); border-right: 2px solid var(--ink); transition: width .2s; }
+  .goal.full .goal-bar i { background: var(--r6); border-right: 0; }
+  .level { margin-top: 12px; font-size: 14px; color: var(--ink-2); text-align: center; }
+  .level #levelName { font-weight: 700; color: var(--ink); }
+  .level-bar { height: 10px; }
+  .level-bar i { background: var(--r2); }
+  .controls { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+  .controls .btn { min-height: 44px; font-size: 14.5px; padding: 0 14px; }
+  .hint { color: var(--ink-2); font-size: 14px; margin: 12px 0 0; text-align: center; max-width: 460px; }
+  kbd { font: 700 12.5px var(--text); border: 2px solid var(--ink); border-radius: 4px; padding: 0 6px; }
   .pops { position: absolute; inset: 0; pointer-events: none; }
-  .pops :global(.pop) { position: absolute; font-weight: 900; font-size: 26px; color: var(--brand-ink); text-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
-  .toast { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 3;
-    background: #1d1600; color: #ffe066; border: 2px solid var(--brand); font-weight: 800; font-size: 15px; padding: 8px 16px; border-radius: 999px; white-space: nowrap; }
+  .pops :global(.pop) { position: absolute; font: 400 28px/1 var(--display); color: var(--ink); }
+  .toast { position: absolute; left: 50%; top: 170px; transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 3;
+    background: var(--banana); color: var(--on-banana); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); font-weight: 700; font-size: 16px; padding: 8px 16px; white-space: nowrap; }
 
-  .board { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; position: sticky; top: 16px; }
-  .board h2 { font-size: 17px; font-weight: 800; margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between; }
-  .live { font-size: 12px; font-weight: 600; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
-  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--up); animation: pulse 2s infinite; }
-  @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 55%, transparent); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-  .leaders { list-style: none; margin: 0; padding: 0; }
-  .leaders :global(li) { position: relative; display: grid; grid-template-columns: 26px 26px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 8px 6px; border-radius: 8px; font-size: 14px; }
-  .leaders :global(li + li) { margin-top: 2px; }
-  .leaders :global(.rank) { color: var(--ink-3); font-weight: 700; font-size: 12px; }
+  .side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 16px; }
+  .live { font-size: 13px; font-weight: 700; color: var(--leaf); display: flex; align-items: center; gap: 6px; }
+  .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--leaf); }
+  @media (prefers-reduced-motion: no-preference) { .live i { animation: pulse 2s infinite; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  .rival { margin: 10px 14px 6px; font-size: 15.5px; color: var(--ink-2); }
+  .leaders { list-style: none; margin: 0; padding: 0 14px; max-height: 420px; overflow: auto; }
+  .leaders :global(li) { position: relative; display: grid; grid-template-columns: 24px 28px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15.5px; }
+  .leaders :global(.rank) { color: var(--ink-3); font-weight: 700; font-size: 13px; }
   .leaders :global(.flag) { font-size: 18px; }
   .leaders :global(.name) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-  .leaders :global(.name em) { font-style: normal; font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: #1d1600; background: var(--brand); border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
-  .leaders :global(b) { font-weight: 800; }
-  .leaders :global(.bar) { position: absolute; left: 0; bottom: 0; height: 3px; border-radius: 2px; background: var(--brand); opacity: .55; }
-  .leaders :global(li.you) { background: color-mix(in srgb, var(--brand) 12%, transparent); }
+  .leaders :global(.name em) { font-style: normal; font-size: 12px; font-weight: 700; color: var(--on-banana); background: var(--banana); padding: 1px 6px; margin-left: 4px; }
+  .leaders :global(b) { font-variant-numeric: tabular-nums; }
+  .leaders :global(.bar) { position: absolute; left: 0; bottom: -1px; height: 3px; background: var(--banana-ink); opacity: .7; }
+  .leaders :global(li.you) { font-weight: 700; }
   .leaders :global(.empty) { display: block; color: var(--ink-3); padding: 12px 0; }
-  .note { color: var(--ink-3); font-size: 12px; margin: 12px 0 0; }
+  .board-foot { padding: 12px 14px 14px; }
+  .board-foot .btn { width: 100%; }
+  .note { color: var(--ink-3); font-size: 13px; margin: 10px 0 0; }
 
   @media (max-width: 900px) {
-    .game { grid-template-columns: 1fr; }
-    .board { position: static; }
+    .game { grid-template-columns: 1fr; padding-top: 30px; }
+    .side { position: static; }
     .combo { right: -10px; }
   }
   @media (max-width: 480px) {
-    .play { padding: 14px 10px 20px; }
-    .scores { gap: 6px; }
-    .lbl { font-size: 11px; }
+    .play.crate { padding: 16px 12px 18px; }
+    .lbl { font-size: 12px; }
     .scores b { font-size: 22px; }
-    .banana-btn svg { width: 170px; height: 280px; }
+    .banana-btn svg { width: 160px; height: 264px; }
+    .hype-next { font-size: 13px; }
+    .goal-top { flex-direction: column; gap: 0; }
   }
 </style>
