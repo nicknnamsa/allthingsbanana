@@ -24,6 +24,13 @@ const nutRows = nut ? [
 ] : [];
 const perLabel = nut ? (nut.per === 'serving' ? `per serving (serves ${nut.servings})` : `per ${nut.per} (makes about ${nut.servings})`) : '';
 
+// a step's name: its first clause, cut to a few words ("Mix the crushed biscuits with the melted butter")
+const stepName = (text: string) => {
+  const first = text.split(/[.,;:]\s/)[0].replace(/\.$/, '');
+  const words = first.split(/\s+/);
+  return words.length > 8 ? words.slice(0, 8).join(' ') + '…' : first;
+};
+
 // structured data so search engines can show it as a recipe
 const jsonLd = {
   '@context': 'https://schema.org', '@type': 'Recipe',
@@ -31,7 +38,8 @@ const jsonLd = {
   totalTime: `PT${r.mins}M`, recipeCategory: r.meals.map(mealLabel).join(', '), recipeCuisine: r.origin,
   keywords: ['banana', ...r.meals, ...r.diet].join(', '),
   recipeIngredient: r.ingredients,
-  recipeInstructions: r.steps.map(text => ({ '@type': 'HowToStep', text })),
+  // each step gets a short name (its opening words) and its own link, so search results can point at a step
+  recipeInstructions: r.steps.map((text, i) => ({ '@type': 'HowToStep', name: stepName(text), text, url: `${new URL(`/recipes/${r.slug}/`, Astro.site).href}#step-${i + 1}` })),
   ...(r.diet.includes('vegan') ? { suitableForDiet: 'https://schema.org/VeganDiet' } : r.diet.includes('gluten-free') ? { suitableForDiet: 'https://schema.org/GlutenFreeDiet' } : {}),
   author: { '@type': 'Organization', name: 'All Things Banana' },
   ...(photo ? { image: new URL(photo.src, Astro.site).href } : {}),
@@ -115,7 +123,7 @@ const jsonLd = {
       <section class="method">
         <div class="col-head"><h2>Method</h2><button class="link" onclick="window.print()">Print</button></div>
         <ol id="steps">
-          {r.steps.map(s => <li><button>{s}</button></li>)}
+          {r.steps.map((s, i) => <li id={`step-${i + 1}`}><button>{s}</button></li>)}
         </ol>
         {r.tip && <aside class="tip"><b>Tip</b> {r.tip}</aside>}
         {/banana-bread/.test(r.slug) && <a class="hub" href="/topics/banana-bread/">Everything about banana bread: history, the science of ripeness and the internet's favourite recipes →</a>}
