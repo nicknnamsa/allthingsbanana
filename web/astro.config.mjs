@@ -12,7 +12,7 @@ export default defineConfig({
   // sitemap-index.xml for search engines: every page except redirects and the 404 page
   integrations: [
     sitemap({
-      filter: page => !['/banana-cube/', '/markets/', '/more/six-degrees/'].includes(new URL(page).pathname) && !page.includes('/404'),
+      filter: page => !['/banana-cube/', '/markets/', '/more/six-degrees/', '/banadaw/'].includes(new URL(page).pathname) && !page.includes('/404'),
     }),
   ],
 });

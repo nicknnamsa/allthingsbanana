@@ -3,8 +3,9 @@
 // image: the picture shown when the page is shared (1200×630, in public/og/)
 // ticker: show the market strip under the header (home page and Prices only)
 import '../styles/site.css';
-interface Props { title: string; description: string; wide?: boolean; section?: string; bare?: boolean; image?: string; ticker?: boolean }
-const { title, description, wide = false, section = '', bare = false, image = '/og/default.jpg', ticker = false } = Astro.props;
+// noindex: keep a page out of search engines (pages still being tested)
+interface Props { title: string; description: string; wide?: boolean; section?: string; bare?: boolean; image?: string; ticker?: boolean; noindex?: boolean }
+const { title, description, wide = false, section = '', bare = false, image = '/og/default.jpg', ticker = false, noindex = false } = Astro.props;
 const path = Astro.url.pathname;
 import { recipes, recipePhoto, formatTime } from '../data/recipes';
 // a small index of recipes for the header search and the home page's recipe of the day
@@ -25,6 +26,7 @@ const tabs = [
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
   <meta name="description" content={description}>
+  {noindex && <meta name="robots" content="noindex">}
   <link rel="canonical" href={new URL(path, Astro.site)}>
   <meta property="og:site_name" content="All Things Banana">
   <meta property="og:title" content={title}>

@@ -1,0 +1,508 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base wide noindex title="BanaDAW · make banana music in your browser · All Things Banana"
+      description="BanaDAW: a music studio in your browser. Program drums and melodies, pick a key and scale, arrange crates into a song, then share a link or download a WAV. Chill to full rave.">
+  <div class="daw" id="daw">
+    <!-- transport: the one crate label on the page -->
+    <section class="crate top">
+      <div class="crate-top">
+        <span class="label">BanaDAW · beta</span>
+        <input class="song-name" id="songName" aria-label="Song name" maxlength="60">
+      </div>
+      <div class="transport">
+        <button class="btn" id="playCrate" title="Loop the selected crate (Space)">▶ Loop crate</button>
+        <button class="btn banana" id="playSong" title="Play every crate in order">▶ Play song</button>
+        <button class="btn plain" id="stopBtn" title="Stop (Space)">■ Stop</button>
+        <span class="mascot" id="mascot" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z" fill="var(--banana)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M5.5 8.5 4.6 4.4l3 1.3" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <label class="field">Tempo <input type="number" id="bpm" min="60" max="190" step="1"> <small>BPM</small></label>
+        <label class="field">Swing <input type="range" id="swing" min="0" max="0.6" step="0.05"></label>
+        <label class="field">Key <select id="root"></select></label>
+        <label class="field">Scale <select id="scale"></select></label>
+        <span class="spacer"></span>
+        <button class="btn plain" id="undoBtn" title="Undo (Ctrl/Cmd+Z)">Undo</button>
+        <button class="btn plain" id="redoBtn" title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
+      </div>
+      <div class="styles">
+        <span class="lbl">Start from</span>
+        <span id="styleBtns"></span>
+        <span class="spacer"></span>
+        <button class="btn plain" id="shareBtn">Share link</button>
+        <button class="btn plain" id="wavBtn">Download WAV</button>
+      </div>
+      <p class="remix" id="remixNote" hidden>You opened someone's song. Change anything you like: it's your remix now, and Share link gives you its own link.</p>
+    </section>
+
+    <!-- crates: the song's sections -->
+    <section class="crates">
+      <div class="crates-head"><h2>Crates</h2><span class="hint">Sections of your song. Play song runs through them in order.</span></div>
+      <div class="crate-row" id="crateRow"></div>
+    </section>
+
+    <div class="studio">
+      <!-- hands: the tracks -->
+      <section class="box hands">
+        <div class="box-head"><h2>Hands</h2><span class="hint">tracks</span></div>
+        <ol class="track-list" id="trackList"></ol>
+        <div class="add-row">
+          <button class="tog" id="addSynth">+ Synth</button>
+          <button class="tog" id="addDrums">+ Drums</button>
+        </div>
+      </section>
+
+      <!-- the editor for the selected hand -->
+      <section class="box editor">
+        <div class="box-head ed-head">
+          <h2 id="edTitle">Drums</h2>
+          <div class="ed-tools">
+            <span class="lbl">Ripeness</span>
+            <span class="brush" id="brush" role="radiogroup" aria-label="Ripeness of new notes (how hard they hit)"></span>
+            <label class="field syn-only">Length <select id="noteLen"><option value="1">1/16</option><option value="2" selected>1/8</option><option value="4">1/4</option><option value="8">1/2</option><option value="16">1 bar</option></select></label>
+            <label class="field syn-only">Octave <select id="oct"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+            <label class="field syn-only">Brightness <input type="range" id="tone" min="0" max="1" step="0.05"></label>
+            <button class="link-btn" id="clearBtn">Clear</button>
+          </div>
+        </div>
+        <div class="grid-wrap" id="gridWrap">
+          <div class="grid" id="grid"></div>
+        </div>
+        <p class="ed-help" id="edHelp"></p>
+      </section>
+    </div>
+
+    <!-- the market board: the mixer -->
+    <section class="box board">
+      <div class="box-head"><h2>Market board</h2><span class="hint">the mixer</span></div>
+      <div class="mixer" id="mixer"></div>
+    </section>
+  </div>
+</Base>
+
+<script>
+  import { Engine, renderWav } from '../scripts/banadaw/engine';
+  import {
+    type Song, type Track, type Crate, type Ripe, type DrumLane, type Note,
+    STYLES, SCALES, KITS, SYNTHS, LANES, NOTE_NAMES, RIPE_NAMES, STEPS_PER_BAR, blankSong, newId, rowsFor, midiOf, noteName, stepsOf, encodeSong, decodeSong,
+  } from '../scripts/banadaw/song';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+  const store = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch {} } };
+
+  const engine = new Engine();
+  let song: Song;
+  let sel = { crate: 0, track: '' };
+  let brush: Ripe = 3;
+  const past: string[] = [], future: string[] = [];
+
+  // ---------- changing the song (everything goes through here, so undo and autosave just work) ----------
+  function change(fn: (s: Song) => void, redraw: ('top' | 'crates' | 'tracks' | 'grid' | 'mixer')[] = ['crates', 'tracks', 'grid', 'mixer']) {
+    past.push(JSON.stringify(song)); if (past.length > 120) past.shift();
+    future.length = 0;
+    fn(song);
+    commit(redraw);
+  }
+  function commit(redraw: string[]) {
+    engine.setSong(song);
+    store.set('banadaw-song', JSON.stringify(song));
+    for (const r of redraw) ({ top: drawTop, crates: drawCrates, tracks: drawTracks, grid: drawGrid, mixer: drawMixer } as Record<string, () => void>)[r]?.();
+  }
+  function load(s: Song) {
+    song = s;
+    sel.crate = Math.min(sel.crate, s.crates.length - 1);
+    if (!s.tracks.some(t => t.id === sel.track)) sel.track = s.tracks[0]?.id || '';
+    commit(['top', 'crates', 'tracks', 'grid', 'mixer']);
+  }
+  function undo() { const p = past.pop(); if (!p) return; future.push(JSON.stringify(song)); load(JSON.parse(p)); }
+  function redo() { const f = future.pop(); if (!f) return; past.push(JSON.stringify(song)); load(JSON.parse(f)); }
+  const crate = () => song.crates[sel.crate];
+  const track = () => song.tracks.find(t => t.id === sel.track)!;
+
+  // ---------- top bar ----------
+  $('root').innerHTML = NOTE_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
+  $('scale').innerHTML = SCALES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+  $('styleBtns').innerHTML = STYLES.map(s => `<button class="tog" data-style="${s.id}" title="${esc(s.blurb)}">${s.label}</button>`).join('') + '<button class="tog" data-style="blank">Blank</button>';
+  function drawTop() {
+    ($('songName') as HTMLInputElement).value = song.name;
+    ($('bpm') as HTMLInputElement).value = String(song.bpm);
+    ($('swing') as HTMLInputElement).value = String(song.swing);
+    ($('root') as HTMLSelectElement).value = String(song.root);
+    ($('scale') as HTMLSelectElement).value = song.scale;
+  }
+  $('songName').addEventListener('change', e => change(s => { s.name = (e.target as HTMLInputElement).value.trim() || 'Untitled bunch'; }, []));
+  $('bpm').addEventListener('change', e => change(s => { s.bpm = Math.max(60, Math.min(190, Math.round(+(e.target as HTMLInputElement).value) || 110)); }, ['top']));
+  $('swing').addEventListener('change', e => change(s => { s.swing = +(e.target as HTMLInputElement).value; }, []));
+  $('root').addEventListener('change', e => change(s => { s.root = +(e.target as HTMLSelectElement).value; }, ['grid']));
+  $('scale').addEventListener('change', e => change(s => { s.scale = (e.target as HTMLSelectElement).value as Song['scale']; }, ['grid']));
+  $('styleBtns').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+    if (!confirm('Start a new song? (Undo brings this one back.)')) return;
+    const st = STYLES.find(x => x.id === b.dataset.style);
+    change(s => Object.assign(s, st ? st.make() : blankSong()), []);
+    sel = { crate: 0, track: song.tracks[0].id };
+    load(song);
+  });
+  $('undoBtn').addEventListener('click', undo);
+  $('redoBtn').addEventListener('click', redo);
+
+  // ---------- transport ----------
+  const playBtns = () => { $('playCrate').classList.toggle('on', engine.playing && engine.mode === 'crate'); $('playSong').classList.toggle('on', engine.playing && engine.mode === 'song'); };
+  $('playCrate').addEventListener('click', () => { engine.setSong(song); engine.play('crate', sel.crate); playBtns(); });
+  $('playSong').addEventListener('click', () => { engine.setSong(song); engine.play('song', 0); playBtns(); });
+  $('stopBtn').addEventListener('click', () => { engine.stop(); playBtns(); });
+  addEventListener('keydown', e => {
+    const typing = (e.target as HTMLElement).closest('input, select, textarea');
+    if (e.code === 'Space' && !typing) { e.preventDefault(); if (engine.playing) engine.stop(); else engine.play('crate', sel.crate); playBtns(); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  });
+
+  // ---------- crates ----------
+  function drawCrates() {
+    $('crateRow').innerHTML = song.crates.map((c, i) => `
+      <div class="crate-tile${i === sel.crate ? ' on' : ''}" data-i="${i}">
+        <button class="ct-pick" data-act="pick">${i + 1}</button>
+        <input class="ct-name" data-act="name" value="${esc(c.name)}" aria-label="Crate name" maxlength="24">
+        <label class="ct-f">bars <select data-act="bars">${[1, 2, 4].map(b => `<option${b === c.bars ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
+        <label class="ct-f">× <select data-act="times">${[1, 2, 3, 4, 6, 8].map(b => `<option${b === c.times ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
+        <span class="ct-acts">
+          <button data-act="left" title="Move earlier" ${i === 0 ? 'disabled' : ''}>←</button>
+          <button data-act="right" title="Move later" ${i === song.crates.length - 1 ? 'disabled' : ''}>→</button>
+          <button data-act="dup" title="Duplicate">Copy</button>
+          <button data-act="del" title="Delete" ${song.crates.length === 1 ? 'disabled' : ''}>Delete</button>
+        </span>
+      </div>`).join('') + `<button class="tog new-crate" id="newCrate">+ New crate</button>`;
+  }
+  $('crateRow').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+    if (b.id === 'newCrate') { change(s => { s.crates.push({ id: newId(), name: `Crate ${s.crates.length + 1}`, bars: 2, times: 1, drums: {}, notes: {} }); sel.crate = s.crates.length - 1; }); return; }
+    const i = +(b.closest('[data-i]') as HTMLElement).dataset.i!, act = b.dataset.act;
+    if (act === 'pick') { sel.crate = i; drawCrates(); drawGrid(); if (engine.playing && engine.mode === 'crate') engine.play('crate', i); return; }
+    change(s => {
+      if (act === 'left' || act === 'right') { const j = act === 'left' ? i - 1 : i + 1; [s.crates[i], s.crates[j]] = [s.crates[j], s.crates[i]]; sel.crate = j; }
+      if (act === 'dup') { const c = clone(s.crates[i]); c.id = newId(); c.name = `${c.name} copy`.slice(0, 24); s.crates.splice(i + 1, 0, c); sel.crate = i + 1; }
+      if (act === 'del' && confirm(`Delete crate “${s.crates[i].name}”?`)) { s.crates.splice(i, 1); sel.crate = Math.max(0, Math.min(sel.crate, s.crates.length - 1)); }
+    });
+  });
+  $('crateRow').addEventListener('change', e => {
+    const el = e.target as HTMLInputElement, i = +(el.closest('[data-i]') as HTMLElement).dataset.i!;
+    change(s => {
+      const c = s.crates[i];
+      if (el.dataset.act === 'name') c.name = el.value.trim() || `Crate ${i + 1}`;
+      if (el.dataset.act === 'bars') c.bars = +el.value as Crate['bars'];
+      if (el.dataset.act === 'times') c.times = +el.value;
+    }, ['crates', 'grid']);
+  });
+
+  // ---------- hands (tracks) ----------
+  function drawTracks() {
+    $('trackList').innerHTML = song.tracks.map(t => `
+      <li class="${t.id === sel.track ? 'on' : ''}${t.mute ? ' peeled' : ''}" data-id="${t.id}">
+        <button class="tr-pick" data-act="pick"><b>${esc(t.name)}</b><span>${t.kind === 'drums' ? KITS.find(k => k.id === t.kit)!.label.split(' (')[0] + ' kit' : SYNTHS.find(x => x.id === t.synth)!.label.split(' (')[0]}</span></button>
+        <select data-act="inst" aria-label="Instrument">${t.kind === 'drums'
+          ? KITS.map(k => `<option value="${k.id}"${k.id === t.kit ? ' selected' : ''}>${k.label}</option>`).join('')
+          : SYNTHS.map(k => `<option value="${k.id}"${k.id === t.synth ? ' selected' : ''}>${k.label}</option>`).join('')}</select>
+        <span class="tr-acts">
+          <button class="mini${t.mute ? ' on' : ''}" data-act="mute" title="Peel (mute)" aria-pressed="${t.mute}">Peel</button>
+          <button class="mini${t.solo ? ' on' : ''}" data-act="solo" title="Solo" aria-pressed="${t.solo}">Solo</button>
+          <button class="mini" data-act="rename" title="Rename" aria-label="Rename">✎</button>
+          <button class="mini" data-act="del" title="Delete" ${song.tracks.length === 1 ? 'disabled' : ''}>×</button>
+        </span>
+      </li>`).join('');
+  }
+  $('trackList').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
+    const id = (b.closest('[data-id]') as HTMLElement).dataset.id!, act = b.dataset.act;
+    if (act === 'pick') { sel.track = id; drawTracks(); drawGrid(); return; }
+    if (act === 'rename') { const t = song.tracks.find(x => x.id === id)!; const n = prompt('Name this hand', t.name); if (n?.trim()) change(s => { s.tracks.find(x => x.id === id)!.name = n.trim().slice(0, 24); }, ['tracks', 'grid', 'mixer']); return; }
+    change(s => {
+      const t = s.tracks.find(x => x.id === id)!;
+      if (act === 'mute') t.mute = !t.mute;
+      if (act === 'solo') t.solo = !t.solo;
+      if (act === 'del' && confirm(`Delete “${t.name}” and everything it plays?`)) {
+        s.tracks = s.tracks.filter(x => x.id !== id);
+        for (const c of s.crates) { delete c.drums[id]; delete c.notes[id]; }
+        if (sel.track === id) sel.track = s.tracks[0].id;
+      }
+    }, ['tracks', 'grid', 'mixer']);
+  });
+  $('trackList').addEventListener('change', e => {
+    const el = e.target as HTMLSelectElement, id = (el.closest('[data-id]') as HTMLElement).dataset.id!;
+    change(s => { const t = s.tracks.find(x => x.id === id)!; if (t.kind === 'drums') t.kit = el.value as any; else t.synth = el.value as any; }, ['tracks', 'grid']);
+  });
+  $('addSynth').addEventListener('click', () => change(s => { const id = newId(); s.tracks.push({ id, kind: 'synth', name: `Synth ${s.tracks.length}`, synth: 'pluck', oct: 4, tone: 0.6, vol: 0.7, pan: 0, rev: 0.2, dly: 0, mute: false, solo: false }); sel.track = id; }));
+  $('addDrums').addEventListener('click', () => change(s => { const id = newId(); s.tracks.push({ id, kind: 'drums', name: 'More drums', kit: 'chill', vol: 0.8, pan: 0, rev: 0.1, dly: 0, mute: false, solo: false }); sel.track = id; }));
+
+  // ---------- ripeness brush ----------
+  $('brush').innerHTML = [1, 2, 3, 4].map(r => `<button class="rb r${r}" data-r="${r}" role="radio" title="${RIPE_NAMES[r]}" aria-label="${RIPE_NAMES[r]}"></button>`).join('');
+  const drawBrush = () => $('brush').querySelectorAll<HTMLButtonElement>('button').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.r! === brush)));
+  $('brush').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { brush = +b.dataset.r! as Ripe; drawBrush(); } });
+  drawBrush();
+
+  // ---------- the grid: drum lanes or a piano roll ----------
+  type Row = { label: string; lane?: DrumLane; d?: number; root?: boolean };
+  let rows: Row[] = [];
+  function drawGrid() {
+    const c = crate(), t = track(), steps = stepsOf(c);
+    const isDrums = t.kind === 'drums';
+    $('edTitle').textContent = `${t.name} · ${c.name}`;
+    document.querySelectorAll<HTMLElement>('.syn-only').forEach(el => (el.hidden = isDrums));
+    if (!isDrums) { ($('oct') as HTMLSelectElement).value = String(t.oct); ($('tone') as HTMLInputElement).value = String(t.tone); }
+    rows = isDrums ? LANES.map(l => ({ label: l.label, lane: l.id }))
+      : Array.from({ length: rowsFor(song.scale) }, (_, i) => { const d = rowsFor(song.scale) - 1 - i, m = midiOf(song, t.oct, d); return { label: noteName(m), d, root: (m - song.root) % 12 === 0 }; });
+    const g = $('grid');
+    const room = $('gridWrap').clientWidth - 24 - 76;
+    g.style.setProperty('--cw', `${Math.max(matchMedia('(pointer: coarse)').matches ? 30 : 20, Math.min(44, Math.floor(room / steps)))}px`);
+    g.style.setProperty('--steps', String(steps));
+    g.style.setProperty('--rows', String(rows.length));
+    g.className = `grid ${isDrums ? 'drums' : 'roll'}`;
+    let html = `<div class="g-labels">${rows.map((r, i) => `<button class="g-label${r.root ? ' root' : ''}" data-row="${i}" tabindex="-1">${r.label}</button>`).join('')}</div><div class="g-cells" id="cells">`;
+    html += `<div class="g-bg">${rows.map(r => `<div class="g-rowbg${r.root ? ' root' : ''}"></div>`).join('')}</div>`;
+    if (isDrums) {
+      const lanes = c.drums[t.id] || {};
+      rows.forEach((r, ri) => (lanes[r.lane!] || []).forEach((v, s) => { if (v && s < steps) html += `<i class="hit r${v}" style="grid-row:${ri + 1};grid-column:${s + 1}"></i>`; }));
+    } else {
+      for (const n of c.notes[t.id] || []) {
+        const ri = rows.findIndex(r => r.d === n.d);
+        if (ri < 0 || n.s >= steps) continue;
+        html += `<i class="note r${n.v}" style="grid-row:${ri + 1};grid-column:${n.s + 1} / span ${Math.min(n.l, steps - n.s)}"></i>`;
+      }
+    }
+    html += `<div class="playhead" id="playhead" hidden></div></div>`;
+    g.innerHTML = html;
+    $('edHelp').textContent = isDrums
+      ? 'Tap a step to drop a banana at the brush ripeness; tap it again to take it off. Drag to paint. Riper bananas hit harder.'
+      : `Tap to add a note (${['', '1/16', '1/8', '', '1/4', '', '', '', '1/2'][+($('noteLen') as HTMLSelectElement).value] || '1 bar'} long), drag right to stretch it, tap a note to remove it. Every row is in ${NOTE_NAMES[song.root]} ${SCALES.find(s => s.id === song.scale)!.label.toLowerCase()}, so nothing sounds wrong.`;
+  }
+  // which row and step a pointer is over
+  function cellAt(e: PointerEvent) {
+    const cells = $('cells'), r = cells.getBoundingClientRect();
+    const steps = stepsOf(crate());
+    const step = Math.floor(((e.clientX - r.left) / r.width) * steps), row = Math.floor(((e.clientY - r.top) / r.height) * rows.length);
+    return step >= 0 && step < steps && row >= 0 && row < rows.length ? { step, row } : null;
+  }
+  let drag: null | { mode: 'paint' | 'erase'; noteAt?: Note; startStep: number; row: number; moved: boolean } = null;
+  $('grid').addEventListener('pointerdown', e => {
+    const label = (e.target as HTMLElement).closest('.g-label') as HTMLElement | null;
+    if (label) { const r = rows[+label.dataset.row!]; engine.setSong(song); engine.preview(track(), { lane: r.lane, d: r.d, v: brush }); return; }
+    const at = cellAt(e); if (!at) return;
+    e.preventDefault();
+    ($('grid') as HTMLElement).setPointerCapture(e.pointerId);
+    const t = track(), r = rows[at.row];
+    past.push(JSON.stringify(song)); if (past.length > 120) past.shift(); future.length = 0;
+    engine.setSong(song);
+    if (t.kind === 'drums') {
+      const lanes = (crate().drums[t.id] ||= {}), arr = (lanes[r.lane!] ||= Array(stepsOf(crate())).fill(0)) as Ripe[];
+      const mode = arr[at.step] === brush ? 'erase' : 'paint';
+      arr[at.step] = mode === 'erase' ? 0 : brush;
+      if (mode === 'paint') engine.preview(t, { lane: r.lane, v: brush });
+      drag = { mode, startStep: at.step, row: at.row, moved: false };
+    } else {
+      const notes = (crate().notes[t.id] ||= []);
+      const hit = notes.find(n => n.d === r.d && at.step >= n.s && at.step < n.s + n.l);
+      if (hit) { notes.splice(notes.indexOf(hit), 1); drag = { mode: 'erase', startStep: at.step, row: at.row, moved: false }; }
+      else {
+        const n: Note = { s: at.step, l: +($('noteLen') as HTMLSelectElement).value, d: r.d!, v: brush };
+        n.l = Math.min(n.l, stepsOf(crate()) - n.s);
+        notes.push(n); engine.preview(t, { d: r.d, v: brush });
+        drag = { mode: 'paint', noteAt: n, startStep: at.step, row: at.row, moved: false };
+      }
+    }
+    commit(['grid']);
+  });
+  $('grid').addEventListener('pointermove', e => {
+    if (!drag) return;
+    const at = cellAt(e); if (!at) return;
+    const t = track();
+    if (t.kind === 'drums') {
+      const arr = crate().drums[t.id]![rows[at.row].lane!] ||= Array(stepsOf(crate())).fill(0) as Ripe[];
+      const want = drag.mode === 'erase' ? 0 : brush;
+      if (arr[at.step] !== want) { arr[at.step] = want as Ripe; commit(['grid']); }
+    } else if (drag.noteAt) {
+      // stretch the note you just drew
+      const l = Math.max(1, at.step - drag.noteAt.s + 1);
+      if (l !== drag.noteAt.l) { drag.noteAt.l = l; commit(['grid']); }
+    }
+  });
+  addEventListener('pointerup', () => { if (drag) { drag = null; commit([]); } });
+
+  // editor tools
+  $('oct').addEventListener('change', e => change(s => { const t = s.tracks.find(x => x.id === sel.track)!; if (t.kind === 'synth') t.oct = +(e.target as HTMLSelectElement).value; }, ['grid']));
+  $('tone').addEventListener('change', e => change(s => { const t = s.tracks.find(x => x.id === sel.track)!; if (t.kind === 'synth') t.tone = +(e.target as HTMLInputElement).value; }, []));
+  $('noteLen').addEventListener('change', () => drawGrid());
+  $('clearBtn').addEventListener('click', () => { if (confirm(`Clear ${track().name} in “${crate().name}”?`)) change(s => { delete s.crates[sel.crate].drums[sel.track]; delete s.crates[sel.crate].notes[sel.track]; }, ['grid']); });
+
+  // ---------- the market board (mixer) ----------
+  const knob = (id: string, key: string, label: string, v: number, min: number, max: number) =>
+    `<label class="mx-k"><span>${label}</span><input type="range" data-id="${id}" data-key="${key}" min="${min}" max="${max}" step="0.01" value="${v}"></label>`;
+  function drawMixer() {
+    $('mixer').innerHTML = song.tracks.map(t => `
+      <div class="mx-col${t.mute ? ' peeled' : ''}">
+        <b>${esc(t.name)}</b>
+        ${knob(t.id, 'vol', 'Volume', t.vol, 0, 1)}${knob(t.id, 'pan', 'Pan', t.pan, -1, 1)}${knob(t.id, 'rev', 'Reverb', t.rev, 0, 1)}${knob(t.id, 'dly', 'Echo', t.dly, 0, 1)}
+      </div>`).join('') + `
+      <div class="mx-col master">
+        <b>Master</b>
+        ${knob('master', 'warmth', 'Warmth', song.warmth, 0, 1)}${knob('master', 'drive', 'Drive', song.drive, 0, 1)}${knob('master', 'pump', 'Pump', song.pump, 0, 1)}
+      </div>`;
+  }
+  $('mixer').addEventListener('input', e => {
+    const el = e.target as HTMLInputElement, v = +el.value;
+    // live while dragging, saved once on release
+    if (el.dataset.id === 'master') (song as any)[el.dataset.key!] = v;
+    else (song.tracks.find(t => t.id === el.dataset.id) as any)[el.dataset.key!] = v;
+    engine.setSong(song);
+  });
+  $('mixer').addEventListener('change', () => change(() => {}, []));
+
+  // ---------- sharing and exporting ----------
+  $('shareBtn').addEventListener('click', async () => {
+    const url = `${location.origin}/banadaw/#s=${await encodeSong(song)}`;
+    history.replaceState(null, '', url);
+    try {
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title: song.name, text: `🍌 “${song.name}”, made in BanaDAW. Remix it:`, url });
+      else { await navigator.clipboard.writeText(url); $('shareBtn').textContent = 'Link copied'; setTimeout(() => ($('shareBtn').textContent = 'Share link'), 2000); }
+    } catch {}
+  });
+  $('wavBtn').addEventListener('click', async () => {
+    const b = $('wavBtn') as HTMLButtonElement;
+    b.disabled = true; b.textContent = 'Rendering…';
+    try {
+      const blob = await renderWav(song);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = `${song.name.replace(/[^\w\- ]+/g, '').trim() || 'banana'}.wav`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch { alert('Sorry, the export failed in this browser.'); }
+    b.disabled = false; b.textContent = 'Download WAV';
+  });
+
+  // ---------- playhead and the dancing banana ----------
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function frame() {
+    const p = engine.position(), ph = document.getElementById('playhead');
+    if (ph) {
+      if (p && p.crate === sel.crate) { ph.hidden = false; ph.style.left = `${(p.step / stepsOf(crate())) * 100}%`; ph.style.width = `${100 / stepsOf(crate())}%`; }
+      else ph.hidden = true;
+    }
+    if (p && !reduce) {
+      const beat = p.step % 4 === 0;
+      $('mascot').style.transform = `rotate(${beat ? -14 : 8}deg) scale(${beat ? 1.15 : 1})`;
+      document.querySelectorAll('.crate-tile').forEach((el, i) => el.classList.toggle('playing', i === p.crate));
+    } else if (!p) document.querySelectorAll('.crate-tile.playing').forEach(el => el.classList.remove('playing'));
+    requestAnimationFrame(frame);
+  let resizeT = 0;
+  addEventListener('resize', () => { clearTimeout(resizeT); resizeT = window.setTimeout(() => song && drawGrid(), 150); });
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- start: a shared song, or your last one, or the chill starter ----------
+  (async () => {
+    let start: Song | null = null;
+    const m = location.hash.match(/s=([\w-]+)/);
+    if (m) { start = await decodeSong(m[1]); if (start) $('remixNote').hidden = false; }
+    if (!start) { try { start = JSON.parse(store.get('banadaw-song') || 'null'); } catch {} }
+    if (!start || start.v !== 1) start = STYLES[0].make();
+    sel = { crate: 0, track: start.tracks[0].id };
+    load(start);
+  })();
+  addEventListener('pagehide', () => engine.ctx?.close());
+</script>
+
+<style>
+  .daw { padding: 26px 0 10px; display: flex; flex-direction: column; gap: 22px; }
+  .top { margin: 6px; }
+  .song-name { font: 400 22px var(--display); color: var(--ink); background: none; border: 0; border-bottom: 2px dashed var(--line); text-align: right; min-width: 0; width: 22ch; padding: 2px 4px; }
+  .song-name:focus { outline: none; border-bottom-color: var(--ink); }
+  .transport, .styles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
+  .transport .btn, .styles .btn { min-height: 44px; }
+  .btn.on { box-shadow: 0 0 0 3px var(--banana); }
+  .field { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
+  .field input[type="number"] { width: 64px; height: 40px; font: 600 16px var(--text); border: 2px solid var(--ink); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
+  .field select { height: 40px; font: 600 15px var(--text); border: 2px solid var(--ink); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
+  .field input[type="range"] { accent-color: var(--banana-ink); width: 110px; }
+  .field small { color: var(--ink-3); font-weight: 500; }
+  .spacer { flex: 1; }
+  .lbl { font: 700 var(--t-label) var(--text); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+  .styles :global(.tog) { margin-right: 6px; }
+  .remix { margin: 12px 0 0; padding: 8px 12px; background: var(--banana); color: #231A10; font-weight: 600; border: 2px solid var(--ink); }
+  .mascot { width: 40px; height: 40px; display: inline-block; transition: transform .08s; }
+  .mascot svg { width: 100%; height: 100%; }
+  .hint { font-size: 14px; color: var(--ink-3); }
+
+  .crates-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .crates-head h2 { font-size: var(--t-2); margin: 0; }
+  .crate-row { display: flex; gap: 10px; overflow-x: auto; padding: 8px 0 4px; align-items: stretch; }
+  .crate-row :global(.crate-tile) { flex: none; display: grid; grid-template-columns: 40px auto auto; gap: 6px 10px; align-items: center; border: 2px solid var(--ink); background: var(--card); padding: 10px; width: 250px; }
+  .crate-row :global(.ct-name) { grid-column: 2 / -1; }
+  .crate-row :global(.crate-tile.on) { box-shadow: inset 0 0 0 3px var(--banana); }
+  .crate-row :global(.crate-tile.playing .ct-pick) { background: var(--leaf); color: #fff; }
+  .crate-row :global(.ct-pick) { width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 50%; background: var(--banana); color: #231A10; font: 400 19px var(--display); cursor: pointer; grid-row: span 2; }
+  .crate-row :global(.ct-f) { margin-right: 0; }
+  .crate-row :global(.ct-name) { font: 700 16px var(--text); border: 0; border-bottom: 2px dashed var(--line); background: none; color: var(--ink); min-width: 0; padding: 2px 0; }
+  .crate-row :global(.ct-f) { font-size: 13.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; }
+  .crate-row :global(.ct-f select) { font: 600 14px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); height: 32px; }
+  .crate-row :global(.ct-acts) { grid-column: 1 / -1; display: flex; gap: 4px; }
+  .crate-row :global(.ct-acts button) { font: 600 13px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 8px; cursor: pointer; }
+  .crate-row :global(.ct-acts button:disabled) { opacity: .35; cursor: default; }
+  .crate-row :global(.new-crate) { align-self: center; }
+
+  .studio { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+  .track-list { list-style: none; margin: 0; padding: 0; }
+  .track-list :global(li) { border-bottom: 1px solid var(--line); padding: 8px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; }
+  .track-list :global(li select) { grid-column: 1 / -1; }
+  .track-list :global(li:not(.on) select) { display: none; }
+  .track-list :global(li.on) { background: color-mix(in srgb, var(--banana) 28%, var(--card)); }
+  .track-list :global(li.peeled .tr-pick) { opacity: .5; text-decoration: line-through; }
+  .track-list :global(.tr-pick) { display: flex; flex-direction: column; align-items: flex-start; background: none; border: 0; padding: 4px 0; cursor: pointer; color: var(--ink); text-align: left; }
+  .track-list :global(.tr-pick b) { font: 400 19px var(--display); }
+  .track-list :global(.tr-pick span) { font-size: 13.5px; color: var(--ink-2); }
+  .track-list :global(select) { height: 36px; font: 600 14px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); }
+  .track-list :global(.tr-acts) { display: flex; gap: 4px; }
+  .track-list :global(.mini) { font: 600 13px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 9px; cursor: pointer; }
+  .track-list :global(.mini.on) { background: var(--ink); color: var(--paper); }
+  .track-list :global(.mini:disabled) { opacity: .35; }
+  .add-row { display: flex; gap: 6px; padding: 10px 12px; }
+
+  .ed-head { flex-wrap: wrap; }
+  .ed-tools { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
+  .brush { display: inline-flex; gap: 4px; }
+  .brush :global(.rb) { width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; cursor: pointer; }
+  .brush :global(.rb[aria-checked="true"]) { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
+  .brush :global(.rb.r1), .grid :global(.r1) { background: var(--r1); }
+  .brush :global(.rb.r2), .grid :global(.r2) { background: var(--r4); }
+  .brush :global(.rb.r3), .grid :global(.r3) { background: var(--r5); }
+  .brush :global(.rb.r4), .grid :global(.r4) { background: var(--r7); }
+
+  .grid-wrap { overflow-x: auto; padding: 10px 12px 12px; }
+  .grid { --rh: 28px; display: grid; grid-template-columns: 76px calc(var(--steps) * var(--cw)); user-select: none; -webkit-user-select: none; touch-action: none; }
+  .grid.roll { --rh: 22px; }
+  .grid.drums { --rh: 30px; }
+  .grid :global(.g-labels) { display: grid; grid-template-rows: repeat(var(--rows), var(--rh)); position: sticky; left: 0; z-index: 2; background: var(--card); }
+  .grid :global(.g-label) { font: 600 13px var(--text); text-align: right; padding: 0 8px; border: 0; background: none; color: var(--ink-2); cursor: pointer; }
+  .grid :global(.g-label.root) { color: var(--ink); font-weight: 700; }
+  .grid :global(.g-label:hover) { color: var(--ink); text-decoration: underline; }
+  .grid :global(.g-cells) { position: relative; display: grid; grid-template-columns: repeat(var(--steps), var(--cw)); grid-template-rows: repeat(var(--rows), var(--rh)); cursor: crosshair; border: 2px solid var(--ink);
+    background-image: linear-gradient(90deg, var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--ink-3) 1px, transparent 1px);
+    background-size: var(--cw) 100%, calc(var(--cw) * 4) 100%; }
+  .grid :global(.g-bg) { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(var(--rows), var(--rh)); pointer-events: none; }
+  .grid :global(.g-rowbg) { border-bottom: 1px solid var(--line-2); }
+  .grid :global(.g-rowbg.root) { background: color-mix(in srgb, var(--banana) 16%, transparent); }
+  .grid :global(.hit) { margin: 4px; border: 2px solid var(--ink); border-radius: 999px 999px 999px 999px / 70% 70% 30% 30%; transform: rotate(-14deg); pointer-events: none; z-index: 1; }
+  .grid :global(.note) { margin: 2px 1px; border: 2px solid var(--ink); border-radius: 6px; pointer-events: none; z-index: 1; }
+  .grid :global(.playhead) { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--banana) 40%, transparent); pointer-events: none; z-index: 0; }
+  .ed-help { margin: 0; padding: 0 14px 12px; font-size: 14.5px; color: var(--ink-2); }
+
+  .mixer { display: flex; overflow-x: auto; }
+  .mixer :global(.mx-col) { flex: none; width: 170px; padding: 12px 14px; border-right: 1px solid var(--line); display: grid; gap: 6px; }
+  .mixer :global(.mx-col b) { font: 400 18px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mixer :global(.mx-col.peeled b) { text-decoration: line-through; opacity: .55; }
+  .mixer :global(.mx-col.master) { background: var(--paper-2); }
+  .mixer :global(.mx-k) { display: grid; gap: 2px; font-size: 13.5px; color: var(--ink-2); }
+  .mixer :global(.mx-k input) { width: 100%; accent-color: var(--banana-ink); }
+
+  .studio > *, .daw > * { min-width: 0; }
+  @media (max-width: 900px) {
+    .studio { grid-template-columns: minmax(0, 1fr); }
+    .song-name { text-align: left; width: 100%; }
+  }
+</style>
