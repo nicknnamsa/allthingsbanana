@@ -24,7 +24,8 @@ export type Song = {
   ch: Channel[];
 };
 
-export const COLORS = ['#FFD23F', '#FF8A4C', '#FF5C8A', '#C77DFF', '#5BA8FF', '#3FD0C9', '#7BDA5B', '#E9E2CF'];
+// the site's pastels, a shade stronger so notes stand out on light and dark
+export const COLORS = ['#F5C93E', '#F2A57C', '#EE8FB0', '#B79CF0', '#7DB6E8', '#6FCDB8', '#8CC56A', '#D9B07A'];
 
 // ---------- drums ----------
 export const DRUMS: Record<DrumSound, { label: string }> = {
@@ -325,7 +326,7 @@ export function blankSong(): Song {
   colorAt = 0;
   const bars = 2;
   return song('Untitled bunch', 124, 0, 'minor', bars, [
-    drumChannel('kick', beat('x...', bars)), drumChannel('clap', beat('.', bars)), drumChannel('hat', beat('.', bars)), drumChannel('open', beat('.', bars)),
+    drumChannel('kick', beat('.', bars)), drumChannel('clap', beat('.', bars)), drumChannel('hat', beat('.', bars)), drumChannel('open', beat('.', bars)),
     synthChannel('rolling', []), synthChannel('pluck', []), synthChannel('pad', []),
   ]);
 }

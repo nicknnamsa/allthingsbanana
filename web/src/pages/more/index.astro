@@ -1,11 +1,11 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base wide section="more" title="All banana games · Bananadle, the Banana Clicker and the Banana Cube · All Things Banana"
-      description="Every banana game on the site: Bananadle, the daily Wikipedia puzzle; the Banana Clicker world league; and the Banana Cube, a 3D puzzle solver.">
+<Base wide section="more" title="All banana games · Bananadle, the Banana Clicker, BanaDAW and the Banana Cube · All Things Banana"
+      description="Every banana game on the site: Bananadle, the daily Wikipedia puzzle; the Banana Clicker world league; BanaDAW, a loop studio; and the Banana Cube, a 3D puzzle solver.">
   <header class="head">
     <h1>All the games</h1>
-    <p>Three ways to waste time on bananas. One of them resets every day.</p>
+    <p>Four ways to waste time on bananas. One of them resets every day; one of them makes music.</p>
   </header>
 
   <ol class="games">
@@ -32,8 +32,19 @@ import Base from '../../layouts/Base.astro';
       </a>
     </li>
     <li>
-      <a href="/more/banana-cube/">
+      <a href="/banadaw/">
         <span class="num">3</span>
+        <span class="txt">
+          <b>BanaDAW <small class="beta">beta</small></b>
+          <span>A loop studio in your browser. Program drums, draw melodies in a piano roll, turn the knobs, then share the link or download a WAV.</span>
+          <em>From lo-fi to a dark club in one loop</em>
+        </span>
+        <span class="go">Make →</span>
+      </a>
+    </li>
+    <li>
+      <a href="/more/banana-cube/">
+        <span class="num">4</span>
         <span class="txt">
           <b>Banana Cube</b>
           <span>A 3D solver for a banana-shaped twisty puzzle. Enter your position and it tells you the fewest moves to solved.</span>
@@ -58,7 +69,8 @@ import Base from '../../layouts/Base.astro';
   .head p { margin: 6px 0 0; color: var(--ink-2); }
   .games { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
   .games a { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 22px 24px; border-radius: var(--r-lg); text-decoration: none; color: var(--ink); transition: transform .2s; }
-  .games li:nth-child(1) a { background: var(--butter); } .games li:nth-child(2) a { background: var(--mint); } .games li:nth-child(3) a { background: var(--sky); }
+  .games li:nth-child(1) a { background: var(--butter); } .games li:nth-child(2) a { background: var(--mint); } .games li:nth-child(3) a { background: var(--lilac); } .games li:nth-child(4) a { background: var(--sky); }
+  .txt .beta { font: 800 12px var(--text); background: var(--card); border-radius: 99px; padding: 2px 8px; vertical-align: middle; }
   .games a:hover { transform: translateY(-2px); }
   .games a:hover b { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 4px; }
   :global(:root[data-theme="banana"]) .games a { border: 2px solid #3A2A0E; box-shadow: 4px 4px 0 #3A2A0E; }

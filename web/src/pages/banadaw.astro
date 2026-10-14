@@ -1,11 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 ---
-<Base wide noindex title="BanaDAW · a loop station in your browser · All Things Banana"
+<Base wide section="more" title="BanaDAW · make banana beats in your browser · All Things Banana"
       description="BanaDAW: a one-loop music studio in your browser. Program drums, draw melodies in a piano roll, tweak synths with knobs, then share a link or download a WAV. Lo-fi to dark club.">
   <header class="bd-intro">
-    <h1>BanaDAW <span class="beta">beta</span></h1>
-    <p>One loop, every instrument. Pick a channel on the left, draw in the piano roll, turn the knobs. Space plays.</p>
+    <div class="bd-tags"><span class="tag"><i class="dot d-butter"></i>Beta</span><span class="tag soft">Works best with headphones</span></div>
+    <h1>BanaDAW</h1>
+    <p>A banana-powered loop studio. Pick a sound from the bunch, draw notes in the piano roll, turn the knobs. Space plays.</p>
   </header>
 
   <div class="bdaw" id="app" data-no-banana>
@@ -15,6 +16,7 @@ import Base from '../layouts/Base.astro';
         <button class="t-btn play" id="play" title="Play / stop (Space)" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z"/></svg></button>
         <button class="t-btn" id="stop" title="Stop" aria-label="Stop"><svg viewBox="0 0 20 20"><rect x="5" y="5" width="10" height="10" rx="1"/></svg></button>
         <output class="lcd" id="lcd" aria-label="Position">1.1.1</output>
+        <span class="mascot" id="mascot" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z" fill="var(--banana)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M5.5 8.5 4.6 4.4l3 1.3" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/></svg></span>
       </div>
       <label class="tb-f lcd-f">BPM <input class="lcd" id="bpm" type="number" min="60" max="200" step="1"></label>
       <div class="tb-f"><span>Loop</span><span class="seg" id="bars" role="group" aria-label="Loop length in bars"></span><span>bars</span></div>
@@ -27,6 +29,7 @@ import Base from '../layouts/Base.astro';
         <button class="t-btn txt" id="undo" title="Undo (Ctrl/Cmd+Z)">Undo</button>
         <button class="t-btn txt" id="redo" title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
       </div>
+      <button class="t-btn txt" id="fresh" title="Empty every channel and start again (undo brings it back)">Start from scratch</button>
       <label class="tb-f"><span class="sr-only">Load a starter loop</span><select id="starter"></select></label>
       <button class="t-btn txt hl" id="share">Share</button>
       <button class="t-btn txt" id="wav" title="Download the loop, played a few times, as a WAV file">WAV</button>
@@ -36,6 +39,7 @@ import Base from '../layouts/Base.astro';
       <!-- channel rack -->
       <aside class="rack" aria-label="Channel rack">
         <div class="pane-h"><input class="song-name" id="songName" aria-label="Loop name" maxlength="40"></div>
+        <div class="rack-t"><span>The bunch</span><small id="rackCount"></small></div>
         <div class="rack-list" id="rack"></div>
         <label class="rack-add"><span class="sr-only">Add a channel</span><select id="add"></select></label>
       </aside>
@@ -62,7 +66,7 @@ import Base from '../layouts/Base.astro';
             <div class="scroll" id="scroll"><div id="spacer"></div></div>
             <canvas id="grid" aria-hidden="true"></canvas>
           </div>
-          <div class="vel-l">Velocity</div>
+          <div class="vel-l" title="How hard each note or hit plays: green is soft, brown hits hardest">Ripeness</div>
           <canvas id="vel" aria-label="Velocity: drag up and down"></canvas>
         </div>
         <p class="help" id="help"></p>
@@ -83,6 +87,11 @@ import Base from '../layouts/Base.astro';
     </section>
     <div class="toast" id="toast" role="status" hidden></div>
   </div>
+
+  <section class="bd-start" aria-labelledby="startH">
+    <div class="bd-start-h"><h2 id="startH">Start from a bunch</h2><p>Every loop is yours to change. Undo brings back whatever you had.</p></div>
+    <div class="bd-cards" id="starterCards"></div>
+  </section>
 </Base>
 
 <script>
@@ -215,6 +224,21 @@ import Base from '../layouts/Base.astro';
     edit(() => { song = st ? st.make() : blankSong(); selId = ''; });
     load(song); toast(`Loaded ${st ? st.label : 'an empty loop'}. Undo brings your old one back.`);
   });
+  // start from scratch: same instruments, nothing playing
+  function fresh() {
+    edit(() => { for (const c of song.ch) { if (c.kind === 'drum') c.steps = c.steps.map(() => 0); else c.notes = []; } song.name = 'Untitled bunch'; });
+    toast('Clean slate. Your sounds are still here; undo brings the notes back.');
+  }
+  $('fresh').addEventListener('click', fresh);
+  const TINTS = ['var(--butter)', 'var(--peach)', 'var(--mint)', 'var(--sky)', 'var(--lilac)', 'var(--butter)'];
+  $('starterCards').innerHTML = STARTERS.map((st, i) => `<button class="bd-card" data-id="${st.id}" style="--tint:${TINTS[i % TINTS.length]}"><b>${esc(st.label)}</b><span>${esc(st.blurb)}</span></button>`).join('')
+    + `<button class="bd-card blank" data-id="scratch"><b>Start from scratch</b><span>Empty every channel and build your own</span></button>`;
+  $('starterCards').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('.bd-card'); if (!b) return;
+    if (b.dataset.id === 'scratch') fresh();
+    else { const st = STARTERS.find(s => s.id === b.dataset.id)!; edit(() => { song = st.make(); selId = ''; }); load(song); toast(`Loaded ${st.label}. Press play.`); }
+    $('app').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
   $('undo').addEventListener('click', undo);
   $('redo').addEventListener('click', redo);
 
@@ -254,13 +278,14 @@ import Base from '../layouts/Base.astro';
   function drawRack() {
     $('rack').innerHTML = song.ch.map(c => `
       <div class="rk${c.id === selId ? ' on' : ''}${c.mix.mute ? ' muted' : ''}" data-id="${c.id}" style="--c:${COLORS[c.color]}">
-        <button class="led" data-act="mute" aria-pressed="${!c.mix.mute}" title="${c.mix.mute ? 'Unmute' : 'Mute'}" aria-label="${c.mix.mute ? 'Unmute' : 'Mute'} ${esc(c.name)}"></button>
+        <button class="led" data-act="mute" aria-pressed="${!c.mix.mute}" title="${c.mix.mute ? 'Peeled (muted): click to unmute' : 'Click to mute'}" aria-label="${c.mix.mute ? 'Unmute' : 'Mute'} ${esc(c.name)}"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z"/></svg></button>
         <button class="solo${c.mix.solo ? ' on' : ''}" data-act="solo" aria-pressed="${c.mix.solo}" title="Solo">S</button>
         ${knobHTML(`ch:${c.id}:vol`, { label: 'Volume', get: () => c.mix.vol, set: v => (c.mix.vol = v), def: 0.78, fmt: pct }, 'xs')}
         <button class="rk-name" data-act="pick"><b>${esc(c.name)}</b>${c.name === instLabel(c) ? '' : `<small>${esc(instLabel(c))}</small>`}</button>
         <canvas class="rk-prev" data-act="pick" width="150" height="30"></canvas>
       </div>`).join('');
     paintKnobs($('rack'));
+    $('rackCount').textContent = `${song.ch.length} ${song.ch.length === 1 ? 'channel' : 'channels'}`;
     drawRackPreviews();
   }
   function drawRackPreviews() {
@@ -270,9 +295,9 @@ import Base from '../layouts/Base.astro';
       const dpr = devicePixelRatio || 1, W = 150, H = 30;
       cv.width = W * dpr; cv.height = H * dpr;
       const g = cv.getContext('2d')!; g.scale(dpr, dpr);
-      g.fillStyle = '#20262a'; g.fillRect(0, 0, W, H);
+      g.fillStyle = C.row; g.fillRect(0, 0, W, H);
       const sw = W / steps;
-      for (let b = 0; b < song.bars * 4; b++) if (b % 2) { g.fillStyle = '#262d32'; g.fillRect(b * 4 * sw, 0, 4 * sw, H); }
+      for (let b = 0; b < song.bars * 4; b++) if (b % 2) { g.fillStyle = C.black; g.fillRect(b * 4 * sw, 0, 4 * sw, H); }
       g.fillStyle = COLORS[c.color];
       if (c.kind === 'drum') c.steps.forEach((v, i) => { if (v) { g.globalAlpha = 0.35 + v * 0.65; g.fillRect(i * sw + 0.5, 6, Math.max(1, sw - 1), H - 12); } });
       else if (c.notes.length) {
@@ -352,7 +377,17 @@ import Base from '../layouts/Base.astro';
   const view = $('view'), scroll = $('scroll'), spacer = $('spacer');
   const gridCv = $<HTMLCanvasElement>('grid'), rulerCv = $<HTMLCanvasElement>('ruler'), keysCv = $<HTMLCanvasElement>('keys'), velCv = $<HTMLCanvasElement>('vel');
   let cw = 24, mode: 'piano' | 'drum' = 'piano', dirty = true, flash: { m: number; t: number } | null = null;
-  const C = { bg: '#262c30', row: '#2b3237', black: '#23292d', out: '#1e2326', root: '#352f22', step: '#2f373c', beat: '#3d474d', bar: '#66727a', text: '#c9d1d5', dim: '#7d8a91' };
+  const C: Record<string, string> = {};
+  const RIPE: string[] = [];
+  function readColors() {
+    const cs = getComputedStyle($('app'));
+    for (const k of ['bg', 'row', 'black', 'out', 'root', 'step', 'beat', 'bar', 'ruler', 'keyw', 'keyb', 'keyt', 'text', 'dim', 'pad', 'pad2', 'sel', 'play', 'edge']) C[k] = cs.getPropertyValue(`--g-${k}`).trim();
+    RIPE.length = 0; for (let i = 1; i <= 7; i++) RIPE.push(cs.getPropertyValue(`--r${i}`).trim());
+  }
+  readColors();
+  const recolor = () => { readColors(); drawRackPreviews(); dirty = true; };
+  new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor);
 
   function fit(cv: HTMLCanvasElement, w: number, h: number) {
     const dpr = devicePixelRatio || 1;
@@ -408,25 +443,31 @@ import Base from '../layouts/Base.astro';
         if (x > sx + W || x + w < sx || y > sy + H || y + rowH < sy) continue;
         g.fillStyle = COLORS[c.color]; g.globalAlpha = 0.55 + n.v * 0.45;
         round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.fill();
-        g.globalAlpha = 1; g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1; round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.stroke();
-        if (w > 30 && rowH >= 14) { g.fillStyle = '#1b1f22'; g.font = `600 ${rowH - 5}px Nunito, system-ui, sans-serif`; g.textBaseline = 'middle'; g.fillText(noteName(n.m), x + 4, y + rowH / 2); }
+        g.globalAlpha = 1; g.strokeStyle = C.edge; g.lineWidth = 1; round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.stroke();
+        if (w > 30 && rowH >= 14) { g.fillStyle = '#2b2116'; g.font = `600 ${rowH - 5}px Nunito, system-ui, sans-serif`; g.textBaseline = 'middle'; g.fillText(noteName(n.m), x + 4, y + rowH / 2); }
       }
     } else {
       const ds = drums();
       ds.forEach((d, r) => {
         const y = r * drumH;
-        g.fillStyle = d.id === selId ? '#30383e' : r % 2 ? C.row : C.black; g.fillRect(sx, y, W, drumH);
+        g.fillStyle = d.id === selId ? C.sel : r % 2 ? C.row : C.black; g.fillRect(sx, y, W, drumH);
         for (let s = s0; s < s1; s++) {
           const v = d.kind === 'drum' ? d.steps[s] || 0 : 0, beatShade = Math.floor(s / 4) % 2;
-          g.fillStyle = v ? COLORS[d.color] : beatShade ? '#3a4349' : '#454f56';
+          g.fillStyle = v ? COLORS[d.color] : beatShade ? C.pad2 : C.pad;
           g.globalAlpha = v ? 0.4 + v * 0.6 : d.mix.mute ? 0.4 : 1;
           round(g, s * cw + 2, y + 4, cw - 4, drumH - 8, 4); g.fill(); g.globalAlpha = 1;
+          if (v) { g.strokeStyle = C.edge; g.lineWidth = 1; round(g, s * cw + 2.5, y + 4.5, cw - 5, drumH - 9, 4); g.stroke(); }
         }
       });
       grid(g, s0, s1, sy, sy + H, true);
     }
-    if (pos != null) { g.fillStyle = '#FFD23F'; g.fillRect(pos * cw - 1, sy, 2, H); }
+    if (pos != null) { g.fillStyle = C.play; g.fillRect(pos * cw - 1, sy, 2, H); }
     g.restore();
+    // an empty channel says what to do
+    if (pos == null && ((c.kind === 'synth' && !c.notes.length && mode === 'piano') || (mode === 'drum' && drums().every(d => d.kind === 'drum' && !d.steps.some(Boolean))))) {
+      g.font = `600 16px Fredoka, Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.fillStyle = C.dim;
+      g.fillText(mode === 'drum' ? 'Click the squares to add hits' : 'Click anywhere to plant a note', W / 2, H / 2); g.textAlign = 'left';
+    }
     drawRuler(pos); drawKeys(); drawVel();
   }
   function grid(g: CanvasRenderingContext2D, s0: number, s1: number, y0: number, y1: number, light = false) {
@@ -441,32 +482,38 @@ import Base from '../layouts/Base.astro';
   }
   function drawRuler(pos: number | null) {
     const W = scroll.clientWidth, sx = scroll.scrollLeft, g = fit(rulerCv, W, 22), steps = stepsOf(song);
-    g.fillStyle = '#1d2225'; g.fillRect(0, 0, W, 22);
+    g.fillStyle = C.ruler; g.fillRect(0, 0, W, 22);
     g.font = '700 11px Nunito, system-ui, sans-serif'; g.textBaseline = 'middle';
     for (let s = 0; s <= steps; s += 4) {
       const x = s * cw - sx; if (x < -40 || x > W + 4) continue;
-      g.fillStyle = s % 16 === 0 ? '#9aa6ad' : '#4a555b'; g.fillRect(x, s % 16 === 0 ? 4 : 14, 1, s % 16 === 0 ? 18 : 8);
+      g.fillStyle = s % 16 === 0 ? C.bar : C.beat; g.fillRect(x, s % 16 === 0 ? 4 : 14, 1, s % 16 === 0 ? 18 : 8);
       if (s % 16 === 0 && s < steps) { g.fillStyle = C.text; g.fillText(String(s / 16 + 1), x + 4, 10); }
     }
-    if (pos != null) { const x = pos * cw - sx; g.fillStyle = '#FFD23F'; g.beginPath(); g.moveTo(x - 5, 12); g.lineTo(x + 5, 12); g.lineTo(x, 21); g.fill(); }
+    if (pos != null) {   // the playhead is a little banana
+      const x = pos * cw - sx;
+      g.save(); g.translate(x - 9, 3); g.scale(0.56, 0.56);
+      g.fillStyle = '#F5C93E'; g.strokeStyle = '#3B3127'; g.lineWidth = 2.6;
+      g.fill(BANANA); g.stroke(BANANA); g.restore();
+    }
   }
+  const BANANA = new Path2D('M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z');
   function drawKeys() {
     const H = scroll.clientHeight, sy = scroll.scrollTop, KW = view.offsetLeft || 64, g = fit(keysCv, KW, H);
-    g.fillStyle = '#1d2225'; g.fillRect(0, 0, KW, H);
+    g.fillStyle = C.ruler; g.fillRect(0, 0, KW, H);
     g.font = '700 10px Nunito, system-ui, sans-serif'; g.textBaseline = 'middle';
     if (mode === 'piano') {
       const r0 = Math.floor(sy / rowH), r1 = Math.ceil((sy + H) / rowH);
       for (let r = r0; r < Math.min(ROWS, r1); r++) {
         const m = TOP - r, y = r * rowH - sy, black = [1, 3, 6, 8, 10].includes(m % 12);
         const lit = flash && flash.m === m && performance.now() - flash.t < 250;
-        g.fillStyle = lit ? '#FFD23F' : black ? '#2a2f33' : '#e9e4d6'; g.fillRect(0, y, black ? KW * 0.62 : KW, rowH - 1);
-        if (!black && inScale(song, m)) { g.fillStyle = '#cbbf9c'; g.fillRect(KW - 8, y + 2, 4, rowH - 5); }
-        if (m % 12 === 0) { g.fillStyle = '#3a3226'; g.fillText(noteName(m), KW - 30, y + rowH / 2); }
+        g.fillStyle = lit ? '#F5C93E' : black ? C.keyb : C.keyw; g.fillRect(0, y, black ? KW * 0.62 : KW, rowH - 1);
+        if (!black && inScale(song, m)) { g.fillStyle = '#F5C93E'; g.fillRect(KW - 8, y + 2, 4, rowH - 5); }
+        if (m % 12 === 0) { g.fillStyle = C.keyt; g.fillText(noteName(m), KW - 30, y + rowH / 2); }
       }
     } else {
       drums().forEach((d, r) => {
         const y = r * drumH - sy;
-        g.fillStyle = d.id === selId ? '#353e44' : '#262c30'; g.fillRect(0, y, KW, drumH - 1);
+        g.fillStyle = d.id === selId ? C.sel : C.ruler; g.fillRect(0, y, KW, drumH - 1);
         g.fillStyle = COLORS[d.color]; g.fillRect(0, y, 4, drumH - 1);
         g.fillStyle = d.mix.mute ? C.dim : C.text; const max = KW > 56 ? 9 : 6; g.fillText(d.name.length > max ? d.name.slice(0, max - 1) + '…' : d.name, 8, y + drumH / 2);
       });
@@ -474,10 +521,10 @@ import Base from '../layouts/Base.astro';
   }
   function drawVel() {
     const W = scroll.clientWidth, sx = scroll.scrollLeft, H = 64, g = fit(velCv, W, H), c = sel();
-    g.fillStyle = '#1d2225'; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#2a3135'; g.fillRect(0, H / 2, W, 1);
-    g.fillStyle = COLORS[c.color];
-    const bar = (s: number, v: number) => { const x = s * cw - sx + 2; if (x < -10 || x > W) return; const h = (H - 8) * v; g.fillRect(x, H - 4 - h, 3, h); g.beginPath(); g.arc(x + 1.5, H - 4 - h, 3.5, 0, 7); g.fill(); };
+    g.fillStyle = C.ruler; g.fillRect(0, 0, W, H);
+    g.fillStyle = C.step; g.fillRect(0, H / 2, W, 1);
+    // each bar is coloured like a banana: green is soft, brown hits hardest
+    const bar = (s: number, v: number) => { const x = s * cw - sx + 2; if (x < -10 || x > W) return; const h = (H - 8) * v; g.fillStyle = RIPE[Math.min(6, Math.floor(v * 7))]; g.fillRect(x, H - 4 - h, 3, h); g.beginPath(); g.arc(x + 1.5, H - 4 - h, 4, 0, 7); g.fill(); g.strokeStyle = C.edge; g.lineWidth = 1; g.stroke(); };
     if (c.kind === 'drum') c.steps.forEach((v, s) => v && bar(s, v));
     else c.notes.forEach(n => bar(n.s, n.v));
   }
@@ -650,13 +697,16 @@ import Base from '../layouts/Base.astro';
       draw(pos); dirty = false;
     }
     const p = pos == null ? '1.1.1' : `${Math.floor(pos / 16) + 1}.${Math.floor((pos % 16) / 4) + 1}.${Math.floor(pos % 4) + 1}`;
-    if (p !== shownPos) { $('lcd').textContent = p; shownPos = p; }
+    if (p !== shownPos) {
+      if (pos != null && p.split('.')[1] !== shownPos.split('.')[1]) { const m = $('mascot'); m.classList.remove('bob'); void m.offsetWidth; m.classList.add('bob'); }
+      $('lcd').textContent = p; shownPos = p;
+    }
     const lv = engine.playing ? engine.level() : 0;
     peakHold = Math.max(lv, peakHold * 0.92);
     const g = fit(meterCv, 14, 40);
-    g.fillStyle = '#1b1f22'; g.fillRect(0, 0, 14, 40);
+    g.fillStyle = C.pad; g.fillRect(0, 0, 14, 40);
     const h = Math.min(1, peakHold) * 38;
-    g.fillStyle = peakHold > 0.97 ? '#FF5C5C' : peakHold > 0.8 ? '#FFD23F' : '#7BDA5B'; g.fillRect(3, 39 - h, 8, h);
+    g.fillStyle = peakHold > 0.97 ? '#E2574C' : peakHold > 0.8 ? '#EDB53B' : '#8CC56A'; g.fillRect(3, 39 - h, 8, h);
     requestAnimationFrame(frame);
   }
   new ResizeObserver(() => layout()).observe(view);
@@ -673,115 +723,156 @@ import Base from '../layouts/Base.astro';
 </script>
 
 <style is:global>
-  .bd-intro { padding: 26px 0 14px; }
-  .bd-intro h1 { margin: 0; font-size: var(--t-1); display: flex; align-items: center; gap: 12px; }
-  .bd-intro .beta { font: 800 13px var(--text); background: var(--butter); color: var(--ink); border-radius: 99px; padding: 3px 10px; }
-  .bd-intro p { margin: 6px 0 0; color: var(--ink-2); }
+  .bd-intro { padding: 28px 0 18px; }
+  .bd-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .bd-intro h1 { margin: 10px 0 0; font-size: var(--t-hero); }
+  .bd-intro p { margin: 6px 0 0; color: var(--ink-2); max-width: 62ch; }
 
-  /* the studio is dark in every theme, like the real thing */
-  .bdaw { --b0: #171b1d; --b1: #1f2427; --b2: #2a3135; --b3: #353e43; --bl: #424c52; --bt: #e3e8ea; --bd: #93a0a7; --acc: #FFD23F;
-    position: relative; width: min(1560px, calc(100vw - 32px)); margin-left: 50%; transform: translateX(-50%);
-    background: var(--b1); color: var(--bt); border-radius: 14px; box-shadow: 0 18px 40px -18px rgba(0,0,0,.6); font: 600 14px/1.3 var(--text); overflow: hidden; margin-bottom: 36px; }
+  /* the studio wears the site's colours, so it follows light, dark and banana mode.
+     --g-*: the piano roll's canvas colours */
+  .bdaw {
+    --b0: var(--paper); --b1: var(--card); --b2: var(--paper-2); --b3: var(--butter); --bl: var(--line); --bt: var(--ink); --bd: var(--ink-2); --acc: var(--banana);
+    --g-bg: #FFFDF7; --g-row: #FFFBF0; --g-black: #F8F1E0; --g-out: #F2EAD6; --g-root: #FFF0B3; --g-step: #F0E7D2; --g-beat: #E3D6B6; --g-bar: #BBA87C;
+    --g-ruler: #FBF3E1; --g-keyw: #FFFFFF; --g-keyb: #4A3D2C; --g-keyt: #6B5F50; --g-text: #3B3127; --g-dim: #9C8E77; --g-pad: #F1E8D2; --g-pad2: #E9DDBF;
+    --g-sel: #FFF2C4; --g-play: #D49B00; --g-edge: rgba(59, 49, 39, .55);
+    position: relative; width: min(1440px, calc(100vw - 32px)); margin-left: 50%; transform: translateX(-50%);
+    background: var(--card); color: var(--ink); border-radius: var(--r-lg); box-shadow: var(--shadow); border: 1px solid var(--line);
+    font: 600 14px/1.3 var(--text); overflow: hidden; }
+  :root[data-theme="dark"] .bdaw { --g-bg: #201D19; --g-row: #26221D; --g-black: #1F1C18; --g-out: #1B1815; --g-root: #3A3220; --g-step: #2E2923; --g-beat: #3E372D;
+    --g-bar: #77684F; --g-ruler: #24201B; --g-keyw: #EDE3CF; --g-keyb: #2A251F; --g-keyt: #6B5F50; --g-text: #FBF3E2; --g-dim: #A89A82; --g-pad: #37312A; --g-pad2: #2F2A24;
+    --g-sel: #3E3724; --g-play: #FFD23F; --g-edge: rgba(0, 0, 0, .55); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .bdaw { --g-bg: #201D19; --g-row: #26221D; --g-black: #1F1C18; --g-out: #1B1815; --g-root: #3A3220; --g-step: #2E2923; --g-beat: #3E372D;
+      --g-bar: #77684F; --g-ruler: #24201B; --g-keyw: #EDE3CF; --g-keyb: #2A251F; --g-keyt: #6B5F50; --g-text: #FBF3E2; --g-dim: #A89A82; --g-pad: #37312A; --g-pad2: #2F2A24;
+      --g-sel: #3E3724; --g-play: #FFD23F; --g-edge: rgba(0, 0, 0, .55); }
+  }
+  :root[data-theme="banana"] .bdaw { --g-bg: #FFF4BF; --g-row: #FFF2B0; --g-black: #FFEA92; --g-out: #FCE27C; --g-root: #FFD84D; --g-step: #F2D66E; --g-beat: #E2BE44; --g-bar: #3A2A0E;
+    --g-ruler: #FFE45C; --g-keyw: #FFF9E0; --g-keyb: #3A2A0E; --g-keyt: #3A2A0E; --g-text: #3A2A0E; --g-dim: #7A5A20; --g-pad: #F7DE78; --g-pad2: #EFD266; --g-sel: #FFE45C; --g-play: #3A2A0E; --g-edge: #3A2A0E;
+    border: 2px solid #3A2A0E; box-shadow: 6px 6px 0 #3A2A0E; }
   .bdaw button, .bdaw select, .bdaw input { font: inherit; color: inherit; }
-  .bdaw select, .bdaw input:not([type]), .bdaw input[type="number"] { background: var(--b0); border: 1px solid var(--bl); border-radius: 7px; padding: 6px 8px; min-height: 34px; }
-  .bdaw select:focus-visible, .bdaw input:focus-visible, .bdaw button:focus-visible, .bdaw .knob:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+  .bdaw select, .bdaw input:not([type]), .bdaw input[type="number"] { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 8px; min-height: 36px; }
+  .bdaw select:focus-visible, .bdaw input:focus-visible, .bdaw button:focus-visible, .bdaw .knob:focus-visible { outline: 3px solid var(--butter-d); outline-offset: 1px; }
 
-  .bdaw .tb { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 14px; background: linear-gradient(#323a3f, #2a3135); border-bottom: 1px solid #14181a; }
+  .bdaw .tb { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; background: var(--butter); border-bottom: 1px solid var(--line); }
   .bdaw .tb-g { display: flex; align-items: center; gap: 6px; }
-  .bdaw .tb-f { display: inline-flex; align-items: center; gap: 6px; color: var(--bd); font-size: 13px; }
+  .bdaw .tb-f { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; font-weight: 700; }
   .bdaw .sp { flex: 1; }
-  .bdaw .t-btn { min-width: 38px; height: 36px; display: grid; place-items: center; background: var(--b2); border: 1px solid var(--bl); border-radius: 8px; cursor: pointer; padding: 0 10px; }
-  .bdaw .t-btn:hover { background: var(--b3); }
+  .bdaw .t-btn { min-width: 40px; height: 38px; display: grid; place-items: center; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; padding: 0 12px; font-weight: 700; }
+  .bdaw .t-btn:hover { box-shadow: inset 0 0 0 2px var(--butter-d); }
   .bdaw .t-btn svg { width: 16px; height: 16px; fill: currentColor; }
-  .bdaw .t-btn.play.on { background: var(--acc); color: #2a2208; border-color: var(--acc); }
-  .bdaw .t-btn.hl { background: var(--acc); color: #2a2208; border-color: var(--acc); }
+  .bdaw .t-btn.play { background: var(--ink); color: var(--paper); border-color: var(--ink); width: 46px; }
+  .bdaw .t-btn.play.on { background: var(--banana); color: #3B3127; border-color: var(--banana); }
+  .bdaw .t-btn.hl { background: var(--banana); color: #3B3127; border-color: var(--banana); }
   .bdaw .t-btn:disabled { opacity: .6; }
-  .bdaw .lcd { font: 700 17px/1 ui-monospace, 'SF Mono', Menlo, monospace; color: #9df27a; background: #0f1311; border: 1px solid #000; border-radius: 6px; padding: 8px 10px; min-width: 76px; text-align: center; letter-spacing: .04em; }
-  .bdaw input.lcd { width: 76px; min-height: 0; color: #9df27a; background: #0f1311; border-color: #000; }
-  .bdaw .seg { display: inline-flex; background: var(--b0); border: 1px solid var(--bl); border-radius: 8px; overflow: hidden; }
-  .bdaw .seg button { background: none; border: 0; padding: 7px 11px; cursor: pointer; color: var(--bd); min-height: 34px; }
-  .bdaw .seg button[aria-pressed="true"] { background: var(--acc); color: #2a2208; }
+  .bdaw .lcd { font: 600 19px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); padding: 9px 12px; min-width: 76px; text-align: center; }
+  .bdaw input.lcd { width: 78px; min-height: 0; }
+  .bdaw .mascot { width: 30px; height: 30px; display: inline-block; transform-origin: 50% 90%; }
+  .bdaw .mascot svg { width: 100%; height: 100%; transform: rotate(-12deg); }
+  .bdaw .mascot.bob { animation: bd-bob .28s ease-out; }
+  @keyframes bd-bob { 0% { transform: translateY(0) scale(1); } 35% { transform: translateY(-5px) scale(1.08, .94); } 100% { transform: none; } }
+  .bdaw .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .bdaw .seg button { background: none; border: 0; padding: 7px 12px; cursor: pointer; color: var(--ink-2); min-height: 36px; font-weight: 800; }
+  .bdaw .seg button[aria-pressed="true"] { background: var(--banana); color: #3B3127; }
   .bdaw .tb-knobs { display: flex; gap: 4px; }
-  .bdaw .meter { border-radius: 3px; }
+  .bdaw .meter { border-radius: 4px; }
   .bdaw #starter { max-width: 150px; }
 
-  .bdaw .main { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
-  .bdaw .pane-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--b2); border-bottom: 1px solid #14181a; min-height: 50px; flex-wrap: wrap; }
-  .bdaw .rack { background: var(--b1); border-right: 1px solid #14181a; display: flex; flex-direction: column; min-width: 0; }
-  .bdaw .song-name { width: 100%; font-weight: 800 !important; }
-  .bdaw .rack-list { flex: 1; overflow: auto; padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 560px; }
-  .bdaw .rk { display: grid; grid-template-columns: 16px 22px 30px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px 6px; align-items: center; padding: 6px 6px 6px 4px; border-radius: 8px; background: var(--b2); border-left: 4px solid var(--c); }
-  .bdaw .rk.on { background: var(--b3); box-shadow: inset 0 0 0 1px var(--c); }
-  .bdaw .rk.muted { opacity: .55; }
-  .bdaw .led { grid-row: 1 / 3; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #000; background: #2c3a2a; cursor: pointer; padding: 0; }
-  .bdaw .led[aria-pressed="true"] { background: #7BDA5B; box-shadow: 0 0 6px #7BDA5B99; }
-  .bdaw .solo { grid-row: 1 / 3; width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--bl); background: var(--b1); color: var(--bd); font-size: 11px; cursor: pointer; padding: 0; }
-  .bdaw .solo.on { background: var(--acc); color: #2a2208; }
+  .bdaw .main { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 0; }
+  .bdaw .pane-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--paper-2); border-bottom: 1px solid var(--line); min-height: 52px; flex-wrap: wrap; }
+  .bdaw .rack { background: var(--paper-2); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
+  .bdaw .song-name { width: 100%; font: 600 16px var(--display) !important; }
+  .bdaw .rack-t { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 12px 2px; font: 600 15px var(--display); }
+  .bdaw .rack-t small { font: 700 12px var(--text); color: var(--ink-2); }
+  .bdaw .rack-list { flex: 1; overflow: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; max-height: 560px; }
+  .bdaw .rk { display: grid; grid-template-columns: 22px 22px 30px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px 6px; align-items: center; padding: 6px 8px 6px 6px; border-radius: var(--r-md); background: var(--card); border-left: 5px solid var(--c); box-shadow: var(--shadow); }
+  .bdaw .rk.on { background: var(--butter); box-shadow: inset 0 0 0 2px var(--butter-d); }
+  .bdaw .rk.muted { opacity: .6; }
+  .bdaw .led { grid-row: 1 / 3; width: 22px; height: 22px; border: 0; background: none; cursor: pointer; padding: 0; }
+  .bdaw .led svg { width: 22px; height: 22px; fill: var(--banana); stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; transform: rotate(-15deg); transition: transform .15s; }
+  .bdaw .led[aria-pressed="false"] svg { fill: var(--line); stroke: var(--ink-3); transform: rotate(-15deg) scale(.85); }
+  .bdaw .solo { grid-row: 1 / 3; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font-size: 11px; font-weight: 800; cursor: pointer; padding: 0; }
+  .bdaw .solo.on { background: var(--banana); color: #3B3127; border-color: var(--banana); }
   .bdaw .rk > .knob { grid-row: 1 / 3; }
   .bdaw .rk-name { text-align: left; background: none; border: 0; cursor: pointer; padding: 0; display: flex; gap: 6px; align-items: baseline; min-width: 0; }
   .bdaw .rk-name b { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bdaw .rk-name small { color: var(--bd); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bdaw .rk-prev { width: 100%; height: 22px; border-radius: 4px; cursor: pointer; grid-column: 4; }
-  .bdaw .rack-add { padding: 8px; border-top: 1px solid #14181a; }
-  .bdaw .rack-add select { width: 100%; background: var(--b2); }
+  .bdaw .rk-name small { color: var(--ink-2); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bdaw .rk-prev { width: 100%; height: 22px; border-radius: 5px; cursor: pointer; grid-column: 4; }
+  .bdaw .rack-add { padding: 8px; border-top: 1px solid var(--line); }
+  .bdaw .rack-add select { width: 100%; font-weight: 800; }
 
-  .bdaw .editor { min-width: 0; display: flex; flex-direction: column; background: var(--b1); }
+  .bdaw .editor { min-width: 0; display: flex; flex-direction: column; background: var(--card); }
   .bdaw .ed-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .bdaw .ed-title i, .bdaw .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
-  .bdaw .ed-title b { font-size: 16px; }
-  .bdaw .ed-title small { color: var(--bd); font-size: 12.5px; }
+  .bdaw .ed-title i, .bdaw .sw { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .bdaw .ed-title b { font: 600 18px var(--display); }
+  .bdaw .ed-title small { color: var(--ink-2); font-size: 12.5px; }
   .bdaw .ed-tools { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
   .bdaw.drum-mode .syn { display: none; }
-  .bdaw .tog { background: var(--b1); border: 1px solid var(--bl); border-radius: 7px; padding: 6px 10px; min-height: 34px; cursor: pointer; color: var(--bd); }
-  .bdaw .tog:hover { color: var(--bt); }
-  .bdaw .tog[aria-pressed="true"] { background: #3d3a24; color: var(--acc); border-color: #6b5f2a; }
+  .bdaw .tog { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 11px; min-height: 36px; cursor: pointer; color: var(--ink-2); font-weight: 700; }
+  .bdaw .tog:hover { color: var(--ink); box-shadow: inset 0 0 0 2px var(--butter-d); }
+  .bdaw .tog[aria-pressed="true"] { background: var(--butter); color: var(--ink); border-color: var(--butter-d); }
   .bdaw .tog:disabled { opacity: .45; cursor: default; }
   .bdaw .zoom { display: inline-flex; gap: 2px; }
-  .bdaw .zoom .tog { width: 34px; padding: 0; }
+  .bdaw .zoom .tog { width: 36px; padding: 0; }
   .bdaw .roll { display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: 22px minmax(320px, 1fr) 64px; height: clamp(440px, 64vh, 640px); }
-  .bdaw .corner { background: #1d2225; }
+  .bdaw .corner { background: var(--g-ruler); border-bottom: 1px solid var(--line); }
+  .bdaw #ruler { border-bottom: 1px solid var(--line); }
   .bdaw #keys { cursor: pointer; touch-action: none; }
   .bdaw .view { position: relative; min-width: 0; min-height: 0; }
-  .bdaw .scroll { position: absolute; inset: 0; overflow: auto; z-index: 1; cursor: crosshair; scrollbar-color: #4a555b #1d2225; }
+  .bdaw .scroll { position: absolute; inset: 0; overflow: auto; z-index: 1; cursor: crosshair; }
   .bdaw #spacer { pointer-events: none; }
   .bdaw #grid { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
-  .bdaw .vel-l { background: #1d2225; color: var(--bd); font-size: 10.5px; display: grid; place-items: center; border-top: 1px solid #14181a; }
-  .bdaw #vel { border-top: 1px solid #14181a; cursor: ns-resize; touch-action: none; }
-  .bdaw .help { margin: 0; padding: 8px 14px 10px; color: var(--bd); font-size: 13px; font-weight: 600; border-top: 1px solid #14181a; }
+  .bdaw .vel-l { background: var(--g-ruler); color: var(--ink-2); font-size: 11px; font-weight: 800; display: grid; place-items: center; border-top: 1px solid var(--line); cursor: help; }
+  .bdaw #vel { border-top: 1px solid var(--line); cursor: ns-resize; touch-action: none; }
+  .bdaw .help { margin: 0; padding: 9px 14px 11px; color: var(--ink-2); font-size: 13.5px; font-weight: 600; border-top: 1px solid var(--line); background: var(--paper-2); }
 
-  .bdaw .chan { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: center; padding: 12px 14px 14px; background: var(--b2); border-top: 1px solid #14181a; }
+  .bdaw .chan { display: flex; flex-wrap: wrap; gap: 12px 26px; align-items: center; padding: 14px 16px 16px; background: var(--paper-2); border-top: 1px solid var(--line); }
   .bdaw .chan-id { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .bdaw .ch-name { width: 150px; font-weight: 800 !important; }
-  .bdaw .knob-row { display: flex; align-items: center; gap: 8px; }
-  .bdaw .kr-l { color: var(--bd); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; writing-mode: vertical-rl; transform: rotate(180deg); }
+  .bdaw .ch-name { width: 150px; font: 600 16px var(--display) !important; }
+  .bdaw .knob-row { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: var(--r-md); padding: 6px 10px 4px; box-shadow: var(--shadow); }
+  .bdaw .kr-l { color: var(--ink-2); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; writing-mode: vertical-rl; transform: rotate(180deg); }
   .bdaw .knobs { display: flex; flex-wrap: wrap; gap: 2px 6px; }
 
-  .bdaw .knob { position: relative; width: 54px; display: flex; flex-direction: column; align-items: center; cursor: ns-resize; touch-action: none; user-select: none; border-radius: 8px; padding: 2px 0; }
+  .bdaw .knob { position: relative; width: 54px; display: flex; flex-direction: column; align-items: center; cursor: ns-resize; touch-action: none; user-select: none; border-radius: var(--r-sm); padding: 2px 0; }
   .bdaw .knob svg { width: 40px; height: 40px; }
   .bdaw .knob.sm { width: 46px; } .bdaw .knob.sm svg { width: 32px; height: 32px; }
   .bdaw .knob.xs { width: 30px; } .bdaw .knob.xs svg { width: 28px; height: 28px; } .bdaw .knob.xs .k-l { display: none; }
-  .bdaw .k-bg { fill: #1a1e21; stroke: #0e1112; stroke-width: 1; }
-  .bdaw .k-tr { fill: none; stroke: #3a4348; stroke-width: 3.2; stroke-linecap: round; }
-  .bdaw .k-arc { fill: none; stroke: var(--acc); stroke-width: 3.2; stroke-linecap: round; }
-  .bdaw .k-tick { stroke: var(--bt); stroke-width: 2.4; stroke-linecap: round; }
-  .bdaw .k-l { font-size: 11px; color: var(--bd); margin-top: 1px; white-space: nowrap; }
-  .bdaw .k-v { position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); background: #0f1311; color: #9df27a; font: 700 11px ui-monospace, Menlo, monospace; padding: 3px 6px; border-radius: 5px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 5; }
+  .bdaw .k-bg { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  .bdaw .k-tr { fill: none; stroke: var(--line); stroke-width: 3.6; stroke-linecap: round; }
+  .bdaw .k-arc { fill: none; stroke: var(--banana); stroke-width: 3.6; stroke-linecap: round; }
+  .bdaw .k-tick { stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; }
+  .bdaw .k-l { font-size: 11.5px; color: var(--ink-2); margin-top: 1px; white-space: nowrap; font-weight: 700; }
+  .bdaw .k-v { position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); font: 800 11.5px var(--text); padding: 3px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 5; }
   .bdaw .knob:hover .k-v, .bdaw .knob.turning .k-v, .bdaw .knob:focus-visible .k-v { opacity: 1; }
 
-  .bdaw .toast { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--acc); color: #2a2208; font-weight: 800; padding: 10px 16px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,.4); z-index: 10; max-width: calc(100% - 32px); }
+  .bdaw .toast { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--banana); color: #3B3127; font-weight: 800; padding: 10px 16px; border-radius: var(--r-md); box-shadow: 0 8px 20px rgba(60, 40, 10, .25); z-index: 10; max-width: calc(100% - 32px); }
+  :root[data-theme="banana"] .bdaw :is(.rk, .knob-row) { border-top: 2px solid #3A2A0E; border-right: 2px solid #3A2A0E; border-bottom: 2px solid #3A2A0E; box-shadow: 3px 3px 0 #3A2A0E; }
+  :root[data-theme="banana"] .bdaw :is(.t-btn, .tog, .seg, select, input, .lcd) { border: 2px solid #3A2A0E; }
+
+  /* starter loops, as cards in the site's style */
+  .bd-start { margin: 34px 0 40px; }
+  .bd-start-h { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .bd-start-h h2 { margin: 0; font-size: var(--t-2); }
+  .bd-start-h p { margin: 0; color: var(--ink-2); }
+  .bd-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px; }
+  .bd-card { text-align: left; font: inherit; color: var(--ink); background: var(--tint); border: 0; border-radius: var(--r-lg); padding: 16px 18px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: transform .2s; }
+  .bd-card:hover { transform: translateY(-2px); }
+  .bd-card b { font: 600 20px var(--display); }
+  .bd-card span { color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+  .bd-card.blank { background: var(--card); box-shadow: inset 0 0 0 2px var(--line); }
+  :root[data-theme="banana"] .bd-card { border: 2px solid #3A2A0E; box-shadow: 4px 4px 0 #3A2A0E; }
 
   @media (max-width: 900px) {
-    .bdaw { border-radius: 10px; }
     .bdaw .main { grid-template-columns: minmax(0, 1fr); }
-    .bdaw .rack { border-right: 0; border-bottom: 1px solid #14181a; }
+    .bdaw .rack { border-right: 0; border-bottom: 1px solid var(--line); }
     .bdaw .rack-list { flex-direction: row; overflow-x: auto; max-height: none; padding: 8px; }
-    .bdaw .rk { grid-template-columns: 16px minmax(0, 1fr); min-width: 132px; }
+    .bdaw .rk { grid-template-columns: 22px minmax(0, 1fr); min-width: 136px; }
     .bdaw .rk .solo, .bdaw .rk > .knob, .bdaw .rk-prev { display: none; }
     .bdaw .rk-name { flex-direction: column; gap: 0; }
     .bdaw .rack-add { border-top: 0; padding-top: 0; }
     .bdaw .roll { grid-template-columns: 48px minmax(0, 1fr); height: 62vh; }
     .bdaw .tb { gap: 8px; }
     .bdaw .tb .sp { display: none; }
+    .bdaw .knob-row { width: 100%; }
   }
-  @media (prefers-reduced-motion: reduce) { .bdaw .k-v { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .bdaw .k-v, .bd-card, .bdaw .led svg { transition: none; } .bdaw .mascot.bob { animation: none; } }
 </style>
