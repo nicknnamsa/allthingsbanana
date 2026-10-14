@@ -1,508 +1,787 @@
 ---
 import Base from '../layouts/Base.astro';
 ---
-<Base wide noindex title="BanaDAW · make banana music in your browser · All Things Banana"
-      description="BanaDAW: a music studio in your browser. Program drums and melodies, pick a key and scale, arrange crates into a song, then share a link or download a WAV. Chill to full rave.">
-  <div class="daw" id="daw">
-    <!-- transport: the one crate label on the page -->
-    <section class="crate top">
-      <div class="crate-top">
-        <span class="label">BanaDAW · beta</span>
-        <input class="song-name" id="songName" aria-label="Song name" maxlength="60">
-      </div>
-      <div class="transport">
-        <button class="btn" id="playCrate" title="Loop the selected crate (Space)">▶ Loop crate</button>
-        <button class="btn banana" id="playSong" title="Play every crate in order">▶ Play song</button>
-        <button class="btn plain" id="stopBtn" title="Stop (Space)">■ Stop</button>
-        <span class="mascot" id="mascot" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z" fill="var(--banana)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M5.5 8.5 4.6 4.4l3 1.3" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/></svg></span>
-        <label class="field">Tempo <input type="number" id="bpm" min="60" max="190" step="1"> <small>BPM</small></label>
-        <label class="field">Swing <input type="range" id="swing" min="0" max="0.6" step="0.05"></label>
-        <label class="field">Key <select id="root"></select></label>
-        <label class="field">Scale <select id="scale"></select></label>
-        <span class="spacer"></span>
-        <button class="btn plain" id="undoBtn" title="Undo (Ctrl/Cmd+Z)">Undo</button>
-        <button class="btn plain" id="redoBtn" title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
-      </div>
-      <div class="styles">
-        <span class="lbl">Start from</span>
-        <span id="styleBtns"></span>
-        <span class="spacer"></span>
-        <button class="btn plain" id="shareBtn">Share link</button>
-        <button class="btn plain" id="wavBtn">Download WAV</button>
-      </div>
-      <p class="remix" id="remixNote" hidden>You opened someone's song. Change anything you like: it's your remix now, and Share link gives you its own link.</p>
-    </section>
+<Base wide noindex title="BanaDAW · a loop station in your browser · All Things Banana"
+      description="BanaDAW: a one-loop music studio in your browser. Program drums, draw melodies in a piano roll, tweak synths with knobs, then share a link or download a WAV. Lo-fi to dark club.">
+  <header class="bd-intro">
+    <h1>BanaDAW <span class="beta">beta</span></h1>
+    <p>One loop, every instrument. Pick a channel on the left, draw in the piano roll, turn the knobs. Space plays.</p>
+  </header>
 
-    <!-- crates: the song's sections -->
-    <section class="crates">
-      <div class="crates-head"><h2>Crates</h2><span class="hint">Sections of your song. Play song runs through them in order.</span></div>
-      <div class="crate-row" id="crateRow"></div>
-    </section>
+  <div class="bdaw" id="app" data-no-banana>
+    <!-- toolbar -->
+    <div class="tb">
+      <div class="tb-g">
+        <button class="t-btn play" id="play" title="Play / stop (Space)" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z"/></svg></button>
+        <button class="t-btn" id="stop" title="Stop" aria-label="Stop"><svg viewBox="0 0 20 20"><rect x="5" y="5" width="10" height="10" rx="1"/></svg></button>
+        <output class="lcd" id="lcd" aria-label="Position">1.1.1</output>
+      </div>
+      <label class="tb-f lcd-f">BPM <input class="lcd" id="bpm" type="number" min="60" max="200" step="1"></label>
+      <div class="tb-f"><span>Loop</span><span class="seg" id="bars" role="group" aria-label="Loop length in bars"></span><span>bars</span></div>
+      <label class="tb-f">Key <select id="root"></select></label>
+      <label class="tb-f">Scale <select id="scale"></select></label>
+      <div class="tb-knobs" id="masterKnobs"></div>
+      <canvas class="meter" id="meter" width="14" height="40" aria-hidden="true"></canvas>
+      <span class="sp"></span>
+      <div class="tb-g">
+        <button class="t-btn txt" id="undo" title="Undo (Ctrl/Cmd+Z)">Undo</button>
+        <button class="t-btn txt" id="redo" title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
+      </div>
+      <label class="tb-f"><span class="sr-only">Load a starter loop</span><select id="starter"></select></label>
+      <button class="t-btn txt hl" id="share">Share</button>
+      <button class="t-btn txt" id="wav" title="Download the loop, played a few times, as a WAV file">WAV</button>
+    </div>
 
-    <div class="studio">
-      <!-- hands: the tracks -->
-      <section class="box hands">
-        <div class="box-head"><h2>Hands</h2><span class="hint">tracks</span></div>
-        <ol class="track-list" id="trackList"></ol>
-        <div class="add-row">
-          <button class="tog" id="addSynth">+ Synth</button>
-          <button class="tog" id="addDrums">+ Drums</button>
+    <div class="main">
+      <!-- channel rack -->
+      <aside class="rack" aria-label="Channel rack">
+        <div class="pane-h"><input class="song-name" id="songName" aria-label="Loop name" maxlength="40"></div>
+        <div class="rack-list" id="rack"></div>
+        <label class="rack-add"><span class="sr-only">Add a channel</span><select id="add"></select></label>
+      </aside>
+
+      <!-- piano roll / drum roll -->
+      <section class="editor" aria-label="Editor">
+        <div class="pane-h ed-h">
+          <span class="ed-title"><i id="edSw"></i><b id="edName"></b><small id="edKind"></small></span>
+          <span class="ed-tools">
+            <label class="tb-f syn">Draw <select id="chord"></select></label>
+            <label class="tb-f syn">Length <select id="len"><option value="1">1/16</option><option value="2">1/8</option><option value="4">1/4</option><option value="8">1/2</option><option value="16">1 bar</option></select></label>
+            <label class="tb-f">Snap <select id="snap"><option value="1">1/16</option><option value="2">1/8</option><option value="4">1/4</option><option value="16">Bar</option></select></label>
+            <button class="tog syn" id="lock" aria-pressed="true" title="New and moved notes stay in the key">Scale lock</button>
+            <button class="tog syn" id="ghost" aria-pressed="true" title="Show the other instruments' notes faintly">Ghosts</button>
+            <span class="zoom"><button class="tog" id="zOut" aria-label="Zoom out">−</button><button class="tog" id="zIn" aria-label="Zoom in">+</button></span>
+            <button class="tog" id="clear">Clear</button>
+          </span>
         </div>
-      </section>
-
-      <!-- the editor for the selected hand -->
-      <section class="box editor">
-        <div class="box-head ed-head">
-          <h2 id="edTitle">Drums</h2>
-          <div class="ed-tools">
-            <span class="lbl">Ripeness</span>
-            <span class="brush" id="brush" role="radiogroup" aria-label="Ripeness of new notes (how hard they hit)"></span>
-            <label class="field syn-only">Length <select id="noteLen"><option value="1">1/16</option><option value="2" selected>1/8</option><option value="4">1/4</option><option value="8">1/2</option><option value="16">1 bar</option></select></label>
-            <label class="field syn-only">Octave <select id="oct"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
-            <label class="field syn-only">Brightness <input type="range" id="tone" min="0" max="1" step="0.05"></label>
-            <button class="link-btn" id="clearBtn">Clear</button>
+        <div class="roll" id="roll">
+          <div class="corner"></div>
+          <canvas id="ruler" aria-hidden="true"></canvas>
+          <canvas id="keys" aria-label="Keyboard: click a key to hear it"></canvas>
+          <div class="view" id="view">
+            <div class="scroll" id="scroll"><div id="spacer"></div></div>
+            <canvas id="grid" aria-hidden="true"></canvas>
           </div>
+          <div class="vel-l">Velocity</div>
+          <canvas id="vel" aria-label="Velocity: drag up and down"></canvas>
         </div>
-        <div class="grid-wrap" id="gridWrap">
-          <div class="grid" id="grid"></div>
-        </div>
-        <p class="ed-help" id="edHelp"></p>
+        <p class="help" id="help"></p>
       </section>
     </div>
 
-    <!-- the market board: the mixer -->
-    <section class="box board">
-      <div class="box-head"><h2>Market board</h2><span class="hint">the mixer</span></div>
-      <div class="mixer" id="mixer"></div>
+    <!-- the selected channel -->
+    <section class="chan" id="chan" aria-label="Channel settings">
+      <div class="chan-id">
+        <i class="sw" id="chSw"></i>
+        <input class="ch-name" id="chName" aria-label="Channel name" maxlength="24">
+        <select id="inst" aria-label="Instrument"></select>
+        <button class="tog" id="dup">Duplicate</button>
+        <button class="tog" id="del">Delete</button>
+      </div>
+      <div class="knob-row"><span class="kr-l">Sound</span><div class="knobs" id="soundKnobs"></div></div>
+      <div class="knob-row"><span class="kr-l">Mix</span><div class="knobs" id="mixKnobs"></div></div>
     </section>
+    <div class="toast" id="toast" role="status" hidden></div>
   </div>
 </Base>
 
 <script>
   import { Engine, renderWav } from '../scripts/banadaw/engine';
   import {
-    type Song, type Track, type Crate, type Ripe, type DrumLane, type Note,
-    STYLES, SCALES, KITS, SYNTHS, LANES, NOTE_NAMES, RIPE_NAMES, STEPS_PER_BAR, blankSong, newId, rowsFor, midiOf, noteName, stepsOf, encodeSong, decodeSong,
+    type Song, type Channel, type Note, type Bars, type Chord, type DrumSound, type SynthPreset,
+    STARTERS, SCALES, NOTE_NAMES, COLORS, DRUMS, SYNTHS, DRUM_KNOBS, SYNTH_KNOBS, BAR_CHOICES, CHORDS, STEPS_PER_BAR,
+    blankSong, newId, stepsOf, setBars, encodeSong, decodeSong, validSong, noteName, inScale, snapToScale, chordAt, drumChannel, synthChannel, drumDefaults,
   } from '../scripts/banadaw/song';
 
-  const $ = (id: string) => document.getElementById(id)!;
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
-  const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+  const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
   const store = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch {} } };
+  const coarse = matchMedia('(pointer: coarse)').matches;
 
   const engine = new Engine();
   let song: Song;
-  let sel = { crate: 0, track: '' };
-  let brush: Ripe = 3;
+  let selId = '';
+  let lastLen = 2, lastVel = 0.8, snap = 1, chord: Chord = 'note', lock = true, ghosts = true, zoom = 1;
   const past: string[] = [], future: string[] = [];
+  const sel = () => song.ch.find(c => c.id === selId) ?? song.ch[0];
+  const drums = () => song.ch.filter(c => c.kind === 'drum');
 
-  // ---------- changing the song (everything goes through here, so undo and autosave just work) ----------
-  function change(fn: (s: Song) => void, redraw: ('top' | 'crates' | 'tracks' | 'grid' | 'mixer')[] = ['crates', 'tracks', 'grid', 'mixer']) {
-    past.push(JSON.stringify(song)); if (past.length > 120) past.shift();
+  // ---------- every edit goes through here, so undo and autosave just work ----------
+  const snapshot = () => JSON.stringify(song);
+  function commit(before: string) {
+    if (before === snapshot()) return;
+    past.push(before); if (past.length > 150) past.shift();
     future.length = 0;
-    fn(song);
-    commit(redraw);
+    save();
   }
-  function commit(redraw: string[]) {
-    engine.setSong(song);
-    store.set('banadaw-song', JSON.stringify(song));
-    for (const r of redraw) ({ top: drawTop, crates: drawCrates, tracks: drawTracks, grid: drawGrid, mixer: drawMixer } as Record<string, () => void>)[r]?.();
-  }
+  function save() { engine.setSong(song); store.set('banadaw2', snapshot()); }
+  function edit(fn: () => void) { const b = snapshot(); fn(); commit(b); refresh(); }
   function load(s: Song) {
     song = s;
-    sel.crate = Math.min(sel.crate, s.crates.length - 1);
-    if (!s.tracks.some(t => t.id === sel.track)) sel.track = s.tracks[0]?.id || '';
-    commit(['top', 'crates', 'tracks', 'grid', 'mixer']);
+    if (!song.ch.some(c => c.id === selId)) selId = song.ch.find(c => c.kind === 'synth')?.id ?? song.ch[0]?.id ?? '';
+    engine.setSong(song);
+    refresh(true);
   }
-  function undo() { const p = past.pop(); if (!p) return; future.push(JSON.stringify(song)); load(JSON.parse(p)); }
-  function redo() { const f = future.pop(); if (!f) return; past.push(JSON.stringify(song)); load(JSON.parse(f)); }
-  const crate = () => song.crates[sel.crate];
-  const track = () => song.tracks.find(t => t.id === sel.track)!;
+  function undo() { const p = past.pop(); if (!p) return; future.push(snapshot()); song = JSON.parse(p); load(song); save(); }
+  function redo() { const f = future.pop(); if (!f) return; past.push(snapshot()); song = JSON.parse(f); load(song); save(); }
+  function refresh(recenter = false) { drawTop(); drawRack(); drawChan(); layout(recenter); }
 
-  // ---------- top bar ----------
+  let toastT = 0;
+  function toast(msg: string) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = window.setTimeout(() => (t.hidden = true), 2600); }
+
+  // ---------- knobs: drag up and down (Shift for fine), double-click to reset, arrow keys work too ----------
+  type Knob = { label: string; get: () => number; set: (v: number) => void; def: number; min?: number; max?: number; fmt: (v: number) => string; bi?: boolean };
+  const knobs = new Map<string, Knob>();
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  function knobHTML(key: string, k: Knob, size = '') {
+    knobs.set(key, k);
+    return `<div class="knob ${size}" data-k="${key}" role="slider" tabindex="0" aria-label="${esc(k.label)}"><svg viewBox="0 0 40 40" aria-hidden="true"><circle class="k-bg" cx="20" cy="20" r="15"/><path class="k-tr" d="${arc(-135, 135)}"/><path class="k-arc"/><line class="k-tick" x1="20" y1="20" x2="20" y2="8"/></svg><span class="k-l">${esc(k.label)}</span><span class="k-v"></span></div>`;
+  }
+  function arc(a0: number, a1: number) {
+    const p = (a: number) => [20 + 15 * Math.sin((a * Math.PI) / 180), 20 - 15 * Math.cos((a * Math.PI) / 180)];
+    if (Math.abs(a1 - a0) < 0.5) return '';
+    const [x0, y0] = p(a0), [x1, y1] = p(a1);
+    return `M${x0.toFixed(2)} ${y0.toFixed(2)}A15 15 0 ${Math.abs(a1 - a0) > 180 ? 1 : 0} ${a1 > a0 ? 1 : 0} ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  }
+  function paintKnob(el: HTMLElement) {
+    const k = knobs.get(el.dataset.k!); if (!k) return;
+    const min = k.min ?? 0, max = k.max ?? 1, v = k.get(), n = (v - min) / (max - min), a = -135 + n * 270;
+    el.querySelector('.k-arc')!.setAttribute('d', k.bi ? arc(Math.min(0, a), Math.max(0, a)) : arc(-135, a));
+    el.querySelector('.k-tick')!.setAttribute('transform', `rotate(${a} 20 20)`);
+    el.querySelector('.k-v')!.textContent = k.fmt(v);
+    el.setAttribute('aria-valuemin', String(min)); el.setAttribute('aria-valuemax', String(max));
+    el.setAttribute('aria-valuenow', v.toFixed(2)); el.setAttribute('aria-valuetext', k.fmt(v));
+  }
+  const paintKnobs = (root: ParentNode) => root.querySelectorAll<HTMLElement>('.knob').forEach(paintKnob);
+  function setKnob(el: HTMLElement, v: number) {
+    const k = knobs.get(el.dataset.k!)!;
+    k.set(clamp(v, k.min ?? 0, k.max ?? 1)); paintKnob(el); engine.setSong(song);
+    if (el.closest('.rack')) drawRackPreviews();
+  }
+  $('app').addEventListener('pointerdown', e => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('.knob'); if (!el) return;
+    e.preventDefault(); el.focus(); el.setPointerCapture(e.pointerId); el.classList.add('turning');
+    const k = knobs.get(el.dataset.k!)!, range = (k.max ?? 1) - (k.min ?? 0), y0 = e.clientY, v0 = k.get(), before = snapshot();
+    const move = (ev: PointerEvent) => setKnob(el, v0 + ((y0 - ev.clientY) / (ev.shiftKey ? 700 : 160)) * range);
+    const up = () => { el.removeEventListener('pointermove', move); el.classList.remove('turning'); commit(before); };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up, { once: true }); el.addEventListener('pointercancel', up, { once: true });
+  });
+  $('app').addEventListener('dblclick', e => { const el = (e.target as HTMLElement).closest<HTMLElement>('.knob'); if (!el) return; const b = snapshot(); setKnob(el, knobs.get(el.dataset.k!)!.def); commit(b); });
+  $('app').addEventListener('keydown', e => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('.knob'); if (!el) return;
+    const k = knobs.get(el.dataset.k!)!, r = (k.max ?? 1) - (k.min ?? 0);
+    const d = { ArrowUp: 0.02, ArrowRight: 0.02, ArrowDown: -0.02, ArrowLeft: -0.02, PageUp: 0.1, PageDown: -0.1 }[e.key];
+    if (d == null) return;
+    e.preventDefault(); const b = snapshot(); setKnob(el, k.get() + d * r); commit(b);
+  });
+
+  // ---------- toolbar ----------
   $('root').innerHTML = NOTE_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
   $('scale').innerHTML = SCALES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
-  $('styleBtns').innerHTML = STYLES.map(s => `<button class="tog" data-style="${s.id}" title="${esc(s.blurb)}">${s.label}</button>`).join('') + '<button class="tog" data-style="blank">Blank</button>';
+  $('bars').innerHTML = BAR_CHOICES.map(b => `<button data-b="${b}">${b}</button>`).join('');
+  $('starter').innerHTML = `<option value="">Loops…</option>` + STARTERS.map(s => `<option value="${s.id}">${esc(s.label)}: ${esc(s.blurb)}</option>`).join('') + `<option value="blank">Empty loop</option>`;
+  $('chord').innerHTML = CHORDS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+  $('add').innerHTML = `<option value="">+ Add channel</option><optgroup label="Drums">${(Object.keys(DRUMS) as DrumSound[]).map(d => `<option value="d:${d}">${DRUMS[d].label}</option>`).join('')}</optgroup>`
+    + ['Bass', 'Lead', 'Chords', 'Keys', 'FX'].map(gr => `<optgroup label="${gr}">${(Object.keys(SYNTHS) as SynthPreset[]).filter(p => SYNTHS[p].group === gr).map(p => `<option value="s:${p}">${SYNTHS[p].label}</option>`).join('')}</optgroup>`).join('');
+
   function drawTop() {
-    ($('songName') as HTMLInputElement).value = song.name;
-    ($('bpm') as HTMLInputElement).value = String(song.bpm);
-    ($('swing') as HTMLInputElement).value = String(song.swing);
-    ($('root') as HTMLSelectElement).value = String(song.root);
-    ($('scale') as HTMLSelectElement).value = song.scale;
+    $<HTMLInputElement>('songName').value = song.name;
+    $<HTMLInputElement>('bpm').value = String(song.bpm);
+    $<HTMLSelectElement>('root').value = String(song.root);
+    $<HTMLSelectElement>('scale').value = song.scale;
+    $('bars').querySelectorAll<HTMLButtonElement>('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.b! === song.bars)));
+    $('masterKnobs').innerHTML = [
+      knobHTML('swing', { label: 'Swing', get: () => song.swing, set: v => (song.swing = v), def: 0, max: 0.6, fmt: v => pct(v / 0.6) }, 'sm'),
+      knobHTML('mfilter', { label: 'Filter', get: () => song.master.filter, set: v => (song.master.filter = Math.abs(v) < 0.03 ? 0 : v), def: 0, min: -1, max: 1, bi: true, fmt: v => (v < -0.02 ? `Dark ${pct(-v)}` : v > 0.02 ? `Thin ${pct(v)}` : 'Open') }, 'sm'),
+      knobHTML('mdrive', { label: 'Drive', get: () => song.master.drive, set: v => (song.master.drive = v), def: 0.15, fmt: pct }, 'sm'),
+      knobHTML('mvol', { label: 'Master', get: () => song.master.vol, set: v => (song.master.vol = v), def: 0.8, fmt: pct }, 'sm'),
+    ].join('');
+    paintKnobs($('masterKnobs'));
   }
-  $('songName').addEventListener('change', e => change(s => { s.name = (e.target as HTMLInputElement).value.trim() || 'Untitled bunch'; }, []));
-  $('bpm').addEventListener('change', e => change(s => { s.bpm = Math.max(60, Math.min(190, Math.round(+(e.target as HTMLInputElement).value) || 110)); }, ['top']));
-  $('swing').addEventListener('change', e => change(s => { s.swing = +(e.target as HTMLInputElement).value; }, []));
-  $('root').addEventListener('change', e => change(s => { s.root = +(e.target as HTMLSelectElement).value; }, ['grid']));
-  $('scale').addEventListener('change', e => change(s => { s.scale = (e.target as HTMLSelectElement).value as Song['scale']; }, ['grid']));
-  $('styleBtns').addEventListener('click', e => {
-    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
-    if (!confirm('Start a new song? (Undo brings this one back.)')) return;
-    const st = STYLES.find(x => x.id === b.dataset.style);
-    change(s => Object.assign(s, st ? st.make() : blankSong()), []);
-    sel = { crate: 0, track: song.tracks[0].id };
-    load(song);
+  $('songName').addEventListener('change', e => edit(() => { song.name = (e.target as HTMLInputElement).value.trim() || 'Untitled bunch'; }));
+  $('bpm').addEventListener('change', e => edit(() => { song.bpm = clamp(Math.round(+(e.target as HTMLInputElement).value) || 120, 60, 200); }));
+  $('bars').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b && +b.dataset.b! !== song.bars) edit(() => setBars(song, +b.dataset.b! as Bars)); });
+  $('root').addEventListener('change', e => edit(() => {   // changing key moves the music with it
+    const r = +(e.target as HTMLSelectElement).value, d = ((((r - song.root) % 12) + 18) % 12) - 6;
+    for (const c of song.ch) if (c.kind === 'synth') c.notes.forEach(n => (n.m += d));
+    song.root = r;
+  }));
+  $('scale').addEventListener('change', e => edit(() => { song.scale = (e.target as HTMLSelectElement).value as Song['scale']; }));
+  $('starter').addEventListener('change', e => {
+    const el = e.target as HTMLSelectElement, id = el.value; el.value = '';
+    if (!id) return;
+    const st = STARTERS.find(s => s.id === id);
+    edit(() => { song = st ? st.make() : blankSong(); selId = ''; });
+    load(song); toast(`Loaded ${st ? st.label : 'an empty loop'}. Undo brings your old one back.`);
   });
-  $('undoBtn').addEventListener('click', undo);
-  $('redoBtn').addEventListener('click', redo);
+  $('undo').addEventListener('click', undo);
+  $('redo').addEventListener('click', redo);
 
   // ---------- transport ----------
-  const playBtns = () => { $('playCrate').classList.toggle('on', engine.playing && engine.mode === 'crate'); $('playSong').classList.toggle('on', engine.playing && engine.mode === 'song'); };
-  $('playCrate').addEventListener('click', () => { engine.setSong(song); engine.play('crate', sel.crate); playBtns(); });
-  $('playSong').addEventListener('click', () => { engine.setSong(song); engine.play('song', 0); playBtns(); });
-  $('stopBtn').addEventListener('click', () => { engine.stop(); playBtns(); });
+  const playBtn = () => { $('play').classList.toggle('on', engine.playing); $('play').setAttribute('aria-label', engine.playing ? 'Stop' : 'Play'); };
+  const toggle = () => { if (engine.playing) engine.stop(); else { engine.setSong(song); engine.play(); } playBtn(); };
+  $('play').addEventListener('click', toggle);
+  $('stop').addEventListener('click', () => { engine.stop(); playBtn(); dirty = true; });
+  // the computer keyboard plays the selected synth, like a little piano: A W S E D F T G Y H U J K
+  const KEYMAP = 'awsedftgyhujk';
   addEventListener('keydown', e => {
-    const typing = (e.target as HTMLElement).closest('input, select, textarea');
-    if (e.code === 'Space' && !typing) { e.preventDefault(); if (engine.playing) engine.stop(); else engine.play('crate', sel.crate); playBtns(); }
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    const typing = (e.target as HTMLElement).closest('input, select, textarea, .knob');
+    if (typing) return;
+    if (e.code === 'Space') { e.preventDefault(); toggle(); return; }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+    const i = KEYMAP.indexOf(e.key.toLowerCase());
+    if (i >= 0 && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) { const c = sel(); engine.preview(c, 12 * Math.floor(viewMid() / 12) + i, 0.8); flash = { m: 12 * Math.floor(viewMid() / 12) + i, t: performance.now() }; dirty = true; }
   });
 
-  // ---------- crates ----------
-  function drawCrates() {
-    $('crateRow').innerHTML = song.crates.map((c, i) => `
-      <div class="crate-tile${i === sel.crate ? ' on' : ''}" data-i="${i}">
-        <button class="ct-pick" data-act="pick">${i + 1}</button>
-        <input class="ct-name" data-act="name" value="${esc(c.name)}" aria-label="Crate name" maxlength="24">
-        <label class="ct-f">bars <select data-act="bars">${[1, 2, 4].map(b => `<option${b === c.bars ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
-        <label class="ct-f">× <select data-act="times">${[1, 2, 3, 4, 6, 8].map(b => `<option${b === c.times ? ' selected' : ''}>${b}</option>`).join('')}</select></label>
-        <span class="ct-acts">
-          <button data-act="left" title="Move earlier" ${i === 0 ? 'disabled' : ''}>←</button>
-          <button data-act="right" title="Move later" ${i === song.crates.length - 1 ? 'disabled' : ''}>→</button>
-          <button data-act="dup" title="Duplicate">Copy</button>
-          <button data-act="del" title="Delete" ${song.crates.length === 1 ? 'disabled' : ''}>Delete</button>
-        </span>
-      </div>`).join('') + `<button class="tog new-crate" id="newCrate">+ New crate</button>`;
-  }
-  $('crateRow').addEventListener('click', e => {
-    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
-    if (b.id === 'newCrate') { change(s => { s.crates.push({ id: newId(), name: `Crate ${s.crates.length + 1}`, bars: 2, times: 1, drums: {}, notes: {} }); sel.crate = s.crates.length - 1; }); return; }
-    const i = +(b.closest('[data-i]') as HTMLElement).dataset.i!, act = b.dataset.act;
-    if (act === 'pick') { sel.crate = i; drawCrates(); drawGrid(); if (engine.playing && engine.mode === 'crate') engine.play('crate', i); return; }
-    change(s => {
-      if (act === 'left' || act === 'right') { const j = act === 'left' ? i - 1 : i + 1; [s.crates[i], s.crates[j]] = [s.crates[j], s.crates[i]]; sel.crate = j; }
-      if (act === 'dup') { const c = clone(s.crates[i]); c.id = newId(); c.name = `${c.name} copy`.slice(0, 24); s.crates.splice(i + 1, 0, c); sel.crate = i + 1; }
-      if (act === 'del' && confirm(`Delete crate “${s.crates[i].name}”?`)) { s.crates.splice(i, 1); sel.crate = Math.max(0, Math.min(sel.crate, s.crates.length - 1)); }
-    });
-  });
-  $('crateRow').addEventListener('change', e => {
-    const el = e.target as HTMLInputElement, i = +(el.closest('[data-i]') as HTMLElement).dataset.i!;
-    change(s => {
-      const c = s.crates[i];
-      if (el.dataset.act === 'name') c.name = el.value.trim() || `Crate ${i + 1}`;
-      if (el.dataset.act === 'bars') c.bars = +el.value as Crate['bars'];
-      if (el.dataset.act === 'times') c.times = +el.value;
-    }, ['crates', 'grid']);
-  });
-
-  // ---------- hands (tracks) ----------
-  function drawTracks() {
-    $('trackList').innerHTML = song.tracks.map(t => `
-      <li class="${t.id === sel.track ? 'on' : ''}${t.mute ? ' peeled' : ''}" data-id="${t.id}">
-        <button class="tr-pick" data-act="pick"><b>${esc(t.name)}</b><span>${t.kind === 'drums' ? KITS.find(k => k.id === t.kit)!.label.split(' (')[0] + ' kit' : SYNTHS.find(x => x.id === t.synth)!.label.split(' (')[0]}</span></button>
-        <select data-act="inst" aria-label="Instrument">${t.kind === 'drums'
-          ? KITS.map(k => `<option value="${k.id}"${k.id === t.kit ? ' selected' : ''}>${k.label}</option>`).join('')
-          : SYNTHS.map(k => `<option value="${k.id}"${k.id === t.synth ? ' selected' : ''}>${k.label}</option>`).join('')}</select>
-        <span class="tr-acts">
-          <button class="mini${t.mute ? ' on' : ''}" data-act="mute" title="Peel (mute)" aria-pressed="${t.mute}">Peel</button>
-          <button class="mini${t.solo ? ' on' : ''}" data-act="solo" title="Solo" aria-pressed="${t.solo}">Solo</button>
-          <button class="mini" data-act="rename" title="Rename" aria-label="Rename">✎</button>
-          <button class="mini" data-act="del" title="Delete" ${song.tracks.length === 1 ? 'disabled' : ''}>×</button>
-        </span>
-      </li>`).join('');
-  }
-  $('trackList').addEventListener('click', e => {
-    const b = (e.target as HTMLElement).closest('button'); if (!b) return;
-    const id = (b.closest('[data-id]') as HTMLElement).dataset.id!, act = b.dataset.act;
-    if (act === 'pick') { sel.track = id; drawTracks(); drawGrid(); return; }
-    if (act === 'rename') { const t = song.tracks.find(x => x.id === id)!; const n = prompt('Name this hand', t.name); if (n?.trim()) change(s => { s.tracks.find(x => x.id === id)!.name = n.trim().slice(0, 24); }, ['tracks', 'grid', 'mixer']); return; }
-    change(s => {
-      const t = s.tracks.find(x => x.id === id)!;
-      if (act === 'mute') t.mute = !t.mute;
-      if (act === 'solo') t.solo = !t.solo;
-      if (act === 'del' && confirm(`Delete “${t.name}” and everything it plays?`)) {
-        s.tracks = s.tracks.filter(x => x.id !== id);
-        for (const c of s.crates) { delete c.drums[id]; delete c.notes[id]; }
-        if (sel.track === id) sel.track = s.tracks[0].id;
-      }
-    }, ['tracks', 'grid', 'mixer']);
-  });
-  $('trackList').addEventListener('change', e => {
-    const el = e.target as HTMLSelectElement, id = (el.closest('[data-id]') as HTMLElement).dataset.id!;
-    change(s => { const t = s.tracks.find(x => x.id === id)!; if (t.kind === 'drums') t.kit = el.value as any; else t.synth = el.value as any; }, ['tracks', 'grid']);
-  });
-  $('addSynth').addEventListener('click', () => change(s => { const id = newId(); s.tracks.push({ id, kind: 'synth', name: `Synth ${s.tracks.length}`, synth: 'pluck', oct: 4, tone: 0.6, vol: 0.7, pan: 0, rev: 0.2, dly: 0, mute: false, solo: false }); sel.track = id; }));
-  $('addDrums').addEventListener('click', () => change(s => { const id = newId(); s.tracks.push({ id, kind: 'drums', name: 'More drums', kit: 'chill', vol: 0.8, pan: 0, rev: 0.1, dly: 0, mute: false, solo: false }); sel.track = id; }));
-
-  // ---------- ripeness brush ----------
-  $('brush').innerHTML = [1, 2, 3, 4].map(r => `<button class="rb r${r}" data-r="${r}" role="radio" title="${RIPE_NAMES[r]}" aria-label="${RIPE_NAMES[r]}"></button>`).join('');
-  const drawBrush = () => $('brush').querySelectorAll<HTMLButtonElement>('button').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.r! === brush)));
-  $('brush').addEventListener('click', e => { const b = (e.target as HTMLElement).closest('button'); if (b) { brush = +b.dataset.r! as Ripe; drawBrush(); } });
-  drawBrush();
-
-  // ---------- the grid: drum lanes or a piano roll ----------
-  type Row = { label: string; lane?: DrumLane; d?: number; root?: boolean };
-  let rows: Row[] = [];
-  function drawGrid() {
-    const c = crate(), t = track(), steps = stepsOf(c);
-    const isDrums = t.kind === 'drums';
-    $('edTitle').textContent = `${t.name} · ${c.name}`;
-    document.querySelectorAll<HTMLElement>('.syn-only').forEach(el => (el.hidden = isDrums));
-    if (!isDrums) { ($('oct') as HTMLSelectElement).value = String(t.oct); ($('tone') as HTMLInputElement).value = String(t.tone); }
-    rows = isDrums ? LANES.map(l => ({ label: l.label, lane: l.id }))
-      : Array.from({ length: rowsFor(song.scale) }, (_, i) => { const d = rowsFor(song.scale) - 1 - i, m = midiOf(song, t.oct, d); return { label: noteName(m), d, root: (m - song.root) % 12 === 0 }; });
-    const g = $('grid');
-    const room = $('gridWrap').clientWidth - 24 - 76;
-    g.style.setProperty('--cw', `${Math.max(matchMedia('(pointer: coarse)').matches ? 30 : 20, Math.min(44, Math.floor(room / steps)))}px`);
-    g.style.setProperty('--steps', String(steps));
-    g.style.setProperty('--rows', String(rows.length));
-    g.className = `grid ${isDrums ? 'drums' : 'roll'}`;
-    let html = `<div class="g-labels">${rows.map((r, i) => `<button class="g-label${r.root ? ' root' : ''}" data-row="${i}" tabindex="-1">${r.label}</button>`).join('')}</div><div class="g-cells" id="cells">`;
-    html += `<div class="g-bg">${rows.map(r => `<div class="g-rowbg${r.root ? ' root' : ''}"></div>`).join('')}</div>`;
-    if (isDrums) {
-      const lanes = c.drums[t.id] || {};
-      rows.forEach((r, ri) => (lanes[r.lane!] || []).forEach((v, s) => { if (v && s < steps) html += `<i class="hit r${v}" style="grid-row:${ri + 1};grid-column:${s + 1}"></i>`; }));
-    } else {
-      for (const n of c.notes[t.id] || []) {
-        const ri = rows.findIndex(r => r.d === n.d);
-        if (ri < 0 || n.s >= steps) continue;
-        html += `<i class="note r${n.v}" style="grid-row:${ri + 1};grid-column:${n.s + 1} / span ${Math.min(n.l, steps - n.s)}"></i>`;
-      }
-    }
-    html += `<div class="playhead" id="playhead" hidden></div></div>`;
-    g.innerHTML = html;
-    $('edHelp').textContent = isDrums
-      ? 'Tap a step to drop a banana at the brush ripeness; tap it again to take it off. Drag to paint. Riper bananas hit harder.'
-      : `Tap to add a note (${['', '1/16', '1/8', '', '1/4', '', '', '', '1/2'][+($('noteLen') as HTMLSelectElement).value] || '1 bar'} long), drag right to stretch it, tap a note to remove it. Every row is in ${NOTE_NAMES[song.root]} ${SCALES.find(s => s.id === song.scale)!.label.toLowerCase()}, so nothing sounds wrong.`;
-  }
-  // which row and step a pointer is over
-  function cellAt(e: PointerEvent) {
-    const cells = $('cells'), r = cells.getBoundingClientRect();
-    const steps = stepsOf(crate());
-    const step = Math.floor(((e.clientX - r.left) / r.width) * steps), row = Math.floor(((e.clientY - r.top) / r.height) * rows.length);
-    return step >= 0 && step < steps && row >= 0 && row < rows.length ? { step, row } : null;
-  }
-  let drag: null | { mode: 'paint' | 'erase'; noteAt?: Note; startStep: number; row: number; moved: boolean } = null;
-  $('grid').addEventListener('pointerdown', e => {
-    const label = (e.target as HTMLElement).closest('.g-label') as HTMLElement | null;
-    if (label) { const r = rows[+label.dataset.row!]; engine.setSong(song); engine.preview(track(), { lane: r.lane, d: r.d, v: brush }); return; }
-    const at = cellAt(e); if (!at) return;
-    e.preventDefault();
-    ($('grid') as HTMLElement).setPointerCapture(e.pointerId);
-    const t = track(), r = rows[at.row];
-    past.push(JSON.stringify(song)); if (past.length > 120) past.shift(); future.length = 0;
-    engine.setSong(song);
-    if (t.kind === 'drums') {
-      const lanes = (crate().drums[t.id] ||= {}), arr = (lanes[r.lane!] ||= Array(stepsOf(crate())).fill(0)) as Ripe[];
-      const mode = arr[at.step] === brush ? 'erase' : 'paint';
-      arr[at.step] = mode === 'erase' ? 0 : brush;
-      if (mode === 'paint') engine.preview(t, { lane: r.lane, v: brush });
-      drag = { mode, startStep: at.step, row: at.row, moved: false };
-    } else {
-      const notes = (crate().notes[t.id] ||= []);
-      const hit = notes.find(n => n.d === r.d && at.step >= n.s && at.step < n.s + n.l);
-      if (hit) { notes.splice(notes.indexOf(hit), 1); drag = { mode: 'erase', startStep: at.step, row: at.row, moved: false }; }
-      else {
-        const n: Note = { s: at.step, l: +($('noteLen') as HTMLSelectElement).value, d: r.d!, v: brush };
-        n.l = Math.min(n.l, stepsOf(crate()) - n.s);
-        notes.push(n); engine.preview(t, { d: r.d, v: brush });
-        drag = { mode: 'paint', noteAt: n, startStep: at.step, row: at.row, moved: false };
-      }
-    }
-    commit(['grid']);
-  });
-  $('grid').addEventListener('pointermove', e => {
-    if (!drag) return;
-    const at = cellAt(e); if (!at) return;
-    const t = track();
-    if (t.kind === 'drums') {
-      const arr = crate().drums[t.id]![rows[at.row].lane!] ||= Array(stepsOf(crate())).fill(0) as Ripe[];
-      const want = drag.mode === 'erase' ? 0 : brush;
-      if (arr[at.step] !== want) { arr[at.step] = want as Ripe; commit(['grid']); }
-    } else if (drag.noteAt) {
-      // stretch the note you just drew
-      const l = Math.max(1, at.step - drag.noteAt.s + 1);
-      if (l !== drag.noteAt.l) { drag.noteAt.l = l; commit(['grid']); }
-    }
-  });
-  addEventListener('pointerup', () => { if (drag) { drag = null; commit([]); } });
-
-  // editor tools
-  $('oct').addEventListener('change', e => change(s => { const t = s.tracks.find(x => x.id === sel.track)!; if (t.kind === 'synth') t.oct = +(e.target as HTMLSelectElement).value; }, ['grid']));
-  $('tone').addEventListener('change', e => change(s => { const t = s.tracks.find(x => x.id === sel.track)!; if (t.kind === 'synth') t.tone = +(e.target as HTMLInputElement).value; }, []));
-  $('noteLen').addEventListener('change', () => drawGrid());
-  $('clearBtn').addEventListener('click', () => { if (confirm(`Clear ${track().name} in “${crate().name}”?`)) change(s => { delete s.crates[sel.crate].drums[sel.track]; delete s.crates[sel.crate].notes[sel.track]; }, ['grid']); });
-
-  // ---------- the market board (mixer) ----------
-  const knob = (id: string, key: string, label: string, v: number, min: number, max: number) =>
-    `<label class="mx-k"><span>${label}</span><input type="range" data-id="${id}" data-key="${key}" min="${min}" max="${max}" step="0.01" value="${v}"></label>`;
-  function drawMixer() {
-    $('mixer').innerHTML = song.tracks.map(t => `
-      <div class="mx-col${t.mute ? ' peeled' : ''}">
-        <b>${esc(t.name)}</b>
-        ${knob(t.id, 'vol', 'Volume', t.vol, 0, 1)}${knob(t.id, 'pan', 'Pan', t.pan, -1, 1)}${knob(t.id, 'rev', 'Reverb', t.rev, 0, 1)}${knob(t.id, 'dly', 'Echo', t.dly, 0, 1)}
-      </div>`).join('') + `
-      <div class="mx-col master">
-        <b>Master</b>
-        ${knob('master', 'warmth', 'Warmth', song.warmth, 0, 1)}${knob('master', 'drive', 'Drive', song.drive, 0, 1)}${knob('master', 'pump', 'Pump', song.pump, 0, 1)}
-      </div>`;
-  }
-  $('mixer').addEventListener('input', e => {
-    const el = e.target as HTMLInputElement, v = +el.value;
-    // live while dragging, saved once on release
-    if (el.dataset.id === 'master') (song as any)[el.dataset.key!] = v;
-    else (song.tracks.find(t => t.id === el.dataset.id) as any)[el.dataset.key!] = v;
-    engine.setSong(song);
-  });
-  $('mixer').addEventListener('change', () => change(() => {}, []));
-
-  // ---------- sharing and exporting ----------
-  $('shareBtn').addEventListener('click', async () => {
+  $('share').addEventListener('click', async () => {
     const url = `${location.origin}/banadaw/#s=${await encodeSong(song)}`;
     history.replaceState(null, '', url);
-    try {
-      if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title: song.name, text: `🍌 “${song.name}”, made in BanaDAW. Remix it:`, url });
-      else { await navigator.clipboard.writeText(url); $('shareBtn').textContent = 'Link copied'; setTimeout(() => ($('shareBtn').textContent = 'Share link'), 2000); }
-    } catch {}
+    try { await navigator.clipboard.writeText(url); toast('Link copied. Anyone who opens it gets this loop to remix.'); } catch { prompt('Copy this link:', url); }
   });
-  $('wavBtn').addEventListener('click', async () => {
-    const b = $('wavBtn') as HTMLButtonElement;
-    b.disabled = true; b.textContent = 'Rendering…';
+  $('wav').addEventListener('click', async () => {
+    const b = $<HTMLButtonElement>('wav'); b.disabled = true; b.textContent = 'Rendering…';
     try {
-      const blob = await renderWav(song);
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = `${song.name.replace(/[^\w\- ]+/g, '').trim() || 'banana'}.wav`; a.click();
+      const blob = await renderWav(song, song.bars <= 2 ? 8 : 4);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${song.name.replace(/[^\w\- ]+/g, '').trim() || 'banadaw'}.wav`; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    } catch { alert('Sorry, the export failed in this browser.'); }
-    b.disabled = false; b.textContent = 'Download WAV';
+    } catch { toast('Couldn’t render the WAV in this browser.'); }
+    b.disabled = false; b.textContent = 'WAV';
   });
 
-  // ---------- playhead and the dancing banana ----------
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function frame() {
-    const p = engine.position(), ph = document.getElementById('playhead');
-    if (ph) {
-      if (p && p.crate === sel.crate) { ph.hidden = false; ph.style.left = `${(p.step / stepsOf(crate())) * 100}%`; ph.style.width = `${100 / stepsOf(crate())}%`; }
-      else ph.hidden = true;
-    }
-    if (p && !reduce) {
-      const beat = p.step % 4 === 0;
-      $('mascot').style.transform = `rotate(${beat ? -14 : 8}deg) scale(${beat ? 1.15 : 1})`;
-      document.querySelectorAll('.crate-tile').forEach((el, i) => el.classList.toggle('playing', i === p.crate));
-    } else if (!p) document.querySelectorAll('.crate-tile.playing').forEach(el => el.classList.remove('playing'));
-    requestAnimationFrame(frame);
-  let resizeT = 0;
-  addEventListener('resize', () => { clearTimeout(resizeT); resizeT = window.setTimeout(() => song && drawGrid(), 150); });
+  // ---------- channel rack ----------
+  const instLabel = (c: Channel) => (c.kind === 'drum' ? DRUMS[c.sound].label : SYNTHS[c.preset].label);
+  function drawRack() {
+    $('rack').innerHTML = song.ch.map(c => `
+      <div class="rk${c.id === selId ? ' on' : ''}${c.mix.mute ? ' muted' : ''}" data-id="${c.id}" style="--c:${COLORS[c.color]}">
+        <button class="led" data-act="mute" aria-pressed="${!c.mix.mute}" title="${c.mix.mute ? 'Unmute' : 'Mute'}" aria-label="${c.mix.mute ? 'Unmute' : 'Mute'} ${esc(c.name)}"></button>
+        <button class="solo${c.mix.solo ? ' on' : ''}" data-act="solo" aria-pressed="${c.mix.solo}" title="Solo">S</button>
+        ${knobHTML(`ch:${c.id}:vol`, { label: 'Volume', get: () => c.mix.vol, set: v => (c.mix.vol = v), def: 0.78, fmt: pct }, 'xs')}
+        <button class="rk-name" data-act="pick"><b>${esc(c.name)}</b>${c.name === instLabel(c) ? '' : `<small>${esc(instLabel(c))}</small>`}</button>
+        <canvas class="rk-prev" data-act="pick" width="150" height="30"></canvas>
+      </div>`).join('');
+    paintKnobs($('rack'));
+    drawRackPreviews();
   }
-  requestAnimationFrame(frame);
+  function drawRackPreviews() {
+    const steps = stepsOf(song);
+    $('rack').querySelectorAll<HTMLCanvasElement>('canvas.rk-prev').forEach(cv => {
+      const c = song.ch.find(x => x.id === cv.closest<HTMLElement>('.rk')!.dataset.id)!;
+      const dpr = devicePixelRatio || 1, W = 150, H = 30;
+      cv.width = W * dpr; cv.height = H * dpr;
+      const g = cv.getContext('2d')!; g.scale(dpr, dpr);
+      g.fillStyle = '#20262a'; g.fillRect(0, 0, W, H);
+      const sw = W / steps;
+      for (let b = 0; b < song.bars * 4; b++) if (b % 2) { g.fillStyle = '#262d32'; g.fillRect(b * 4 * sw, 0, 4 * sw, H); }
+      g.fillStyle = COLORS[c.color];
+      if (c.kind === 'drum') c.steps.forEach((v, i) => { if (v) { g.globalAlpha = 0.35 + v * 0.65; g.fillRect(i * sw + 0.5, 6, Math.max(1, sw - 1), H - 12); } });
+      else if (c.notes.length) {
+        const lo = Math.min(...c.notes.map(n => n.m)), hi = Math.max(...c.notes.map(n => n.m)), span = Math.max(12, hi - lo + 1);
+        for (const n of c.notes) { g.globalAlpha = 0.45 + n.v * 0.55; g.fillRect(n.s * sw, H - 4 - ((n.m - lo + 1) / span) * (H - 8), Math.max(1.5, n.l * sw - 0.5), 2.5); }
+      }
+      g.globalAlpha = 1;
+    });
+  }
+  $('rack').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]'); if (!b) return;
+    const id = b.closest<HTMLElement>('.rk')!.dataset.id!, c = song.ch.find(x => x.id === id)!;
+    if (b.dataset.act === 'pick') { if (selId !== id) { selId = id; drawRack(); drawChan(); layout(true); } engine.preview(c, c.kind === 'synth' ? (c.notes[0]?.m ?? SYNTHS[c.preset].low + 12) : 60); return; }
+    edit(() => { if (b.dataset.act === 'mute') c.mix.mute = !c.mix.mute; else c.mix.solo = !c.mix.solo; });
+  });
+  $('add').addEventListener('change', e => {
+    const el = e.target as HTMLSelectElement, [kind, what] = el.value.split(':'); el.value = '';
+    if (!what) return;
+    const color = (Math.max(-1, ...song.ch.map(c => c.color)) + 1) % COLORS.length;
+    edit(() => {
+      const c = kind === 'd' ? drumChannel(what as DrumSound, Array(stepsOf(song)).fill(0), { color }) : synthChannel(what as SynthPreset, [], { color });
+      song.ch.push(c); selId = c.id;
+    });
+    layout(true);
+  });
 
-  // ---------- start: a shared song, or your last one, or the chill starter ----------
+  // ---------- the selected channel's panel ----------
+  function drawChan() {
+    const c = sel(); if (!c) return;
+    $('chSw').style.background = COLORS[c.color];
+    $<HTMLInputElement>('chName').value = c.name;
+    $('inst').innerHTML = c.kind === 'drum'
+      ? (Object.keys(DRUMS) as DrumSound[]).map(d => `<option value="${d}"${d === c.sound ? ' selected' : ''}>${DRUMS[d].label}</option>`).join('')
+      : ['Bass', 'Lead', 'Chords', 'Keys', 'FX'].map(gr => `<optgroup label="${gr}">${(Object.keys(SYNTHS) as SynthPreset[]).filter(p => SYNTHS[p].group === gr).map(p => `<option value="${p}"${p === c.preset ? ' selected' : ''}>${SYNTHS[p].label}</option>`).join('')}</optgroup>`).join('');
+    const hzFmt = (v: number) => { const f = 30 * 2 ** (v * 9.3); return f >= 1000 ? `${(f / 1000).toFixed(1)} kHz` : `${Math.round(f)} Hz`; };
+    const secs = (s: number) => (s < 1 ? `${Math.round(s * 1000)} ms` : `${s.toFixed(2)} s`);
+    $('soundKnobs').innerHTML = c.kind === 'drum'
+      ? DRUM_KNOBS.map(({ k, label }) => knobHTML(`ch:${c.id}:p:${k}`, { label, get: () => c.p[k], set: v => (c.p[k] = v), def: drumDefaults()[k], bi: k === 'tune', min: 0, max: 1,
+          fmt: v => (k === 'tune' ? `${v >= 0.5 ? '+' : '−'}${Math.abs(Math.round((v - 0.5) * 14 * 1.2))} st` : pct(v)) })).join('')
+      : SYNTH_KNOBS.filter(({ k }) => k !== 'glide' || SYNTHS[c.preset].mono).map(({ k, label }) => knobHTML(`ch:${c.id}:p:${k}`, { label, get: () => c.p[k], set: v => (c.p[k] = v), def: SYNTHS[c.preset].p[k],
+          fmt: v => (k === 'cutoff' ? hzFmt(v) : k === 'attack' ? secs(0.0015 + v ** 3 * 2.5) : k === 'release' ? secs(0.015 + v * v * 2.5) : k === 'glide' ? secs(0.035 + v * v * 0.4) : pct(v)) })).join('');
+    $('mixKnobs').innerHTML = [
+      knobHTML(`ch:${c.id}:vol2`, { label: 'Volume', get: () => c.mix.vol, set: v => (c.mix.vol = v), def: 0.78, fmt: pct }),
+      knobHTML(`ch:${c.id}:pan`, { label: 'Pan', get: () => c.mix.pan, set: v => (c.mix.pan = Math.abs(v) < 0.04 ? 0 : v), def: 0, min: -1, max: 1, bi: true, fmt: v => (Math.abs(v) < 0.04 ? 'Centre' : `${pct(Math.abs(v))} ${v < 0 ? 'L' : 'R'}`) }),
+      knobHTML(`ch:${c.id}:rev`, { label: 'Reverb', get: () => c.mix.rev, set: v => (c.mix.rev = v), def: 0.1, fmt: pct }),
+      knobHTML(`ch:${c.id}:dly`, { label: 'Delay', get: () => c.mix.dly, set: v => (c.mix.dly = v), def: 0, fmt: pct }),
+      knobHTML(`ch:${c.id}:duck`, { label: 'Sidechain', get: () => c.mix.duck, set: v => (c.mix.duck = v), def: 0, fmt: v => (v < 0.02 ? 'Off' : pct(v)) }),
+    ].join('');
+    paintKnobs($('chan'));
+    $<HTMLButtonElement>('del').disabled = song.ch.length <= 1;
+  }
+  $('chName').addEventListener('change', e => edit(() => { sel().name = (e.target as HTMLInputElement).value.trim().slice(0, 24) || instLabel(sel()); }));
+  $('inst').addEventListener('change', e => {
+    const v = (e.target as HTMLSelectElement).value, c = sel();
+    edit(() => {
+      const wasDefault = c.name === instLabel(c);
+      if (c.kind === 'drum') c.sound = v as DrumSound; else { c.preset = v as SynthPreset; c.p = { ...SYNTHS[c.preset].p }; }
+      if (wasDefault) c.name = instLabel(c);
+    });
+    engine.preview(sel(), sel().kind === 'synth' ? SYNTHS[(sel() as any).preset as SynthPreset].low + 12 : 60);
+  });
+  $('dup').addEventListener('click', () => edit(() => {
+    const c = sel(), i = song.ch.indexOf(c), copy: Channel = JSON.parse(JSON.stringify(c));
+    copy.id = newId(); copy.name = `${c.name} 2`.slice(0, 24); copy.color = (c.color + 1) % COLORS.length;
+    song.ch.splice(i + 1, 0, copy); selId = copy.id;
+  }));
+  $('del').addEventListener('click', () => {
+    const c = sel(); if (song.ch.length <= 1) return;
+    edit(() => { const i = song.ch.indexOf(c); song.ch.splice(i, 1); selId = song.ch[Math.min(i, song.ch.length - 1)].id; });
+    toast(`Deleted ${c.name}. Undo brings it back.`);
+  });
+
+  // ---------- the editor: a piano roll for synths, a drum roll for drums ----------
+  const TOP = 100, LOW = 24, ROWS = TOP - LOW + 1;
+  const rowH = coarse ? 18 : 14;
+  let drumH = 32;
+  const view = $('view'), scroll = $('scroll'), spacer = $('spacer');
+  const gridCv = $<HTMLCanvasElement>('grid'), rulerCv = $<HTMLCanvasElement>('ruler'), keysCv = $<HTMLCanvasElement>('keys'), velCv = $<HTMLCanvasElement>('vel');
+  let cw = 24, mode: 'piano' | 'drum' = 'piano', dirty = true, flash: { m: number; t: number } | null = null;
+  const C = { bg: '#262c30', row: '#2b3237', black: '#23292d', out: '#1e2326', root: '#352f22', step: '#2f373c', beat: '#3d474d', bar: '#66727a', text: '#c9d1d5', dim: '#7d8a91' };
+
+  function fit(cv: HTMLCanvasElement, w: number, h: number) {
+    const dpr = devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    cv.style.width = `${w}px`; cv.style.height = `${h}px`;
+    const g = cv.getContext('2d')!; g.setTransform(dpr, 0, 0, dpr, 0, 0); return g;
+  }
+  const viewMid = () => TOP - Math.floor((scroll.scrollTop + scroll.clientHeight / 2) / rowH);
+
+  function layout(recenter = false) {
+    const c = sel(); if (!c) return;
+    mode = c.kind === 'drum' ? 'drum' : 'piano';
+    $('app').classList.toggle('drum-mode', mode === 'drum');
+    $('edSw').style.background = COLORS[c.color];
+    $('edName').textContent = c.name;
+    $('edKind').textContent = mode === 'drum' ? 'Drum roll · every drum channel' : `Piano roll · ${instLabel(c)}`;
+    $('help').textContent = mode === 'drum'
+      ? (coarse ? 'Tap a square to add or remove a hit. Drag along the velocity strip to make hits softer or harder.' : 'Click squares to add or remove hits (drag to paint). Right-click erases. Drag in the velocity strip to make hits softer or harder.')
+      : (coarse ? 'Tap the grid to add a note, tap a note to remove it. Swipe to scroll. Length sets how long new notes are.' : 'Click to add a note, drag it to move, drag its right edge to make it longer, click it again to remove it. Right-click erases. Keys A to K play along.');
+    const steps = stepsOf(song), W = scroll.clientWidth || 600;
+    const fitW = (W - 2) / steps;
+    cw = clamp(fitW, coarse ? 22 : 14, 60) * zoom;
+    drumH = clamp(Math.floor((scroll.clientHeight || 400) / Math.max(1, drums().length)), coarse ? 40 : 32, 56);
+    const H = mode === 'drum' ? drums().length * drumH : ROWS * rowH;
+    spacer.style.width = `${steps * cw}px`; spacer.style.height = `${H}px`;
+    if (recenter && mode === 'piano' && c.kind === 'synth') {
+      const ms = c.notes.map(n => n.m), mid = ms.length ? (Math.min(...ms) + Math.max(...ms)) / 2 : SYNTHS[c.preset].low + 12;
+      scroll.scrollTop = (TOP - mid) * rowH - scroll.clientHeight / 2;
+    }
+    if (recenter && mode === 'drum') scroll.scrollTop = 0;
+    dirty = true;
+  }
+
+  function draw(pos: number | null) {
+    const W = scroll.clientWidth, H = scroll.clientHeight, sx = scroll.scrollLeft, sy = scroll.scrollTop, steps = stepsOf(song), c = sel();
+    const g = fit(gridCv, W, H);
+    g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+    g.save(); g.translate(-sx, -sy);
+    const s0 = Math.max(0, Math.floor(sx / cw)), s1 = Math.min(steps, Math.ceil((sx + W) / cw));
+    if (mode === 'piano') {
+      const r0 = Math.max(0, Math.floor(sy / rowH)), r1 = Math.min(ROWS, Math.ceil((sy + H) / rowH));
+      for (let r = r0; r < r1; r++) {
+        const m = TOP - r, pc = m % 12, black = [1, 3, 6, 8, 10].includes(pc);
+        g.fillStyle = (m - song.root) % 12 === 0 ? C.root : !inScale(song, m) ? C.out : black ? C.black : C.row;
+        g.fillRect(sx, r * rowH, W, rowH - 1);
+      }
+      grid(g, s0, s1, sy, sy + H);
+      if (ghosts) for (const o of song.ch) if (o.kind === 'synth' && o.id !== c.id) for (const n of o.notes) {
+        g.strokeStyle = COLORS[o.color] + '88'; g.lineWidth = 1; g.strokeRect(n.s * cw + 1.5, (TOP - n.m) * rowH + 2.5, Math.max(2, n.l * cw - 3), rowH - 5);
+      }
+      if (c.kind === 'synth') for (const n of c.notes) {
+        const x = n.s * cw, y = (TOP - n.m) * rowH, w = Math.max(3, n.l * cw - 1);
+        if (x > sx + W || x + w < sx || y > sy + H || y + rowH < sy) continue;
+        g.fillStyle = COLORS[c.color]; g.globalAlpha = 0.55 + n.v * 0.45;
+        round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.fill();
+        g.globalAlpha = 1; g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1; round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.stroke();
+        if (w > 30 && rowH >= 14) { g.fillStyle = '#1b1f22'; g.font = `600 ${rowH - 5}px Nunito, system-ui, sans-serif`; g.textBaseline = 'middle'; g.fillText(noteName(n.m), x + 4, y + rowH / 2); }
+      }
+    } else {
+      const ds = drums();
+      ds.forEach((d, r) => {
+        const y = r * drumH;
+        g.fillStyle = d.id === selId ? '#30383e' : r % 2 ? C.row : C.black; g.fillRect(sx, y, W, drumH);
+        for (let s = s0; s < s1; s++) {
+          const v = d.kind === 'drum' ? d.steps[s] || 0 : 0, beatShade = Math.floor(s / 4) % 2;
+          g.fillStyle = v ? COLORS[d.color] : beatShade ? '#3a4349' : '#454f56';
+          g.globalAlpha = v ? 0.4 + v * 0.6 : d.mix.mute ? 0.4 : 1;
+          round(g, s * cw + 2, y + 4, cw - 4, drumH - 8, 4); g.fill(); g.globalAlpha = 1;
+        }
+      });
+      grid(g, s0, s1, sy, sy + H, true);
+    }
+    if (pos != null) { g.fillStyle = '#FFD23F'; g.fillRect(pos * cw - 1, sy, 2, H); }
+    g.restore();
+    drawRuler(pos); drawKeys(); drawVel();
+  }
+  function grid(g: CanvasRenderingContext2D, s0: number, s1: number, y0: number, y1: number, light = false) {
+    for (let s = s0; s <= s1; s++) {
+      if (light && s % 4) continue;
+      g.fillStyle = s % 16 === 0 ? C.bar : s % 4 === 0 ? C.beat : C.step;
+      g.fillRect(s * cw - (s % 16 === 0 ? 1 : 0.5), y0, s % 16 === 0 ? 1.5 : 1, y1 - y0);
+    }
+  }
+  function round(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+  }
+  function drawRuler(pos: number | null) {
+    const W = scroll.clientWidth, sx = scroll.scrollLeft, g = fit(rulerCv, W, 22), steps = stepsOf(song);
+    g.fillStyle = '#1d2225'; g.fillRect(0, 0, W, 22);
+    g.font = '700 11px Nunito, system-ui, sans-serif'; g.textBaseline = 'middle';
+    for (let s = 0; s <= steps; s += 4) {
+      const x = s * cw - sx; if (x < -40 || x > W + 4) continue;
+      g.fillStyle = s % 16 === 0 ? '#9aa6ad' : '#4a555b'; g.fillRect(x, s % 16 === 0 ? 4 : 14, 1, s % 16 === 0 ? 18 : 8);
+      if (s % 16 === 0 && s < steps) { g.fillStyle = C.text; g.fillText(String(s / 16 + 1), x + 4, 10); }
+    }
+    if (pos != null) { const x = pos * cw - sx; g.fillStyle = '#FFD23F'; g.beginPath(); g.moveTo(x - 5, 12); g.lineTo(x + 5, 12); g.lineTo(x, 21); g.fill(); }
+  }
+  function drawKeys() {
+    const H = scroll.clientHeight, sy = scroll.scrollTop, KW = view.offsetLeft || 64, g = fit(keysCv, KW, H);
+    g.fillStyle = '#1d2225'; g.fillRect(0, 0, KW, H);
+    g.font = '700 10px Nunito, system-ui, sans-serif'; g.textBaseline = 'middle';
+    if (mode === 'piano') {
+      const r0 = Math.floor(sy / rowH), r1 = Math.ceil((sy + H) / rowH);
+      for (let r = r0; r < Math.min(ROWS, r1); r++) {
+        const m = TOP - r, y = r * rowH - sy, black = [1, 3, 6, 8, 10].includes(m % 12);
+        const lit = flash && flash.m === m && performance.now() - flash.t < 250;
+        g.fillStyle = lit ? '#FFD23F' : black ? '#2a2f33' : '#e9e4d6'; g.fillRect(0, y, black ? KW * 0.62 : KW, rowH - 1);
+        if (!black && inScale(song, m)) { g.fillStyle = '#cbbf9c'; g.fillRect(KW - 8, y + 2, 4, rowH - 5); }
+        if (m % 12 === 0) { g.fillStyle = '#3a3226'; g.fillText(noteName(m), KW - 30, y + rowH / 2); }
+      }
+    } else {
+      drums().forEach((d, r) => {
+        const y = r * drumH - sy;
+        g.fillStyle = d.id === selId ? '#353e44' : '#262c30'; g.fillRect(0, y, KW, drumH - 1);
+        g.fillStyle = COLORS[d.color]; g.fillRect(0, y, 4, drumH - 1);
+        g.fillStyle = d.mix.mute ? C.dim : C.text; const max = KW > 56 ? 9 : 6; g.fillText(d.name.length > max ? d.name.slice(0, max - 1) + '…' : d.name, 8, y + drumH / 2);
+      });
+    }
+  }
+  function drawVel() {
+    const W = scroll.clientWidth, sx = scroll.scrollLeft, H = 64, g = fit(velCv, W, H), c = sel();
+    g.fillStyle = '#1d2225'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#2a3135'; g.fillRect(0, H / 2, W, 1);
+    g.fillStyle = COLORS[c.color];
+    const bar = (s: number, v: number) => { const x = s * cw - sx + 2; if (x < -10 || x > W) return; const h = (H - 8) * v; g.fillRect(x, H - 4 - h, 3, h); g.beginPath(); g.arc(x + 1.5, H - 4 - h, 3.5, 0, 7); g.fill(); };
+    if (c.kind === 'drum') c.steps.forEach((v, s) => v && bar(s, v));
+    else c.notes.forEach(n => bar(n.s, n.v));
+  }
+
+  // pointer → position in the loop
+  function at(e: PointerEvent) {
+    const r = scroll.getBoundingClientRect(), x = e.clientX - r.left + scroll.scrollLeft, y = e.clientY - r.top + scroll.scrollTop;
+    return { x, y, step: x / cw, m: TOP - Math.floor(y / rowH), row: Math.floor(y / drumH) };
+  }
+  function hitNote(x: number, y: number) {
+    const c = sel(); if (c.kind !== 'synth') return null;
+    for (let i = c.notes.length - 1; i >= 0; i--) {
+      const n = c.notes[i], nx = n.s * cw, ny = (TOP - n.m) * rowH;
+      if (x >= nx && x <= nx + n.l * cw && y >= ny && y < ny + rowH) return { n, edge: x > nx + n.l * cw - Math.min(8, n.l * cw * 0.35) };
+    }
+    return null;
+  }
+  type Drag = { kind: 'move' | 'resize' | 'erase' | 'paint'; notes: Note[]; orig: Note[]; x0: number; m0: number; moved: boolean; created: boolean; before: string; paint?: number; heard?: number };
+  let drag: Drag | null = null, touchStart: { x: number; y: number; e: PointerEvent } | null = null;
+
+  scroll.addEventListener('contextmenu', e => e.preventDefault());
+  scroll.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch') { touchStart = { x: e.clientX, y: e.clientY, e }; return; }   // touch: wait to see if it's a tap or a swipe
+    start(e);
+  });
+  scroll.addEventListener('pointerup', e => {
+    if (e.pointerType === 'touch' && touchStart && Math.hypot(e.clientX - touchStart.x, e.clientY - touchStart.y) < 10) { tap(touchStart.e); touchStart = null; return; }
+  });
+  scroll.addEventListener('pointercancel', () => { touchStart = null; });
+
+  function start(e: PointerEvent) {
+    const p = at(e), c = sel(), before = snapshot();
+    if (mode === 'drum') {
+      const d = drums()[p.row]; if (!d || d.kind !== 'drum') return;
+      const s = Math.floor(p.step); if (s < 0 || s >= stepsOf(song)) return;
+      if (d.id !== selId) { selId = d.id; drawRack(); drawChan(); }
+      const value = e.button === 2 ? 0 : d.steps[s] ? 0 : lastVel;
+      drag = { kind: 'paint', notes: [], orig: [], x0: s, m0: 0, moved: false, created: false, before, paint: value };
+      paintAt(e);
+    } else if (c.kind === 'synth') {
+      if (e.button === 2) { drag = { kind: 'erase', notes: [], orig: [], x0: 0, m0: 0, moved: false, created: false, before }; eraseAt(e); }
+      else {
+        const h = hitNote(p.x, p.y);
+        if (h) {
+          lastLen = h.n.l; syncLen();
+          drag = { kind: h.edge ? 'resize' : 'move', notes: [h.n], orig: [{ ...h.n }], x0: p.step, m0: p.m, moved: false, created: false, before, heard: h.n.m };
+          if (!h.edge) engine.preview(c, h.n.m, h.n.v);
+        } else {
+          const s = clamp(Math.floor(p.step / snap) * snap, 0, stepsOf(song) - 1);
+          const ms = chordAt(song, lock ? snapToScale(song, p.m) : p.m, chord).filter(m => m >= LOW && m <= TOP);
+          const len = Math.min(lastLen, stepsOf(song) - s);
+          const made = ms.map(m => ({ s, l: len, m, v: lastVel }));
+          c.notes.push(...made);
+          ms.forEach(m => engine.preview(c, m, lastVel));
+          drag = { kind: 'move', notes: made, orig: made.map(n => ({ ...n })), x0: p.step, m0: p.m, moved: false, created: true, before, heard: ms[0] };
+        }
+      }
+    }
+    scroll.setPointerCapture(e.pointerId);
+    dirty = true;
+  }
+  // touch: a tap adds a note or hit, or removes the one under your finger
+  function tap(e: PointerEvent) {
+    const p = at(e), c = sel(), before = snapshot();
+    if (mode === 'drum') {
+      const d = drums()[p.row], s = Math.floor(p.step); if (!d || d.kind !== 'drum' || s < 0 || s >= stepsOf(song)) return;
+      d.steps[s] = d.steps[s] ? 0 : lastVel; if (d.steps[s]) engine.preview(d, 60, lastVel);
+      if (d.id !== selId) { selId = d.id; drawRack(); drawChan(); }
+    } else if (c.kind === 'synth') {
+      const h = hitNote(p.x, p.y);
+      if (h) c.notes.splice(c.notes.indexOf(h.n), 1);
+      else {
+        const s = clamp(Math.floor(p.step / snap) * snap, 0, stepsOf(song) - 1), ms = chordAt(song, lock ? snapToScale(song, p.m) : p.m, chord).filter(m => m >= LOW && m <= TOP);
+        c.notes.push(...ms.map(m => ({ s, l: Math.min(lastLen, stepsOf(song) - s), m, v: lastVel })));
+        ms.forEach(m => engine.preview(c, m, lastVel));
+      }
+    }
+    commit(before); drawRackPreviews(); dirty = true;
+  }
+  function paintAt(e: PointerEvent) {
+    if (!drag) return;
+    const p = at(e), d = drums()[p.row], s = Math.floor(p.step);
+    if (!d || d.kind !== 'drum' || s < 0 || s >= stepsOf(song)) return;
+    if (d.steps[s] !== drag.paint) { d.steps[s] = drag.paint!; if (drag.paint) engine.preview(d, 60, drag.paint); dirty = true; }
+  }
+  function eraseAt(e: PointerEvent) {
+    const p = at(e), c = sel(), h = hitNote(p.x, p.y);
+    if (h && c.kind === 'synth') { c.notes.splice(c.notes.indexOf(h.n), 1); dirty = true; }
+  }
+  scroll.addEventListener('pointermove', e => {
+    if (!drag) {   // the cursor tells you what a click will do
+      if (mode === 'piano' && e.pointerType === 'mouse') { const p = at(e), h = hitNote(p.x, p.y); scroll.style.cursor = h ? (h.edge ? 'ew-resize' : 'grab') : 'crosshair'; }
+      return;
+    }
+    const p = at(e), c = sel(), steps = stepsOf(song);
+    if (drag.kind === 'paint') return paintAt(e);
+    if (drag.kind === 'erase') return eraseAt(e);
+    if (c.kind !== 'synth') return;
+    if (drag.kind === 'move') {
+      const ds = Math.round((p.step - drag.x0) / snap) * snap, dm = p.m - drag.m0;
+      drag.notes.forEach((n, i) => {
+        const o = drag!.orig[i];
+        n.s = clamp(o.s + ds, 0, steps - Math.min(o.l, steps)); n.m = clamp(lock ? snapToScale(song, o.m + dm) : o.m + dm, LOW, TOP);
+      });
+      if (ds || dm) drag.moved = true;
+      if (drag.notes[0].m !== drag.heard) { drag.heard = drag.notes[0].m; engine.preview(c, drag.heard, drag.notes[0].v); }
+    } else if (drag.kind === 'resize') {
+      const n = drag.notes[0], end = Math.max(n.s + snap, Math.round(p.step / snap) * snap);
+      n.l = clamp(end - n.s, Math.min(snap, 1), steps - n.s); lastLen = n.l; syncLen(); drag.moved = true;
+    }
+    dirty = true;
+  });
+  const endDrag = () => {
+    if (!drag) return;
+    const c = sel();
+    if (drag.kind === 'move' && !drag.created && !drag.moved && c.kind === 'synth') c.notes.splice(c.notes.indexOf(drag.notes[0]), 1);   // a click on a note removes it
+    commit(drag.before); drag = null; drawRackPreviews(); dirty = true;
+  };
+  scroll.addEventListener('pointerup', e => { if (e.pointerType !== 'touch') endDrag(); });
+  scroll.addEventListener('lostpointercapture', endDrag);
+  scroll.addEventListener('scroll', () => (dirty = true), { passive: true });
+
+  // velocity strip: drag to set how hard notes and hits play
+  velCv.addEventListener('pointerdown', e => {
+    e.preventDefault(); velCv.setPointerCapture(e.pointerId);
+    const before = snapshot();
+    const set = (ev: PointerEvent) => {
+      const r = velCv.getBoundingClientRect(), s = (ev.clientX - r.left + scroll.scrollLeft) / cw, v = clamp(1 - (ev.clientY - r.top - 4) / (r.height - 8), 0.05, 1), c = sel();
+      if (c.kind === 'drum') { const i = Math.floor(s); if (c.steps[i]) { c.steps[i] = v; lastVel = v; } }
+      else { const hits = c.notes.filter(n => Math.abs(n.s + 0.25 - s) < 0.6); hits.forEach(n => (n.v = v)); if (hits.length) lastVel = v; }
+      dirty = true;
+    };
+    set(e);
+    velCv.onpointermove = set;
+    velCv.onpointerup = () => { velCv.onpointermove = null; commit(before); drawRackPreviews(); };
+  });
+  // the keys: hear a note, or pick a drum
+  keysCv.addEventListener('pointerdown', e => {
+    const r = keysCv.getBoundingClientRect(), y = e.clientY - r.top + scroll.scrollTop;
+    if (mode === 'piano') { const m = TOP - Math.floor(y / rowH); engine.preview(sel(), m, 0.8); flash = { m, t: performance.now() }; }
+    else { const d = drums()[Math.floor(y / drumH)]; if (d) { selId = d.id; drawRack(); drawChan(); layout(); engine.preview(d); } }
+    dirty = true;
+  });
+  keysCv.addEventListener('wheel', e => { scroll.scrollTop += e.deltaY; e.preventDefault(); }, { passive: false });
+
+  // editor tools
+  const syncLen = () => { const el = $<HTMLSelectElement>('len'); if ([...el.options].some(o => +o.value === lastLen)) el.value = String(lastLen); };
+  $('len').addEventListener('change', e => (lastLen = +(e.target as HTMLSelectElement).value));
+  $('snap').addEventListener('change', e => (snap = +(e.target as HTMLSelectElement).value));
+  $('chord').addEventListener('change', e => (chord = (e.target as HTMLSelectElement).value as Chord));
+  $('lock').addEventListener('click', () => { lock = !lock; $('lock').setAttribute('aria-pressed', String(lock)); });
+  $('ghost').addEventListener('click', () => { ghosts = !ghosts; $('ghost').setAttribute('aria-pressed', String(ghosts)); dirty = true; });
+  $('zIn').addEventListener('click', () => { zoom = Math.min(4, zoom * 1.4); layout(); });
+  $('zOut').addEventListener('click', () => { zoom = Math.max(0.4, zoom / 1.4); layout(); });
+  $('clear').addEventListener('click', () => {
+    const c = sel();
+    edit(() => { if (c.kind === 'drum') c.steps = c.steps.map(() => 0); else c.notes = []; });
+    toast(`Cleared ${c.name}. Undo brings it back.`);
+  });
+  syncLen();
+
+  // ---------- the frame loop: playhead, position display and level meter ----------
+  const meterCv = $<HTMLCanvasElement>('meter');
+  let shownPos = '', peakHold = 0;
+  function frame() {
+    const pos = engine.position();
+    if (pos != null || dirty || (flash && performance.now() - flash.t < 300)) {
+      // follow the playhead when the loop is wider than the screen
+      if (pos != null && !drag) { const x = pos * cw; if (x > scroll.scrollLeft + scroll.clientWidth - 24 || x < scroll.scrollLeft) scroll.scrollLeft = Math.max(0, x - 24); }
+      draw(pos); dirty = false;
+    }
+    const p = pos == null ? '1.1.1' : `${Math.floor(pos / 16) + 1}.${Math.floor((pos % 16) / 4) + 1}.${Math.floor(pos % 4) + 1}`;
+    if (p !== shownPos) { $('lcd').textContent = p; shownPos = p; }
+    const lv = engine.playing ? engine.level() : 0;
+    peakHold = Math.max(lv, peakHold * 0.92);
+    const g = fit(meterCv, 14, 40);
+    g.fillStyle = '#1b1f22'; g.fillRect(0, 0, 14, 40);
+    const h = Math.min(1, peakHold) * 38;
+    g.fillStyle = peakHold > 0.97 ? '#FF5C5C' : peakHold > 0.8 ? '#FFD23F' : '#7BDA5B'; g.fillRect(3, 39 - h, 8, h);
+    requestAnimationFrame(frame);
+  }
+  new ResizeObserver(() => layout()).observe(view);
+
+  // ---------- start: a shared link, the last loop on this device, or Red Circle ----------
   (async () => {
-    let start: Song | null = null;
     const m = location.hash.match(/s=([\w-]+)/);
-    if (m) { start = await decodeSong(m[1]); if (start) $('remixNote').hidden = false; }
-    if (!start) { try { start = JSON.parse(store.get('banadaw-song') || 'null'); } catch {} }
-    if (!start || start.v !== 1) start = STYLES[0].make();
-    sel = { crate: 0, track: start.tracks[0].id };
-    load(start);
+    let s: Song | null = null;
+    if (m) { s = await decodeSong(m[1]); if (!s) toast('That link is from an older BanaDAW, so here’s a starter loop instead.'); else toast('You opened someone’s loop. Change anything: it’s your remix now.'); }
+    if (!s) { try { const saved = JSON.parse(store.get('banadaw2') || 'null'); if (validSong(saved)) s = saved; } catch {} }
+    load(s ?? STARTERS[0].make());
+    requestAnimationFrame(frame);
   })();
-  addEventListener('pagehide', () => engine.ctx?.close());
 </script>
 
-<style>
-  .daw { padding: 26px 0 10px; display: flex; flex-direction: column; gap: 22px; }
-  .top { margin: 6px; }
-  .song-name { font: 600 22px var(--display); color: var(--ink); background: none; border: 0; border-bottom: 2px dashed var(--line); text-align: right; min-width: 0; width: 22ch; padding: 2px 4px; }
-  .song-name:focus { outline: none; border-bottom-color: var(--ink); }
-  .transport, .styles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
-  .transport .btn, .styles .btn { min-height: 44px; }
-  .btn.on { box-shadow: 0 0 0 3px var(--banana); }
-  .field { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
-  .field input[type="number"] { width: 64px; height: 40px; font: 600 16px var(--text); border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
-  .field select { height: 40px; font: 600 15px var(--text); border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
-  .field input[type="range"] { accent-color: var(--banana-ink); width: 110px; }
-  .field small { color: var(--ink-3); font-weight: 500; }
-  .spacer { flex: 1; }
-  .lbl { font: 700 var(--t-label) var(--text); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
-  .styles :global(.tog) { margin-right: 6px; }
-  .remix { margin: 12px 0 0; padding: 8px 12px; background: var(--banana); color: #231A10; font-weight: 600; border: 1px solid var(--line); }
-  .mascot { width: 40px; height: 40px; display: inline-block; transition: transform .08s; }
-  .mascot svg { width: 100%; height: 100%; }
-  .hint { font-size: 14px; color: var(--ink-3); }
+<style is:global>
+  .bd-intro { padding: 26px 0 14px; }
+  .bd-intro h1 { margin: 0; font-size: var(--t-1); display: flex; align-items: center; gap: 12px; }
+  .bd-intro .beta { font: 800 13px var(--text); background: var(--butter); color: var(--ink); border-radius: 99px; padding: 3px 10px; }
+  .bd-intro p { margin: 6px 0 0; color: var(--ink-2); }
 
-  .crates-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-  .crates-head h2 { font-size: var(--t-2); margin: 0; }
-  .crate-row { display: flex; gap: 10px; overflow-x: auto; padding: 8px 0 4px; align-items: stretch; }
-  .crate-row :global(.crate-tile) { flex: none; display: grid; grid-template-columns: 40px auto auto; gap: 6px 10px; align-items: center; border: 1px solid var(--line); background: var(--card); padding: 10px; width: 250px; }
-  .crate-row :global(.ct-name) { grid-column: 2 / -1; }
-  .crate-row :global(.crate-tile.on) { box-shadow: inset 0 0 0 3px var(--banana); }
-  .crate-row :global(.crate-tile.playing .ct-pick) { background: var(--leaf); color: #fff; }
-  .crate-row :global(.ct-pick) { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%; background: var(--banana); color: #231A10; font: 600 19px var(--display); cursor: pointer; grid-row: span 2; }
-  .crate-row :global(.ct-f) { margin-right: 0; }
-  .crate-row :global(.ct-name) { font: 700 16px var(--text); border: 0; border-bottom: 2px dashed var(--line); background: none; color: var(--ink); min-width: 0; padding: 2px 0; }
-  .crate-row :global(.ct-f) { font-size: 13.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; }
-  .crate-row :global(.ct-f select) { font: 600 14px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); height: 32px; }
-  .crate-row :global(.ct-acts) { grid-column: 1 / -1; display: flex; gap: 4px; }
-  .crate-row :global(.ct-acts button) { font: 600 13px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 8px; cursor: pointer; }
-  .crate-row :global(.ct-acts button:disabled) { opacity: .35; cursor: default; }
-  .crate-row :global(.new-crate) { align-self: center; }
+  /* the studio is dark in every theme, like the real thing */
+  .bdaw { --b0: #171b1d; --b1: #1f2427; --b2: #2a3135; --b3: #353e43; --bl: #424c52; --bt: #e3e8ea; --bd: #93a0a7; --acc: #FFD23F;
+    position: relative; width: min(1560px, calc(100vw - 32px)); margin-left: 50%; transform: translateX(-50%);
+    background: var(--b1); color: var(--bt); border-radius: 14px; box-shadow: 0 18px 40px -18px rgba(0,0,0,.6); font: 600 14px/1.3 var(--text); overflow: hidden; margin-bottom: 36px; }
+  .bdaw button, .bdaw select, .bdaw input { font: inherit; color: inherit; }
+  .bdaw select, .bdaw input:not([type]), .bdaw input[type="number"] { background: var(--b0); border: 1px solid var(--bl); border-radius: 7px; padding: 6px 8px; min-height: 34px; }
+  .bdaw select:focus-visible, .bdaw input:focus-visible, .bdaw button:focus-visible, .bdaw .knob:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
-  .studio { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
-  .track-list { list-style: none; margin: 0; padding: 0; }
-  .track-list :global(li) { border-bottom: 1px solid var(--line); padding: 8px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; }
-  .track-list :global(li select) { grid-column: 1 / -1; }
-  .track-list :global(li:not(.on) select) { display: none; }
-  .track-list :global(li.on) { background: color-mix(in srgb, var(--banana) 28%, var(--card)); }
-  .track-list :global(li.peeled .tr-pick) { opacity: .5; text-decoration: line-through; }
-  .track-list :global(.tr-pick) { display: flex; flex-direction: column; align-items: flex-start; background: none; border: 0; padding: 4px 0; cursor: pointer; color: var(--ink); text-align: left; }
-  .track-list :global(.tr-pick b) { font: 600 19px var(--display); }
-  .track-list :global(.tr-pick span) { font-size: 13.5px; color: var(--ink-2); }
-  .track-list :global(select) { height: 36px; font: 600 14px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); }
-  .track-list :global(.tr-acts) { display: flex; gap: 4px; }
-  .track-list :global(.mini) { font: 600 13px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 9px; cursor: pointer; }
-  .track-list :global(.mini.on) { background: var(--ink); color: var(--paper); }
-  .track-list :global(.mini:disabled) { opacity: .35; }
-  .add-row { display: flex; gap: 6px; padding: 10px 12px; }
+  .bdaw .tb { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 14px; background: linear-gradient(#323a3f, #2a3135); border-bottom: 1px solid #14181a; }
+  .bdaw .tb-g { display: flex; align-items: center; gap: 6px; }
+  .bdaw .tb-f { display: inline-flex; align-items: center; gap: 6px; color: var(--bd); font-size: 13px; }
+  .bdaw .sp { flex: 1; }
+  .bdaw .t-btn { min-width: 38px; height: 36px; display: grid; place-items: center; background: var(--b2); border: 1px solid var(--bl); border-radius: 8px; cursor: pointer; padding: 0 10px; }
+  .bdaw .t-btn:hover { background: var(--b3); }
+  .bdaw .t-btn svg { width: 16px; height: 16px; fill: currentColor; }
+  .bdaw .t-btn.play.on { background: var(--acc); color: #2a2208; border-color: var(--acc); }
+  .bdaw .t-btn.hl { background: var(--acc); color: #2a2208; border-color: var(--acc); }
+  .bdaw .t-btn:disabled { opacity: .6; }
+  .bdaw .lcd { font: 700 17px/1 ui-monospace, 'SF Mono', Menlo, monospace; color: #9df27a; background: #0f1311; border: 1px solid #000; border-radius: 6px; padding: 8px 10px; min-width: 76px; text-align: center; letter-spacing: .04em; }
+  .bdaw input.lcd { width: 76px; min-height: 0; color: #9df27a; background: #0f1311; border-color: #000; }
+  .bdaw .seg { display: inline-flex; background: var(--b0); border: 1px solid var(--bl); border-radius: 8px; overflow: hidden; }
+  .bdaw .seg button { background: none; border: 0; padding: 7px 11px; cursor: pointer; color: var(--bd); min-height: 34px; }
+  .bdaw .seg button[aria-pressed="true"] { background: var(--acc); color: #2a2208; }
+  .bdaw .tb-knobs { display: flex; gap: 4px; }
+  .bdaw .meter { border-radius: 3px; }
+  .bdaw #starter { max-width: 150px; }
 
-  .ed-head { flex-wrap: wrap; }
-  .ed-tools { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
-  .brush { display: inline-flex; gap: 4px; }
-  .brush :global(.rb) { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%; cursor: pointer; }
-  .brush :global(.rb[aria-checked="true"]) { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
-  .brush :global(.rb.r1), .grid :global(.r1) { background: var(--r1); }
-  .brush :global(.rb.r2), .grid :global(.r2) { background: var(--r4); }
-  .brush :global(.rb.r3), .grid :global(.r3) { background: var(--r5); }
-  .brush :global(.rb.r4), .grid :global(.r4) { background: var(--r7); }
+  .bdaw .main { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
+  .bdaw .pane-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--b2); border-bottom: 1px solid #14181a; min-height: 50px; flex-wrap: wrap; }
+  .bdaw .rack { background: var(--b1); border-right: 1px solid #14181a; display: flex; flex-direction: column; min-width: 0; }
+  .bdaw .song-name { width: 100%; font-weight: 800 !important; }
+  .bdaw .rack-list { flex: 1; overflow: auto; padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 560px; }
+  .bdaw .rk { display: grid; grid-template-columns: 16px 22px 30px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px 6px; align-items: center; padding: 6px 6px 6px 4px; border-radius: 8px; background: var(--b2); border-left: 4px solid var(--c); }
+  .bdaw .rk.on { background: var(--b3); box-shadow: inset 0 0 0 1px var(--c); }
+  .bdaw .rk.muted { opacity: .55; }
+  .bdaw .led { grid-row: 1 / 3; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #000; background: #2c3a2a; cursor: pointer; padding: 0; }
+  .bdaw .led[aria-pressed="true"] { background: #7BDA5B; box-shadow: 0 0 6px #7BDA5B99; }
+  .bdaw .solo { grid-row: 1 / 3; width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--bl); background: var(--b1); color: var(--bd); font-size: 11px; cursor: pointer; padding: 0; }
+  .bdaw .solo.on { background: var(--acc); color: #2a2208; }
+  .bdaw .rk > .knob { grid-row: 1 / 3; }
+  .bdaw .rk-name { text-align: left; background: none; border: 0; cursor: pointer; padding: 0; display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+  .bdaw .rk-name b { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bdaw .rk-name small { color: var(--bd); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bdaw .rk-prev { width: 100%; height: 22px; border-radius: 4px; cursor: pointer; grid-column: 4; }
+  .bdaw .rack-add { padding: 8px; border-top: 1px solid #14181a; }
+  .bdaw .rack-add select { width: 100%; background: var(--b2); }
 
-  .grid-wrap { overflow-x: auto; padding: 10px 12px 12px; }
-  .grid { --rh: 28px; display: grid; grid-template-columns: 76px calc(var(--steps) * var(--cw)); user-select: none; -webkit-user-select: none; touch-action: none; }
-  .grid.roll { --rh: 22px; }
-  .grid.drums { --rh: 30px; }
-  .grid :global(.g-labels) { display: grid; grid-template-rows: repeat(var(--rows), var(--rh)); position: sticky; left: 0; z-index: 2; background: var(--card); }
-  .grid :global(.g-label) { font: 600 13px var(--text); text-align: right; padding: 0 8px; border: 0; background: none; color: var(--ink-2); cursor: pointer; }
-  .grid :global(.g-label.root) { color: var(--ink); font-weight: 700; }
-  .grid :global(.g-label:hover) { color: var(--ink); text-decoration: underline; }
-  .grid :global(.g-cells) { position: relative; display: grid; grid-template-columns: repeat(var(--steps), var(--cw)); grid-template-rows: repeat(var(--rows), var(--rh)); cursor: crosshair; border: 1px solid var(--line);
-    background-image: linear-gradient(90deg, var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--ink-3) 1px, transparent 1px);
-    background-size: var(--cw) 100%, calc(var(--cw) * 4) 100%; }
-  .grid :global(.g-bg) { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(var(--rows), var(--rh)); pointer-events: none; }
-  .grid :global(.g-rowbg) { border-bottom: 1px solid var(--line-2); }
-  .grid :global(.g-rowbg.root) { background: color-mix(in srgb, var(--banana) 16%, transparent); }
-  .grid :global(.hit) { margin: 4px; border: 1px solid var(--line); border-radius: 999px 999px 999px 999px / 70% 70% 30% 30%; transform: rotate(-14deg); pointer-events: none; z-index: 1; }
-  .grid :global(.note) { margin: 2px 1px; border: 1px solid var(--line); border-radius: 6px; pointer-events: none; z-index: 1; }
-  .grid :global(.playhead) { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--banana) 40%, transparent); pointer-events: none; z-index: 0; }
-  .ed-help { margin: 0; padding: 0 14px 12px; font-size: 14.5px; color: var(--ink-2); }
+  .bdaw .editor { min-width: 0; display: flex; flex-direction: column; background: var(--b1); }
+  .bdaw .ed-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .bdaw .ed-title i, .bdaw .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .bdaw .ed-title b { font-size: 16px; }
+  .bdaw .ed-title small { color: var(--bd); font-size: 12.5px; }
+  .bdaw .ed-tools { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .bdaw.drum-mode .syn { display: none; }
+  .bdaw .tog { background: var(--b1); border: 1px solid var(--bl); border-radius: 7px; padding: 6px 10px; min-height: 34px; cursor: pointer; color: var(--bd); }
+  .bdaw .tog:hover { color: var(--bt); }
+  .bdaw .tog[aria-pressed="true"] { background: #3d3a24; color: var(--acc); border-color: #6b5f2a; }
+  .bdaw .tog:disabled { opacity: .45; cursor: default; }
+  .bdaw .zoom { display: inline-flex; gap: 2px; }
+  .bdaw .zoom .tog { width: 34px; padding: 0; }
+  .bdaw .roll { display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: 22px minmax(320px, 1fr) 64px; height: clamp(440px, 64vh, 640px); }
+  .bdaw .corner { background: #1d2225; }
+  .bdaw #keys { cursor: pointer; touch-action: none; }
+  .bdaw .view { position: relative; min-width: 0; min-height: 0; }
+  .bdaw .scroll { position: absolute; inset: 0; overflow: auto; z-index: 1; cursor: crosshair; scrollbar-color: #4a555b #1d2225; }
+  .bdaw #spacer { pointer-events: none; }
+  .bdaw #grid { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
+  .bdaw .vel-l { background: #1d2225; color: var(--bd); font-size: 10.5px; display: grid; place-items: center; border-top: 1px solid #14181a; }
+  .bdaw #vel { border-top: 1px solid #14181a; cursor: ns-resize; touch-action: none; }
+  .bdaw .help { margin: 0; padding: 8px 14px 10px; color: var(--bd); font-size: 13px; font-weight: 600; border-top: 1px solid #14181a; }
 
-  .mixer { display: flex; overflow-x: auto; }
-  .mixer :global(.mx-col) { flex: none; width: 170px; padding: 12px 14px; border-right: 1px solid var(--line); display: grid; gap: 6px; }
-  .mixer :global(.mx-col b) { font: 600 18px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mixer :global(.mx-col.peeled b) { text-decoration: line-through; opacity: .55; }
-  .mixer :global(.mx-col.master) { background: var(--paper-2); }
-  .mixer :global(.mx-k) { display: grid; gap: 2px; font-size: 13.5px; color: var(--ink-2); }
-  .mixer :global(.mx-k input) { width: 100%; accent-color: var(--banana-ink); }
+  .bdaw .chan { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: center; padding: 12px 14px 14px; background: var(--b2); border-top: 1px solid #14181a; }
+  .bdaw .chan-id { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .bdaw .ch-name { width: 150px; font-weight: 800 !important; }
+  .bdaw .knob-row { display: flex; align-items: center; gap: 8px; }
+  .bdaw .kr-l { color: var(--bd); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; writing-mode: vertical-rl; transform: rotate(180deg); }
+  .bdaw .knobs { display: flex; flex-wrap: wrap; gap: 2px 6px; }
 
-  .studio > *, .daw > * { min-width: 0; }
+  .bdaw .knob { position: relative; width: 54px; display: flex; flex-direction: column; align-items: center; cursor: ns-resize; touch-action: none; user-select: none; border-radius: 8px; padding: 2px 0; }
+  .bdaw .knob svg { width: 40px; height: 40px; }
+  .bdaw .knob.sm { width: 46px; } .bdaw .knob.sm svg { width: 32px; height: 32px; }
+  .bdaw .knob.xs { width: 30px; } .bdaw .knob.xs svg { width: 28px; height: 28px; } .bdaw .knob.xs .k-l { display: none; }
+  .bdaw .k-bg { fill: #1a1e21; stroke: #0e1112; stroke-width: 1; }
+  .bdaw .k-tr { fill: none; stroke: #3a4348; stroke-width: 3.2; stroke-linecap: round; }
+  .bdaw .k-arc { fill: none; stroke: var(--acc); stroke-width: 3.2; stroke-linecap: round; }
+  .bdaw .k-tick { stroke: var(--bt); stroke-width: 2.4; stroke-linecap: round; }
+  .bdaw .k-l { font-size: 11px; color: var(--bd); margin-top: 1px; white-space: nowrap; }
+  .bdaw .k-v { position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); background: #0f1311; color: #9df27a; font: 700 11px ui-monospace, Menlo, monospace; padding: 3px 6px; border-radius: 5px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 5; }
+  .bdaw .knob:hover .k-v, .bdaw .knob.turning .k-v, .bdaw .knob:focus-visible .k-v { opacity: 1; }
+
+  .bdaw .toast { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--acc); color: #2a2208; font-weight: 800; padding: 10px 16px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,.4); z-index: 10; max-width: calc(100% - 32px); }
+
   @media (max-width: 900px) {
-    .studio { grid-template-columns: minmax(0, 1fr); }
-    .song-name { text-align: left; width: 100%; }
+    .bdaw { border-radius: 10px; }
+    .bdaw .main { grid-template-columns: minmax(0, 1fr); }
+    .bdaw .rack { border-right: 0; border-bottom: 1px solid #14181a; }
+    .bdaw .rack-list { flex-direction: row; overflow-x: auto; max-height: none; padding: 8px; }
+    .bdaw .rk { grid-template-columns: 16px minmax(0, 1fr); min-width: 132px; }
+    .bdaw .rk .solo, .bdaw .rk > .knob, .bdaw .rk-prev { display: none; }
+    .bdaw .rk-name { flex-direction: column; gap: 0; }
+    .bdaw .rack-add { border-top: 0; padding-top: 0; }
+    .bdaw .roll { grid-template-columns: 48px minmax(0, 1fr); height: 62vh; }
+    .bdaw .tb { gap: 8px; }
+    .bdaw .tb .sp { display: none; }
   }
+  @media (prefers-reduced-motion: reduce) { .bdaw .k-v { transition: none; } }
 </style>
