@@ -378,15 +378,15 @@ import PopularityChart from '../../components/PopularityChart.astro';
   .play { position: relative; z-index: 45; display: flex; flex-direction: column; align-items: center; overflow: hidden; user-select: none; -webkit-user-select: none;
     background: radial-gradient(520px 360px at 50% 52%, color-mix(in srgb, var(--banana) 30%, var(--card)), var(--card) 70%); transition: background .6s; }
   .play .crate-top { width: 100%; }
-  .lvl { font: 400 19px/1 var(--display); }
+  .lvl { font: 600 19px/1 var(--display); }
   /* deeper in, the game box melts into the rave */
   :global(body[data-rave="3"]) .play, :global(body[data-rave="4"]) .play, :global(body[data-rave="5"]) .play { background: rgba(0, 0, 0, .25); overflow: visible; }
 
-  .scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; text-align: center; border: 2px solid var(--ink); margin-top: 16px; background: var(--card); }
-  .scores div { padding: 10px 6px; border-right: 2px solid var(--ink); min-width: 0; }
+  .scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; text-align: center; border: 1px solid var(--line); margin-top: 16px; background: var(--card); }
+  .scores div { padding: 10px 6px; border-right: 1px solid var(--line); min-width: 0; }
   .scores div:last-child { border-right: 0; }
   .lbl { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .scores b { display: block; font: 400 30px/1.15 var(--display); }
+  .scores b { display: block; font: 600 30px/1.15 var(--display); }
 
   .hype { width: 100%; margin-top: 16px; }
   .hype-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; margin-bottom: 5px; }
@@ -394,7 +394,7 @@ import PopularityChart from '../../components/PopularityChart.astro';
   .hype-next { color: var(--ink-2); }
 
   .banana-zone { position: relative; margin-top: 6px; }
-  .combo { position: absolute; right: -40px; top: 30px; z-index: 2; font: 400 30px/1 var(--display); color: var(--stamp); transform: rotate(10deg); }
+  .combo { position: absolute; right: -40px; top: 30px; z-index: 2; font: 600 30px/1 var(--display); color: var(--stamp); transform: rotate(10deg); }
   .banana-btn { background: none; border: none; cursor: pointer; padding: 10px; border-radius: 50%; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .spinner { display: block; transform: rotate(-12deg); will-change: transform; }
   .banana-btn svg { display: block; filter: drop-shadow(0 14px 18px rgba(35, 26, 16, .3)); transition: transform .12s; }
@@ -410,9 +410,9 @@ import PopularityChart from '../../components/PopularityChart.astro';
   .goal, .level { width: 100%; max-width: 460px; }
   .goal-top { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; font-weight: 700; }
   .goal-reset { font-weight: 500; color: var(--ink-2); font-size: 14px; }
-  .goal-bar, .level-bar { border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: var(--paper); margin-top: 5px; }
+  .goal-bar, .level-bar { border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--paper); margin-top: 5px; }
   .goal-bar { height: 16px; }
-  .goal-bar i, .level-bar i { display: block; height: 100%; width: 0; background: var(--banana); border-right: 2px solid var(--ink); transition: width .2s; }
+  .goal-bar i, .level-bar i { display: block; height: 100%; width: 0; background: var(--banana); border-right: 1px solid var(--line); transition: width .2s; }
   .goal.full .goal-bar i { background: var(--r6); border-right: 0; }
   .level { margin-top: 12px; font-size: 14px; color: var(--ink-2); text-align: center; }
   .level #levelName { font-weight: 700; color: var(--ink); }
@@ -421,11 +421,11 @@ import PopularityChart from '../../components/PopularityChart.astro';
   .controls { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
   .controls .btn { min-height: 44px; font-size: 14.5px; padding: 0 14px; }
   .hint { color: var(--ink-2); font-size: 14px; margin: 12px 0 0; text-align: center; max-width: 460px; }
-  kbd { font: 700 12.5px var(--text); border: 2px solid var(--ink); border-radius: 4px; padding: 0 6px; }
+  kbd { font: 700 12.5px var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; }
   .pops { position: absolute; inset: 0; pointer-events: none; }
-  .pops :global(.pop) { position: absolute; font: 400 28px/1 var(--display); color: var(--ink); }
+  .pops :global(.pop) { position: absolute; font: 600 28px/1 var(--display); color: var(--ink); }
   .toast { position: absolute; left: 50%; top: 170px; transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 3;
-    background: var(--banana); color: var(--on-banana); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); font-weight: 700; font-size: 16px; padding: 8px 16px; white-space: nowrap; }
+    background: var(--banana); color: var(--on-banana); border: 1px solid var(--line); box-shadow: 3px 3px 0 var(--ink); font-weight: 700; font-size: 16px; padding: 8px 16px; white-space: nowrap; }
 
   .side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 16px; }
   .live { font-size: 13px; font-weight: 700; color: var(--leaf); display: flex; align-items: center; gap: 6px; }

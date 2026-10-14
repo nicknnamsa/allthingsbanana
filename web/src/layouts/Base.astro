@@ -1,9 +1,9 @@
 ---
 // bare: the page fills the full width under the header (used by the Banana Cube)
 // image: the picture shown when the page is shared (1200×630, in public/og/)
-// ticker: show the market strip under the header (home page and Prices only)
-import '../styles/site.css';
+// ticker: show the market strip under the header (Prices only)
 // noindex: keep a page out of search engines (pages still being tested)
+import '../styles/site.css';
 interface Props { title: string; description: string; wide?: boolean; section?: string; bare?: boolean; image?: string; ticker?: boolean; noindex?: boolean }
 const { title, description, wide = false, section = '', bare = false, image = '/og/default.jpg', ticker = false, noindex = false } = Astro.props;
 const path = Astro.url.pathname;
@@ -11,13 +11,14 @@ import { recipes, recipePhoto, formatTime } from '../data/recipes';
 // a small index of recipes for the header search and the home page's recipe of the day
 const recipeIndex = recipes.map(r => ({ n: r.name, s: r.slug, e: r.emoji, b: r.blurb, p: recipePhoto(r.slug)?.thumb, m: formatTime(r.mins), o: r.origin,
   t: `${r.name} ${r.origin} ${r.meals.join(' ')} ${r.diet.join(' ')}`.toLowerCase() }));
-// the logo goes home; four tabs, each with a one-line descriptor on wide screens
-const tabs = [
-  { id: 'bananadle', href: '/bananadle/', label: 'Bananadle', desc: 'daily puzzle' },
-  { id: 'clicker', href: '/more/banana-clicker/', label: 'Clicker', desc: 'world league' },
-  { id: 'recipes', href: '/recipes/', label: 'Recipes', desc: `${recipes.length} + 5,203` },
-  { id: 'prices', href: '/bananalytics/', label: 'Prices', desc: '& the map' },
+// the logo goes home; four sections, each with its own colour dot
+const links = [
+  { id: 'bananadle', href: '/bananadle/', label: 'Bananadle', dot: 'd-butter' },
+  { id: 'clicker', href: '/more/banana-clicker/', label: 'Clicker', dot: 'd-mint' },
+  { id: 'recipes', href: '/recipes/', label: 'Recipes', dot: 'd-peach' },
+  { id: 'prices', href: '/bananalytics/', label: 'Prices', dot: 'd-sky' },
 ];
+const mark = `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9c1.5 10.5 10.5 17.5 21 13.8-1.6 3.4-5.5 5.4-10.2 5.4C10 28.2 4.6 20 6 9z" fill="#F2CF5B" stroke="#3B3127" stroke-width="2" stroke-linejoin="round"/><path d="M6 9 5.2 5l2.8 1.2" fill="none" stroke="#3B3127" stroke-width="2" stroke-linecap="round"/></svg>`;
 ---
 <!doctype html>
 <html lang="en">
@@ -42,31 +43,30 @@ const tabs = [
   <meta name="twitter:image" content={new URL(image, Astro.site)}>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#FBF4E2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#16110A" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#FFFBF2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1D1A16" media="(prefers-color-scheme: dark)">
   <!-- the visitor's chosen theme, before anything is drawn (so the page never flashes the wrong one) -->
-  <script is:inline>try { var t = localStorage.getItem('atb-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <script is:inline>try { var t = localStorage.getItem('atb-theme'); if (t === 'light' || t === 'dark' || t === 'banana') document.documentElement.dataset.theme = t; } catch (e) {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+  <div class="drift" aria-hidden="true"><i style="left:2%;top:18%"></i><i style="left:95%;top:30%;animation-delay:-3s"></i><i style="left:4%;top:72%;animation-delay:-5s;width:60px;height:60px"></i><i style="left:93%;top:82%;animation-delay:-1.5s"></i></div>
   <header class="mast">
     <div class="wrap wide mast-in">
-      <a class="logo" href="/" aria-label="All Things Banana, home">
-        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z" fill="var(--banana)" stroke="var(--ink)" stroke-width="2.2" stroke-linejoin="round"/><path d="M5.5 8.5 4.6 4.4l3 1.3" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="word">allthingsbanana</span>
-      </a>
-      <nav class="tabs" aria-label="Main">
-        {tabs.map(t => <a href={t.href} class={section === t.id ? 'on' : ''} aria-current={section === t.id ? 'page' : undefined}><span class="t-l">{t.label}</span><span class="t-d">{t.desc}</span></a>)}
+      <a class="logo" href="/" aria-label="All Things Banana, home"><span class="mark" set:html={mark}></span><span class="word">allthingsbanana</span></a>
+      <nav class="links" aria-label="Main">
+        {links.map(l => <a href={l.href} class={section === l.id ? 'on' : ''} aria-current={section === l.id ? 'page' : undefined}><i class={`dot ${l.dot}`}></i>{l.label}</a>)}
       </nav>
       <div class="tools">
         <button class="icon" id="searchBtn" aria-label="Search recipes, prices and news" aria-expanded="false" aria-controls="search">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         </button>
-        <button class="icon" id="themeBtn" aria-label="Switch theme">
-          <svg class="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
-          <svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <button class="icon" id="themeBtn" aria-label="Switch theme" title="Light, dark or banana">
+          <svg class="i-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+          <svg class="i-banana" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9c1.5 10.5 10.5 17.5 21 13.8-1.6 3.4-5.5 5.4-10.2 5.4C10 28.2 4.6 20 6 9z" fill="#F2CF5B" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M6 9 5.2 5l2.8 1.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <svg class="i-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
         </button>
       </div>
     </div>
@@ -96,9 +96,15 @@ const tabs = [
         <a href="/topics/">Topics</a><a href="/more/banana-cube/">Banana Cube</a><a href="/more/">All games</a>
         <a href="/about/">About</a><a href="/privacy/">Privacy</a>
       </nav>
-      <p class="small">© {new Date().getFullYear()} All Things Banana. Prices are delayed or monthly averages. Not financial advice, obviously.</p>
+      <p class="small" data-banana="© All Things Banana. A website about bananas, by bananas, for bananas.">© {new Date().getFullYear()} All Things Banana. Prices are delayed or monthly averages. Not financial advice, obviously.</p>
     </div>
   </footer>
+
+  <!-- phones: the four sections in a bar at the bottom, in reach of a thumb -->
+  <nav class="dock" aria-label="Main">
+    {links.map(l => <a href={l.href} class={section === l.id ? 'on' : ''} aria-current={section === l.id ? 'page' : undefined}><i class={`dot ${l.dot}`}></i>{l.label}</a>)}
+  </nav>
+  <div class="theme-note" id="themeNote" role="status"></div>
 </body>
 </html>
 
@@ -109,28 +115,70 @@ const tabs = [
   // ---------- banana popularity: one anonymous page view per page ----------
   if (!navigator.webdriver) fetch('/api/visits', { method: 'POST', keepalive: true }).catch(() => {});   // skips automated browsers
 
-  // ---------- theme: follows the system unless the visitor picks one ----------
-  const root = document.documentElement, themeBtn = document.getElementById('themeBtn')!;
-  const isDark = () => (root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
-  const syncTheme = () => { themeBtn.setAttribute('aria-label', isDark() ? 'Switch to light theme' : 'Switch to dark theme'); root.classList.toggle('is-dark', isDark()); };
+  // ---------- themes: light → dark → banana ----------
+  const root = document.documentElement, themeBtn = document.getElementById('themeBtn')!, note = document.getElementById('themeNote')!;
+  const ORDER = ['light', 'dark', 'banana'] as const;
+  type Theme = typeof ORDER[number];
+  const LABEL: Record<Theme, string> = { light: 'Light', dark: 'Dark', banana: 'Banana mode' };
+  const current = (): Theme => (root.dataset.theme as Theme) || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const swapped = new Map<Element, string>();
+  // banana mode: every B becomes a banana, and a few lines of copy go silly
+  function swapCopy(on: boolean) {
+    document.querySelectorAll<HTMLElement>('[data-banana]').forEach(el => {
+      if (on) { if (!swapped.has(el)) swapped.set(el, el.textContent || ''); el.textContent = el.dataset.banana!; }
+      else if (swapped.has(el)) { el.textContent = swapped.get(el)!; swapped.delete(el); }
+    });
+  }
+  function bananify(on: boolean) {
+    if (!on) { document.querySelectorAll('banana-run').forEach(r => r.replaceWith(document.createTextNode(r.textContent || ''))); document.body.normalize(); return; }
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: n => n.parentElement!.closest('script, style, svg, input, textarea, select, option, banana-run, [data-no-banana]') || !/[bB]/.test(n.nodeValue || '') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+    });
+    const nodes: Text[] = []; while (walk.nextNode()) nodes.push(walk.currentNode as Text);
+    for (const n of nodes) {
+      const run = document.createElement('banana-run');
+      // words with a B stay in one piece, so a line never breaks between the banana and the rest of the word
+      (n.nodeValue || '').split(/(\S*[bB]\S*)/).forEach(chunk => {
+        if (!/[bB]/.test(chunk)) { if (chunk) run.append(chunk); return; }
+        const word = document.createElement('banana-w');
+        chunk.split(/([bB])/).forEach(part => {
+          if (part === 'b' || part === 'B') { const b = document.createElement('banana-b'); if (part === 'B') b.className = 'big'; b.textContent = part; word.append(b); }
+          else if (part) word.append(part);
+        });
+        run.append(word);
+      });
+      n.replaceWith(run);
+    }
+  }
+  let banana = false;
+  function applyTheme(announce: boolean) {
+    const t = current();
+    themeBtn.dataset.theme = t;
+    themeBtn.setAttribute('aria-label', `Theme: ${LABEL[t]}. Switch to ${LABEL[ORDER[(ORDER.indexOf(t) + 1) % 3]]}`);
+    if ((t === 'banana') !== banana) { banana = t === 'banana'; if (!banana) bananify(false); swapCopy(banana); if (banana) bananify(true); }
+    if (announce) { note.textContent = t === 'banana' ? 'Banana mode. You asked for this.' : `${LABEL[t]} mode`; note.classList.add('show'); setTimeout(() => note.classList.remove('show'), 1600); }
+  }
   themeBtn.addEventListener('click', () => {
-    const next = isDark() ? 'light' : 'dark';
+    const next = ORDER[(ORDER.indexOf(current()) + 1) % 3];
     root.dataset.theme = next;
     try { localStorage.setItem('atb-theme', next); } catch {}
-    syncTheme();
+    applyTheme(true);
   });
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);
-  syncTheme();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(false));
+  applyTheme(false);
+  // content that arrives later (news, the puzzle) gets bananas too
+  let pending = 0;
+  new MutationObserver(() => { if (banana && !pending) pending = requestAnimationFrame(() => { pending = 0; bananify(true); }); }).observe(document.querySelector('main')!, { childList: true, subtree: true, characterData: true });
 
-  // ---------- market strip (only on pages that ask for it) ----------
+  // ---------- market strip (Prices only) ----------
   const tickers = document.getElementById('tickers');
   if (tickers) {
     const TICKERS = ['PBANSOP', 'APU0000711211', 'PORANG', 'PCOCO', 'PCOFFOTM', 'PSUGAISA', 'DOLE', 'FDP'];
     Promise.all([getMarket(), getFeed().catch(() => null)]).then(([m, f]) => {
       const quotes = new Map((f?.stocks || []).map(q => [q.symbol, q]));
       const html = (TICKERS.map(c => lookup(m, c)).filter(Boolean) as Sel[]).map(s => {
-        const pts = s.pts, last = pts[pts.length - 1], prev = pts[pts.length - 2], q = quotes.get(s.code);
-        const price = q?.price ?? last.y, ch = q?.change ?? last.y - prev.y, chp = q?.changePct ?? lastChange(pts) ?? 0;
+        const pts = s.pts, last = pts[pts.length - 1], q = quotes.get(s.code);
+        const price = q?.price ?? last.y, chp = q?.changePct ?? lastChange(pts) ?? 0;
         return `<a class="tk" href="${marketLink(s.code)}">
           <span class="tk-n">${esc(label(s))}</span>
           <span class="tk-v num">${money(s, price)}</span>
@@ -185,69 +233,74 @@ const tabs = [
 
 <style is:global>
   /* ---------- header ---------- */
-  .mast { background: var(--paper); border-bottom: 2px solid var(--ink); position: relative; z-index: 20; }
-  .mast-in { display: flex; align-items: center; gap: 18px; min-height: 64px; }
-  .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); flex: none; }
-  .logo .mark { width: 30px; height: 30px; }
-  .logo .word { font: 400 21px/1 var(--display); }
-  .tabs { display: flex; gap: 4px; margin-left: auto; }
-  .tabs a { display: flex; flex-direction: column; justify-content: center; text-decoration: none; padding: 8px 12px; min-height: 48px; color: var(--ink-2); }
-  .tabs .t-l { font: 700 15.5px/1.15 var(--text); }
-  .tabs .t-d { font: 500 12.5px/1.2 var(--text); color: var(--ink-3); }
-  .tabs a:hover { color: var(--ink); }
-  .tabs a.on { color: var(--ink); box-shadow: inset 0 -4px 0 var(--banana-ink); }
-  .tools { display: flex; gap: 4px; }
-  .icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-ctl); border: 2px solid transparent; background: none; color: var(--ink); cursor: pointer; }
-  .icon:hover, .icon[aria-expanded="true"] { border-color: var(--ink); }
-  .icon .sun { display: none; }
-  .is-dark .icon .sun { display: block; }
-  .is-dark .icon .moon { display: none; }
+  .mast { border-bottom: 1px solid var(--line); background: var(--paper); position: relative; z-index: 20; }
+  :root[data-theme="banana"] .mast { background: transparent; border-bottom-color: #3A2A0E; }
+  .mast-in { display: flex; align-items: center; gap: 28px; height: 70px; }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); flex: none; }
+  .logo .mark { width: 36px; height: 36px; border-radius: var(--r-md); background: var(--butter); display: grid; place-items: center; }
+  .logo .mark svg { width: 24px; height: 24px; }
+  :root[data-theme="banana"] .logo .mark { background: #FFF4BF; transform: rotate(-12deg); }
+  @media (prefers-reduced-motion: no-preference) { :root[data-theme="banana"] .logo .mark { animation: wobble 2.4s ease-in-out infinite; } }
+  @keyframes wobble { 50% { transform: rotate(10deg); } }
+  .logo .word { font: 600 22px/1 var(--display); }
+  .links { display: flex; gap: 26px; }
+  .links a { display: flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700; font-size: 16px; color: var(--ink-2); padding: 12px 0; position: relative; }
+  .links a:hover, .links a.on { color: var(--ink); }
+  .links a.on::after { content: ''; position: absolute; left: 18px; right: 0; bottom: 4px; height: 3px; border-radius: 3px; background: var(--butter-d); }
+  .tools { margin-left: auto; display: flex; gap: 8px; }
+  .icon { width: 44px; height: 44px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--card); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+  .icon:hover, .icon[aria-expanded="true"] { border-color: var(--butter-d); }
+  #themeBtn svg { display: none; }
+  #themeBtn[data-theme="light"] .i-moon, #themeBtn[data-theme="dark"] .i-banana, #themeBtn[data-theme="banana"] .i-sun { display: block; }
 
-  .search { border-top: 2px solid var(--ink); background: var(--card); padding: 12px 0; position: absolute; left: 0; right: 0; top: 100%; border-bottom: 2px solid var(--ink); }
-  .search .wrap { position: relative; }
-  .search input { width: 100%; height: 48px; border: 2px solid var(--ink); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 14px; font: 500 17px var(--text); outline: none; }
-  .search input:focus { box-shadow: 0 0 0 3px var(--banana); }
+  .search { border-top: 1px solid var(--line); background: var(--card); padding: 14px 0; position: absolute; left: 0; right: 0; top: 100%; box-shadow: var(--shadow); }
+  .search input { width: 100%; height: 50px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); color: var(--ink); padding: 0 16px; font: 600 17px var(--text); outline: none; }
+  .search input:focus { box-shadow: 0 0 0 3px var(--butter-d); }
   .qres { margin-top: 8px; max-height: 65vh; overflow: auto; }
-  .qres .qh { font: 700 var(--t-label) var(--text); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); padding: 10px 4px 4px; }
-  .qres a { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 10px 6px; text-decoration: none; border-bottom: 1px solid var(--line); min-height: 44px; }
+  .qres .qh { font: 800 var(--t-label) var(--text); color: var(--ink-2); padding: 10px 4px 4px; }
+  .qres a { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 10px 8px; text-decoration: none; border-radius: var(--r-sm); min-height: 44px; }
   .qres a:hover { background: var(--paper-2); }
-  .qres b { font-size: 15px; }
-  .qres b.nt { grid-column: 1 / -1; font-weight: 600; }
-  .qres span { font-size: 13px; color: var(--ink-3); grid-column: 1; }
-  .qres em { font-style: normal; font-weight: 700; font-size: 14px; grid-column: 2; grid-row: 1 / span 2; align-self: center; }
-  .qnone { padding: 14px 4px; color: var(--ink-3); }
+  .qres b { font-size: 16px; }
+  .qres b.nt { grid-column: 1 / -1; font-weight: 700; }
+  .qres span { font-size: 14px; color: var(--ink-2); grid-column: 1; }
+  .qres em { font-style: normal; font-weight: 800; font-size: 15px; grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .qnone { padding: 14px 4px; color: var(--ink-2); }
 
-  /* ---------- market strip (home and Prices) ---------- */
-  .board-strip { border-bottom: 2px solid var(--ink); background: var(--card); }
-  .tk-in { display: flex; overflow-x: auto; scrollbar-width: none; }
+  /* ---------- market strip (Prices) ---------- */
+  .board-strip { border-bottom: 1px solid var(--line); }
+  .tk-in { display: flex; overflow-x: auto; scrollbar-width: none; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
   .tk-in::-webkit-scrollbar { display: none; }
-  .tk { display: grid; grid-template-columns: auto auto; column-gap: 12px; padding: 9px 18px 9px 0; margin-right: 18px; text-decoration: none; min-width: 150px; border-right: 2px solid var(--line); flex: none; }
-  .tk:last-child { border-right: none; }
-  .tk-n { font: 700 12px var(--text); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
-  .tk-v { font: 400 19px/1.15 var(--display); grid-column: 1; }
-  .tk-c { font-size: 13px; font-weight: 700; grid-column: 1; white-space: nowrap; }
+  .tk { display: grid; grid-template-columns: auto auto; column-gap: 12px; padding: 8px 14px; text-decoration: none; min-width: 160px; flex: none; background: var(--card); border-radius: var(--r-md); box-shadow: var(--shadow); }
+  .tk-n { font: 800 13px var(--text); color: var(--ink-2); white-space: nowrap; }
+  .tk-v { font: 600 18px/1.2 var(--display); grid-column: 1; }
+  .tk-c { font-size: 13.5px; font-weight: 800; grid-column: 1; white-space: nowrap; }
   .tk .spark { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
-  .tk:hover .tk-n { text-decoration: underline; }
-  .tk.sk { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
-  .tk.sk span { display: block; width: 110px; height: 10px; border-radius: 3px; background: var(--paper-2); }
+  .tk.sk { display: flex; flex-direction: column; gap: 6px; padding: 14px; }
+  .tk.sk span { display: block; width: 110px; height: 10px; border-radius: 4px; background: var(--paper-2); }
 
   /* ---------- footer ---------- */
-  .foot { border-top: 2px solid var(--ink); margin-top: 48px; padding: 18px 0 26px; }
-  .foot-links { display: flex; flex-wrap: wrap; gap: 0 4px; margin-bottom: 8px; }
-  .foot-links a { font-weight: 600; font-size: 15px; padding: 10px 10px 10px 0; min-height: 44px; display: inline-flex; align-items: center; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; margin-right: 8px; }
-  .foot-links a:hover { text-decoration-color: var(--banana-ink); }
-  .foot .small { margin: 0; color: var(--ink-3); font-size: var(--t-small); }
+  .foot { border-top: 1px solid var(--line); margin-top: 48px; padding: 20px 0 28px; position: relative; z-index: 1; }
+  :root[data-theme="banana"] .foot { border-top-color: #3A2A0E; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 0 20px; margin-bottom: 6px; }
+  .foot-links a { font-weight: 700; font-size: 15.5px; padding: 10px 0; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
+  .foot-links a:hover { text-decoration: underline; text-decoration-color: var(--butter-d); text-decoration-thickness: 2px; }
+  .foot .small { margin: 0; color: var(--ink-2); font-size: var(--t-small); }
 
-  /* ---------- phones: two short rows, four equal tabs, no sideways scrolling ---------- */
-  @media (max-width: 820px) {
-    .mast-in { flex-wrap: wrap; gap: 0 8px; min-height: 0; padding-top: 6px; }
-    .logo { order: 1; }
-    .tools { order: 2; margin-left: auto; }
-    .tabs { order: 3; flex-basis: 100%; margin: 0 -16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 2px solid var(--ink); }
-    .tabs a { align-items: center; padding: 8px 2px; min-height: 46px; border-right: 2px solid var(--line); }
-    .tabs a:last-child { border-right: 0; }
-    .tabs .t-d { display: none; }
-    .tabs .t-l { font-size: 15px; }
-    .logo .word { font-size: 19px; }
+  .theme-note { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 60; background: var(--ink); color: var(--paper); font-weight: 800; padding: 9px 18px; border-radius: var(--r-md); opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .theme-note.show { opacity: 1; }
+
+  /* ---------- phones: logo and icons on top, the sections in a bar at the bottom ---------- */
+  .dock { display: none; }
+  @media (max-width: 760px) {
+    .links { display: none; }
+    .mast-in { height: 62px; gap: 12px; }
+    .logo .word { font-size: 20px; }
+    body { padding-bottom: 82px; }
+    .dock { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 30; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 24px rgba(60, 45, 15, .16); padding: 6px; }
+    :root[data-theme="banana"] .dock { border: 2px solid #3A2A0E; }
+    .dock a { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; font-weight: 800; font-size: 13px; padding: 8px 0; border-radius: 12px; color: var(--ink-2); min-height: 52px; justify-content: center; }
+    .dock a .dot { width: 24px; height: 8px; border-radius: 999px; opacity: .6; }
+    .dock a.on { color: var(--ink); background: var(--butter); }
+    .dock a.on .dot { opacity: 1; }
   }
 </style>

@@ -411,20 +411,20 @@ import Base from '../layouts/Base.astro';
 <style>
   .daw { padding: 26px 0 10px; display: flex; flex-direction: column; gap: 22px; }
   .top { margin: 6px; }
-  .song-name { font: 400 22px var(--display); color: var(--ink); background: none; border: 0; border-bottom: 2px dashed var(--line); text-align: right; min-width: 0; width: 22ch; padding: 2px 4px; }
+  .song-name { font: 600 22px var(--display); color: var(--ink); background: none; border: 0; border-bottom: 2px dashed var(--line); text-align: right; min-width: 0; width: 22ch; padding: 2px 4px; }
   .song-name:focus { outline: none; border-bottom-color: var(--ink); }
   .transport, .styles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
   .transport .btn, .styles .btn { min-height: 44px; }
   .btn.on { box-shadow: 0 0 0 3px var(--banana); }
   .field { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
-  .field input[type="number"] { width: 64px; height: 40px; font: 600 16px var(--text); border: 2px solid var(--ink); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
-  .field select { height: 40px; font: 600 15px var(--text); border: 2px solid var(--ink); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
+  .field input[type="number"] { width: 64px; height: 40px; font: 600 16px var(--text); border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
+  .field select { height: 40px; font: 600 15px var(--text); border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--paper); color: var(--ink); padding: 0 6px; }
   .field input[type="range"] { accent-color: var(--banana-ink); width: 110px; }
   .field small { color: var(--ink-3); font-weight: 500; }
   .spacer { flex: 1; }
   .lbl { font: 700 var(--t-label) var(--text); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
   .styles :global(.tog) { margin-right: 6px; }
-  .remix { margin: 12px 0 0; padding: 8px 12px; background: var(--banana); color: #231A10; font-weight: 600; border: 2px solid var(--ink); }
+  .remix { margin: 12px 0 0; padding: 8px 12px; background: var(--banana); color: #231A10; font-weight: 600; border: 1px solid var(--line); }
   .mascot { width: 40px; height: 40px; display: inline-block; transition: transform .08s; }
   .mascot svg { width: 100%; height: 100%; }
   .hint { font-size: 14px; color: var(--ink-3); }
@@ -432,17 +432,17 @@ import Base from '../layouts/Base.astro';
   .crates-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .crates-head h2 { font-size: var(--t-2); margin: 0; }
   .crate-row { display: flex; gap: 10px; overflow-x: auto; padding: 8px 0 4px; align-items: stretch; }
-  .crate-row :global(.crate-tile) { flex: none; display: grid; grid-template-columns: 40px auto auto; gap: 6px 10px; align-items: center; border: 2px solid var(--ink); background: var(--card); padding: 10px; width: 250px; }
+  .crate-row :global(.crate-tile) { flex: none; display: grid; grid-template-columns: 40px auto auto; gap: 6px 10px; align-items: center; border: 1px solid var(--line); background: var(--card); padding: 10px; width: 250px; }
   .crate-row :global(.ct-name) { grid-column: 2 / -1; }
   .crate-row :global(.crate-tile.on) { box-shadow: inset 0 0 0 3px var(--banana); }
   .crate-row :global(.crate-tile.playing .ct-pick) { background: var(--leaf); color: #fff; }
-  .crate-row :global(.ct-pick) { width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 50%; background: var(--banana); color: #231A10; font: 400 19px var(--display); cursor: pointer; grid-row: span 2; }
+  .crate-row :global(.ct-pick) { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%; background: var(--banana); color: #231A10; font: 600 19px var(--display); cursor: pointer; grid-row: span 2; }
   .crate-row :global(.ct-f) { margin-right: 0; }
   .crate-row :global(.ct-name) { font: 700 16px var(--text); border: 0; border-bottom: 2px dashed var(--line); background: none; color: var(--ink); min-width: 0; padding: 2px 0; }
   .crate-row :global(.ct-f) { font-size: 13.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; }
-  .crate-row :global(.ct-f select) { font: 600 14px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); height: 32px; }
+  .crate-row :global(.ct-f select) { font: 600 14px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); height: 32px; }
   .crate-row :global(.ct-acts) { grid-column: 1 / -1; display: flex; gap: 4px; }
-  .crate-row :global(.ct-acts button) { font: 600 13px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 8px; cursor: pointer; }
+  .crate-row :global(.ct-acts button) { font: 600 13px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 8px; cursor: pointer; }
   .crate-row :global(.ct-acts button:disabled) { opacity: .35; cursor: default; }
   .crate-row :global(.new-crate) { align-self: center; }
 
@@ -454,11 +454,11 @@ import Base from '../layouts/Base.astro';
   .track-list :global(li.on) { background: color-mix(in srgb, var(--banana) 28%, var(--card)); }
   .track-list :global(li.peeled .tr-pick) { opacity: .5; text-decoration: line-through; }
   .track-list :global(.tr-pick) { display: flex; flex-direction: column; align-items: flex-start; background: none; border: 0; padding: 4px 0; cursor: pointer; color: var(--ink); text-align: left; }
-  .track-list :global(.tr-pick b) { font: 400 19px var(--display); }
+  .track-list :global(.tr-pick b) { font: 600 19px var(--display); }
   .track-list :global(.tr-pick span) { font-size: 13.5px; color: var(--ink-2); }
-  .track-list :global(select) { height: 36px; font: 600 14px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); }
+  .track-list :global(select) { height: 36px; font: 600 14px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); }
   .track-list :global(.tr-acts) { display: flex; gap: 4px; }
-  .track-list :global(.mini) { font: 600 13px var(--text); border: 2px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 9px; cursor: pointer; }
+  .track-list :global(.mini) { font: 600 13px var(--text); border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); min-height: 32px; padding: 0 9px; cursor: pointer; }
   .track-list :global(.mini.on) { background: var(--ink); color: var(--paper); }
   .track-list :global(.mini:disabled) { opacity: .35; }
   .add-row { display: flex; gap: 6px; padding: 10px 12px; }
@@ -466,7 +466,7 @@ import Base from '../layouts/Base.astro';
   .ed-head { flex-wrap: wrap; }
   .ed-tools { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
   .brush { display: inline-flex; gap: 4px; }
-  .brush :global(.rb) { width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; cursor: pointer; }
+  .brush :global(.rb) { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%; cursor: pointer; }
   .brush :global(.rb[aria-checked="true"]) { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
   .brush :global(.rb.r1), .grid :global(.r1) { background: var(--r1); }
   .brush :global(.rb.r2), .grid :global(.r2) { background: var(--r4); }
@@ -481,20 +481,20 @@ import Base from '../layouts/Base.astro';
   .grid :global(.g-label) { font: 600 13px var(--text); text-align: right; padding: 0 8px; border: 0; background: none; color: var(--ink-2); cursor: pointer; }
   .grid :global(.g-label.root) { color: var(--ink); font-weight: 700; }
   .grid :global(.g-label:hover) { color: var(--ink); text-decoration: underline; }
-  .grid :global(.g-cells) { position: relative; display: grid; grid-template-columns: repeat(var(--steps), var(--cw)); grid-template-rows: repeat(var(--rows), var(--rh)); cursor: crosshair; border: 2px solid var(--ink);
+  .grid :global(.g-cells) { position: relative; display: grid; grid-template-columns: repeat(var(--steps), var(--cw)); grid-template-rows: repeat(var(--rows), var(--rh)); cursor: crosshair; border: 1px solid var(--line);
     background-image: linear-gradient(90deg, var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--ink-3) 1px, transparent 1px);
     background-size: var(--cw) 100%, calc(var(--cw) * 4) 100%; }
   .grid :global(.g-bg) { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(var(--rows), var(--rh)); pointer-events: none; }
   .grid :global(.g-rowbg) { border-bottom: 1px solid var(--line-2); }
   .grid :global(.g-rowbg.root) { background: color-mix(in srgb, var(--banana) 16%, transparent); }
-  .grid :global(.hit) { margin: 4px; border: 2px solid var(--ink); border-radius: 999px 999px 999px 999px / 70% 70% 30% 30%; transform: rotate(-14deg); pointer-events: none; z-index: 1; }
-  .grid :global(.note) { margin: 2px 1px; border: 2px solid var(--ink); border-radius: 6px; pointer-events: none; z-index: 1; }
+  .grid :global(.hit) { margin: 4px; border: 1px solid var(--line); border-radius: 999px 999px 999px 999px / 70% 70% 30% 30%; transform: rotate(-14deg); pointer-events: none; z-index: 1; }
+  .grid :global(.note) { margin: 2px 1px; border: 1px solid var(--line); border-radius: 6px; pointer-events: none; z-index: 1; }
   .grid :global(.playhead) { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--banana) 40%, transparent); pointer-events: none; z-index: 0; }
   .ed-help { margin: 0; padding: 0 14px 12px; font-size: 14.5px; color: var(--ink-2); }
 
   .mixer { display: flex; overflow-x: auto; }
   .mixer :global(.mx-col) { flex: none; width: 170px; padding: 12px 14px; border-right: 1px solid var(--line); display: grid; gap: 6px; }
-  .mixer :global(.mx-col b) { font: 400 18px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mixer :global(.mx-col b) { font: 600 18px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mixer :global(.mx-col.peeled b) { text-decoration: line-through; opacity: .55; }
   .mixer :global(.mx-col.master) { background: var(--paper-2); }
   .mixer :global(.mx-k) { display: grid; gap: 2px; font-size: 13.5px; color: var(--ink-2); }

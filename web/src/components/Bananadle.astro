@@ -8,17 +8,23 @@ const starts = degrees.starts.map(s => ({ t: s.title }));
 ---
 <section class={`crate bd bd-${variant}`} data-bananadle data-variant={variant} aria-label="Bananadle, today's puzzle">
   <script type="application/json" data-bd="starts" set:html={JSON.stringify(starts)} />
-  <span class="sticker bd-sticker" aria-hidden="true">Par<b>4</b></span>
-  <div class="crate-top"><span class="label" data-bd="kick">Bananadle</span><span class="bd-no" data-bd="no"></span></div>
+  <div class="bd-tags"><span class="tag" data-bd="no">Bananadle</span><span class="tag soft" data-bd="kick"></span><span class="tag soft">Par 4</span></div>
 
-  <div class="bd-where" data-bd="where">Start here</div>
+  <div class="bd-where"><span class="bd-w" aria-hidden="true">W</span><span data-bd="where">Start on this Wikipedia page</span></div>
   <h2 class="bd-current" data-bd="current">&nbsp;</h2>
   <p class="bd-about"><span data-bd="desc"></span> <span data-bd="extract"></span></p>
-  <p class="bd-warm" data-bd="warm" hidden>This page links to Banana. You know what to do.</p>
-  <p class="bd-intro">Get to <b>Banana</b> by naming pages this one links to or mentions. From memory. <span data-bd="tried"></span></p>
+  <p class="bd-warm" data-bd="warm" hidden>This page links to Banana. Type Banana to finish!</p>
+
+  <!-- the rules, said plainly, before the first guess -->
+  <div class="bd-rule">
+    <p><b>Wikipedia page to Wikipedia page, all the way to Banana.</b> Type the name of another Wikipedia page that this one links to or mentions, and you jump there. Keep hopping until you land on the Wikipedia page for <b>Banana</b>. Fewest hops wins. <span data-bd="tried"></span></p>
+    <ol class="bd-route-eg" aria-label="For example">
+      <li><span class="bd-w" aria-hidden="true">W</span>Napoleon</li><li><span class="bd-w" aria-hidden="true">W</span>Haiti</li><li class="goal"><span class="bd-w" aria-hidden="true">W</span>Banana</li>
+    </ol>
+  </div>
 
   <form class="bd-guess" data-bd="form" autocomplete="off">
-    <input data-bd="input" type="text" placeholder="England? Napoleon? Fruit?" aria-label="Your guess: a page this one links to or mentions" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+    <input data-bd="input" type="text" placeholder="Name a Wikipedia page it links to…" aria-label="Your guess: the name of a Wikipedia page this one links to or mentions" autocapitalize="off" spellcheck="false" enterkeyhint="go">
     <button class="btn" data-bd="go" type="submit">Go</button>
   </form>
   <div class="bd-feedback" data-bd="feedback" aria-live="polite"></div>
@@ -39,7 +45,7 @@ const starts = degrees.starts.map(s => ({ t: s.title }));
       <div><p class="bd-done-title" data-bd="doneTitle"></p><p class="bd-done-sub" data-bd="doneSub"></p></div>
     </div>
     <p class="bd-route" data-bd="route"></p>
-    <p class="bd-next" data-bd="next">Next crate in <b data-bd="countdown"></b>. Same time tomorrow.</p>
+    <p class="bd-next" data-bd="next">A new Wikipedia page in <b data-bd="countdown"></b>. Same time tomorrow.</p>
     <div class="bd-done-btns">
       <button class="btn" type="button" data-bd="share">Share result</button>
       {variant === 'home'
@@ -59,8 +65,9 @@ const starts = degrees.starts.map(s => ({ t: s.title }));
   </div>
   <div class="bd-how" data-bd="how" hidden>
     <ol>
-      <li>Type a page that <b>the page you're on links to or mentions</b>. "England" from Queen Victoria works.</li>
-      <li>Hop page to page until you reach one that <b>links to Banana</b>, then type Banana.</li>
+      <li>Every page in this game is a <b>Wikipedia article</b>. You start on today's.</li>
+      <li>Type the name of another Wikipedia page that <b>the page you're on links to or mentions</b>. "England" from Queen Victoria works. You jump to it.</li>
+      <li>Keep hopping until you reach a page that <b>links to the Wikipedia page "Banana"</b>, then type Banana to finish.</li>
       <li><b>Par is 4.</b> Three is a birdie, two an eagle. A real page that isn't connected is a miss; typos are free.</li>
       <li>Tap an earlier page in your route to go back. It undoes the steps after it.</li>
     </ol>
@@ -75,79 +82,84 @@ const starts = degrees.starts.map(s => ({ t: s.title }));
 </script>
 
 <style is:global>
-  .bd { padding-top: 18px; }
-  .bd-sticker { position: absolute; top: -22px; right: 18px; z-index: 1; }
-  .bd .crate-top { padding-right: 96px; }
-  .bd-no { font: 400 19px/1 var(--display); }
-  .bd-where { margin-top: 18px; font: 600 var(--t-small) var(--text); color: var(--ink-3); }
-  .bd-current { font-size: var(--t-hero); margin: 2px 0 6px; overflow-wrap: anywhere; }
-  .bd-about { margin: 0; color: var(--ink-2); font-size: 15.5px; min-height: 1.5em; max-width: 62ch; }
-  .bd-about [data-bd="desc"] { font-weight: 600; color: var(--ink); }
-  .bd-warm { display: inline-block; margin: 10px 0 0; padding: 4px 12px; background: var(--banana); color: var(--on-banana); font-weight: 700; font-size: 15px; border: 2px solid var(--ink); }
-  .bd-intro { margin: 14px 0 0; font-size: 15.5px; color: var(--ink-2); }
-  .bd-intro b { color: var(--ink); }
-  .is-done .bd-intro, .is-done .bd-about [data-bd="extract"] { display: none; }
+  .bd-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .bd-where { display: flex; align-items: center; gap: 8px; margin-top: 18px; font: 700 15px var(--text); color: var(--ink-2); }
+  .bd-w { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--card); color: var(--ink); font: 700 13px Georgia, 'Times New Roman', serif; flex: none; }
+  .bd-current { font-size: var(--t-hero); margin: 4px 0 6px; overflow-wrap: anywhere; }
+  .bd-about { margin: 0; color: var(--ink-2); font-size: 16px; min-height: 1.5em; max-width: 62ch; }
+  .bd-about [data-bd="desc"] { font-weight: 700; color: var(--ink); }
+  .bd-warm { display: inline-block; margin: 12px 0 0; padding: 6px 14px; background: var(--card); color: var(--ink); font-weight: 800; font-size: 15.5px; border-radius: var(--r-md); }
+  .bd-rule { margin-top: 16px; padding: 14px 16px; background: rgba(255, 255, 255, .55); border-radius: var(--r-md); }
+  :root[data-theme="dark"] .bd-rule { background: rgba(255, 255, 255, .05); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme]) .bd-rule { background: rgba(255, 255, 255, .05); } }
+  .bd-rule p { margin: 0; font-size: 16px; color: var(--ink-2); }
+  .bd-rule p b { color: var(--ink); }
+  .bd-route-eg { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 0; padding: 0; font-weight: 700; font-size: 14.5px; }
+  .bd-route-eg li { display: inline-flex; align-items: center; gap: 6px; background: var(--card); padding: 4px 10px 4px 5px; border-radius: var(--r-sm); }
+  .bd-route-eg li + li::before { content: '→'; margin: 0 6px 0 -2px; color: var(--ink-2); }
+  .bd-route-eg li.goal { background: var(--banana); color: var(--on-banana); }
+  .bd-route-eg .bd-w { background: var(--paper-2); width: 20px; height: 20px; font-size: 12px; }
+  .bd-path-started .bd-rule, .is-done .bd-rule { display: none; }
 
-  .bd-guess { display: flex; gap: 8px; margin-top: 14px; }
-  .bd-guess input { flex: 1; min-width: 0; height: 52px; font: 500 18px var(--text); color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 0 14px; outline: none; }
-  .bd-guess input::placeholder { color: var(--ink-3); }
-  .bd-guess input:focus { box-shadow: 0 0 0 3px var(--banana); }
-  .bd-guess .btn { min-height: 52px; min-width: 76px; font-size: 17px; }
+  .bd-guess { display: flex; gap: 10px; margin-top: 16px; max-width: 640px; }
+  .bd-guess input { flex: 1; min-width: 0; height: 54px; font: 600 18px var(--text); color: var(--ink); background: var(--card); border: 1px solid rgba(59, 49, 39, .12); border-radius: var(--r-md); padding: 0 18px; outline: none; }
+  .bd-guess input::placeholder { color: var(--ink-2); opacity: .85; font-weight: 500; }
+  .bd-guess input:focus { box-shadow: 0 0 0 3px var(--butter-d); }
+  .bd-guess .btn { min-height: 54px; min-width: 80px; font-size: 18px; }
 
-  .bd-feedback { min-height: 8px; }
-  .bd-feedback .msg { margin: 10px 0 0; padding: 9px 12px; font-size: 15px; line-height: 1.5; border-left: 4px solid var(--ink-3); background: var(--paper-2); }
-  .bd-feedback .msg b { font-weight: 700; }
-  .bd-feedback .msg.ok { border-left-color: var(--leaf); }
-  .bd-feedback .msg.miss { border-left-color: var(--stamp); }
+  .bd-feedback { min-height: 6px; }
+  .bd-feedback .msg { margin: 12px 0 0; padding: 10px 14px; font-size: 15.5px; line-height: 1.5; border-radius: var(--r-md); background: var(--card); max-width: 640px; }
+  .bd-feedback .msg b { font-weight: 800; }
+  .bd-feedback .msg.ok { background: var(--mint); }
+  .bd-feedback .msg.miss { background: var(--peach); }
   @media (prefers-reduced-motion: no-preference) { .bd-feedback .msg.miss { animation: bd-shake .3s; } }
   @keyframes bd-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-  .bd .free { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
-  .bd .sugg { font: 600 15px var(--text); color: var(--ink); background: var(--card); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 6px 11px; margin: 3px 2px; min-height: 40px; cursor: pointer; }
-  .bd .sugg:hover { background: var(--banana); color: var(--on-banana); }
+  .bd .free { font-size: 12.5px; font-weight: 800; color: var(--ink-2); white-space: nowrap; }
+  .bd .sugg { font: 700 15px var(--text); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 11px; margin: 3px 2px; min-height: 40px; cursor: pointer; }
+  .bd .sugg:hover { background: var(--butter); border-color: var(--butter-d); }
 
-  .bd-trail { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0; margin: 14px 0 0; }
+  .bd-trail { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0; margin: 16px 0 0; }
   .bd-trail li { display: flex; align-items: center; gap: 6px; }
-  .bd-trail li + li::before { content: '→'; color: var(--ink-3); font-weight: 700; }
-  .bd-trail button, .bd-trail span { font: 600 14px var(--text); color: var(--ink); background: var(--paper); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 5px 10px; min-height: 38px; display: inline-flex; align-items: center; }
+  .bd-trail li + li::before { content: '→'; color: var(--ink-2); font-weight: 700; }
+  .bd-trail button, .bd-trail span { font: 700 14.5px var(--text); color: var(--ink); background: var(--card); border: 0; border-radius: var(--r-sm); padding: 6px 12px; min-height: 38px; display: inline-flex; align-items: center; }
   .bd-trail button { cursor: pointer; }
-  .bd-trail button:hover { background: var(--paper-2); text-decoration: line-through; }
+  .bd-trail button:hover { text-decoration: line-through; }
   .bd-trail .here { background: var(--ink); color: var(--paper); }
-  .bd-trail .goal span { border-style: dashed; color: var(--ink-3); background: none; }
+  .bd-trail .goal span { background: transparent; box-shadow: inset 0 0 0 2px var(--butter-d); color: var(--ink-2); }
 
-  .bd-ripe { margin-top: 16px; }
-  .bd-ripe-head { display: flex; justify-content: space-between; gap: 10px; font-size: var(--t-small); color: var(--ink-2); margin-bottom: 5px; }
-  .bd-ripe-head span:first-child { font-weight: 700; color: var(--ink); }
+  .bd-ripe { margin-top: 18px; max-width: 420px; }
+  .bd-ripe-head { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; color: var(--ink-2); margin-bottom: 6px; }
+  .bd-ripe-head span:first-child { font-weight: 800; color: var(--ink); }
 
-  .bd-hint { margin-top: 12px; padding: 9px 12px; font-size: 15px; border: 2px dashed var(--ink); }
+  .bd-hint { margin-top: 12px; padding: 10px 14px; font-size: 15.5px; border-radius: var(--r-md); background: var(--lilac); max-width: 640px; }
 
-  .bd-done { margin-top: 18px; padding-top: 16px; border-top: 2px solid var(--ink); }
+  .bd-done { margin-top: 20px; padding: 18px 20px; background: var(--card); border-radius: var(--r-lg); }
   .bd-result { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-  .bd-result .stamp { font-size: 30px; }
-  .bd-done-title { margin: 0; font: 400 var(--t-2)/1.1 var(--display); }
-  .bd-done-sub { margin: 4px 0 0; color: var(--ink-2); font-size: 15px; }
-  .bd-route { margin: 12px 0 0; font-size: 15px; color: var(--ink-2); line-height: 1.6; }
-  .bd-route a { color: var(--ink); font-weight: 600; text-decoration-color: var(--banana-ink); text-underline-offset: 3px; }
-  .bd-next { margin: 10px 0 0; font-size: 15.5px; }
-  .bd-next b { font-family: var(--display); font-weight: 400; font-size: 19px; }
+  .bd-done-title { margin: 0; font: 600 var(--t-2)/1.15 var(--display); }
+  .bd-done-sub { margin: 4px 0 0; color: var(--ink-2); font-size: 15.5px; }
+  .bd-route { margin: 12px 0 0; font-size: 15.5px; color: var(--ink-2); line-height: 1.6; }
+  .bd-route a { color: var(--ink); font-weight: 700; text-decoration-color: var(--butter-d); text-underline-offset: 3px; }
+  .bd-next { margin: 10px 0 0; font-size: 16px; }
+  .bd-next b { font: 600 20px var(--display); }
   .bd-done-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
-  .bd-foot { display: flex; justify-content: space-between; align-items: center; gap: 4px 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 8px; border-top: 2px solid var(--line); }
-  .bd-stats { font-size: var(--t-small); color: var(--ink-2); }
+  .bd-foot { display: flex; justify-content: space-between; align-items: center; gap: 4px 12px; flex-wrap: wrap; margin-top: 16px; }
+  .bd-stats { font-size: 15px; color: var(--ink-2); }
   .bd-stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .bd-tools { display: flex; flex-wrap: wrap; gap: 0 10px; }
+  .bd-tools { display: flex; flex-wrap: wrap; gap: 0 12px; }
   .bd-tools .link-btn { min-height: 44px; }
-  .bd-how { margin-top: 6px; padding: 12px 14px; background: var(--paper-2); font-size: 15px; }
-  .bd-how ol { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 4px; }
+  .bd-how { margin-top: 6px; padding: 14px 16px; background: var(--card); border-radius: var(--r-md); font-size: 16px; }
+  .bd-how ol { margin: 0 0 8px; padding-left: 22px; display: grid; gap: 5px; }
   .bd-how p { margin: 0; color: var(--ink-2); }
-  .bd-credit { margin: 12px 0 0; font-size: 13px; color: var(--ink-3); }
-  .bd-credit a { color: var(--ink-3); }
+  .bd-credit { margin: 12px 0 0; font-size: 13.5px; color: var(--ink-2); }
+  .bd-credit a { color: var(--ink-2); }
+  .is-done .bd-about [data-bd="extract"] { display: none; }
 
   @media (max-width: 600px) {
-    .crate.bd { padding: 16px 14px 14px; }
-    .bd-sticker { right: 8px; top: -24px; width: 72px; height: 52px; }
-    .bd-sticker b { font-size: 20px; }
-    .bd .crate-top { padding-right: 70px; }
+    .crate.bd { padding: 20px 16px 16px; }
     .bd-current { font-size: clamp(32px, 10vw, 44px); }
+    .bd-guess { flex-direction: column; }
+    .bd-guess input { flex: none; }
     .bd-ripe-head span:last-child { display: none; }
   }
 </style>

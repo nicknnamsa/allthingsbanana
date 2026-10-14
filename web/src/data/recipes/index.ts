@@ -5,8 +5,10 @@ import { savoury } from './savoury';
 import { desserts } from './desserts';
 import { drinks } from './drinks';
 import { slugify, type Recipe } from './types';
+import { extras, type Extra } from './extras';
 
 export * from './types';
+export type { Extra } from './extras';
 
 export const recipes: Recipe[] = [...breakfast, ...savoury, ...desserts, ...drinks]
   .map(r => ({ ...r, slug: slugify(r.name) }))
@@ -17,7 +19,14 @@ const seen = new Set<string>();
 for (const r of recipes) {
   if (seen.has(r.slug)) throw new Error(`Two recipes are called "${r.name}"`);
   seen.add(r.slug);
+  const x = extras[r.slug];
+  if (!x) throw new Error(`"${r.name}" has no entry in extras/ (its slug is ${r.slug})`);
+  if (x.prep + x.cook > r.mins) throw new Error(`"${r.name}": prep ${x.prep} + cook ${x.cook} is longer than its ${r.mins} min total`);
 }
+for (const slug in extras) if (!seen.has(slug)) throw new Error(`extras/ has "${slug}", which is not a recipe`);
+
+// the long version of a recipe: intro, prep and cook times, named steps, tips, storage, swaps
+export const recipeExtra = (slug: string): Extra => extras[slug];
 
 // the same recipe all day, a different one tomorrow
 export function recipeOfTheDay(date = new Date()) {

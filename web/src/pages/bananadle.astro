@@ -50,17 +50,17 @@ import PopularityChart from '../components/PopularityChart.astro';
   .bd-page { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; padding-top: 34px; }
   .bd-side { display: flex; flex-direction: column; gap: 18px; }
   .record { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; padding: 12px 6px; }
-  .record :global(b) { display: block; font: 400 28px/1.1 var(--display); }
+  .record :global(b) { display: block; font: 600 28px/1.1 var(--display); }
   .record :global(span) { font-size: 13px; color: var(--ink-2); }
   .world-sum { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; padding: 10px 4px 4px; }
-  .world-sum :global(b) { display: block; font: 400 20px/1.15 var(--display); }
+  .world-sum :global(b) { display: block; font: 600 20px/1.15 var(--display); }
   .world-sum :global(span) { font-size: 12.5px; color: var(--ink-2); }
   .world-hist { display: grid; gap: 4px; padding: 6px 14px 14px; }
   .world-hist :global(.bar) { display: grid; grid-template-columns: 48px 1fr 26px; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .world-hist :global(.k) { text-align: right; font-weight: 600; }
   .world-hist :global(.k em) { font-style: normal; font-size: 12px; color: var(--ink-3); }
-  .world-hist :global(.track) { height: 16px; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: var(--paper); }
-  .world-hist :global(i) { display: block; height: 100%; border-right: 2px solid var(--ink); }
+  .world-hist :global(.track) { height: 16px; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--paper); }
+  .world-hist :global(i) { display: block; height: 100%; border-right: 1px solid var(--line); }
   .world-hist :global(i[style*="width:0%"]) { border-right: 0; }
   .world-hist :global(.r1) { background: var(--r1); } .world-hist :global(.r2) { background: var(--r2); } .world-hist :global(.r3) { background: var(--r3); }
   .world-hist :global(.r4) { background: var(--r4); } .world-hist :global(.r5) { background: var(--r5); } .world-hist :global(.r6) { background: var(--r6); } .world-hist :global(.r7) { background: var(--r7); }

@@ -160,8 +160,8 @@ export function mountBananadle(root: HTMLElement) {
       s = newState(start);
     }
     const date = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-    q('kick').textContent = m === 'daily' ? `Bananadle · ${date}` : 'Bananadle · practice crate';
-    q('no').textContent = m === 'daily' ? `No. ${today}` : 'Practice';
+    q('kick').textContent = m === 'daily' ? date : 'Practice round';
+    q('no').textContent = m === 'daily' ? `Bananadle No. ${today}` : 'Bananadle practice';
     const modeBtn = root.querySelector<HTMLButtonElement>('[data-bd="modeBtn"]');
     if (modeBtn) modeBtn.textContent = m === 'daily' ? 'Practice round' : "Back to today's crate";
     q('feedback').innerHTML = '';
@@ -176,7 +176,8 @@ export function mountBananadle(root: HTMLElement) {
   function render() {
     const cur = current(), playing = !s.done;
     q('current').textContent = cur;
-    q('where').textContent = s.path.length === 1 ? 'Start here' : "You're on";
+    q('where').textContent = s.path.length === 1 ? 'Start on this Wikipedia page' : `Wikipedia page you're on · hop ${s.path.length - 1}`;
+    root.classList.toggle('bd-path-started', s.path.length > 1);
     root.classList.toggle('is-done', s.done);
     // the route so far; tapping an earlier page rewinds to it
     q('path').innerHTML = s.path.map((t, i) => {

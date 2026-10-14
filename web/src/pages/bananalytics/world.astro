@@ -352,18 +352,18 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .head h1 { margin: 4px 0 4px; font-size: var(--t-1); }
   .head p { margin: 0; color: var(--ink-2); font-size: 15.5px; max-width: 720px; }
   .counter { text-align: right; }
-  .c-n { display: block; font: 400 38px/1.1 var(--display); }
+  .c-n { display: block; font: 600 38px/1.1 var(--display); }
   .c-l { display: block; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
   .c-r { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
 
-  .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); }
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .seg { display: inline-flex; }
-  .seg button { font: 700 15px var(--text); color: var(--ink); background: var(--card); border: 2px solid var(--ink); margin-left: -2px; padding: 0 12px; min-height: 42px; cursor: pointer; white-space: nowrap; }
+  .seg button { font: 700 15px var(--text); color: var(--ink); background: var(--card); border: 1px solid var(--line); margin-left: -2px; padding: 0 12px; min-height: 42px; cursor: pointer; white-space: nowrap; }
   .seg button:first-child { margin-left: 0; border-radius: var(--r-ctl) 0 0 var(--r-ctl); }
   .seg button:last-child { border-radius: 0 var(--r-ctl) var(--r-ctl) 0; }
   .seg button:hover { background: var(--paper-2); }
   .seg button.on { background: var(--ink); color: var(--paper); }
-  .layer-btn { font: 700 15px var(--text); color: var(--ink); background: var(--card); border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 0 14px; min-height: 42px; cursor: pointer; white-space: nowrap; }
+  .layer-btn { font: 700 15px var(--text); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 0 14px; min-height: 42px; cursor: pointer; white-space: nowrap; }
   .layer-btn:hover { background: var(--paper-2); }
   .layer-btn.on { background: var(--leaf); color: var(--paper); }
   .map.dim :global(.cty) { fill: #262b33 !important; }
@@ -376,12 +376,12 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .legend :global(.lg-small) { display: block; margin-top: 4px; color: var(--ink-3); }
   .years { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px; }
   .years input { flex: 1; accent-color: #f2b81f; }
-  #play { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ink); background: var(--banana); color: #231A10; font-size: 15px; font-weight: 800; cursor: pointer; flex: none; }
-  #yearLbl { font: 400 24px var(--display); min-width: 60px; }
+  #play { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--banana); color: #231A10; font-size: 15px; font-weight: 800; cursor: pointer; flex: none; }
+  #yearLbl { font: 600 24px var(--display); min-width: 60px; }
   .years input { accent-color: var(--banana-ink); }
 
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; margin-top: 16px; align-items: start; }
-  .mapbox { position: relative; background: #0b0e11; border: 2px solid var(--ink); overflow: hidden; }
+  .mapbox { position: relative; background: #0b0e11; border: 1px solid var(--line); overflow: hidden; }
   /* the map is a dark chalkboard in both themes, so it carries the dark theme's text colours */
   .mapbox > * { --ink: #F7ECD2; --ink-2: #D3C09A; --ink-3: #A99572; --border: #3B2F1F; }
   .mapbox { outline: 0; }
@@ -407,15 +407,15 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .tip[hidden] { display: none; }
 
   .panel { display: flex; flex-direction: column; gap: 14px; }
-  .card { background: var(--card); border: 2px solid var(--ink); padding: 14px 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); padding: 14px 16px; }
   .card h2 { font-size: 22px; margin: 0; }
   .p-top { display: flex; justify-content: space-between; align-items: baseline; }
   .link { font: 600 13px var(--text); color: var(--link); background: none; border: none; cursor: pointer; padding: 0; }
   .p-sub { color: var(--ink-3); font-size: 12.5px; margin: 2px 0 10px; }
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
-  .stats div { background: var(--paper); border: 2px solid var(--ink); padding: 8px 10px; }
+  .stats div { background: var(--paper); border: 1px solid var(--line); padding: 8px 10px; }
   .stats dt { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
-  .stats dd { margin: 2px 0 0; font: 400 20px/1.2 var(--display); }
+  .stats dd { margin: 2px 0 0; font: 600 20px/1.2 var(--display); }
   .p-note { margin: 8px 0 0; color: var(--ink-2); font-size: 13px; }
   .top { list-style: none; margin: 8px 0 0; padding: 0; }
   .top :global(button) { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; width: 100%; text-align: left; font: 600 13.5px var(--text); color: var(--ink); background: none; border: none; border-bottom: 1px solid var(--line); padding: 7px 2px; cursor: pointer; }
@@ -424,11 +424,11 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .top :global(span) { color: var(--ink-3); font-size: 12px; }
   .top :global(b) { font-weight: 700; }
 
-  .spots { margin-top: 28px; padding-top: 18px; border-top: 2px solid var(--ink); }
+  .spots { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
   .spots-head h2 { font-size: var(--t-2); margin: 0; }
   .spots-head p { color: var(--ink-2); font-size: 14px; margin: 4px 0 14px; }
   .spot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-  .spot { background: var(--card); border: 2px solid var(--ink); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .spot { background: var(--card); border: 1px solid var(--line); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
   .spot-go { text-align: left; background: none; border: none; padding: 0; cursor: pointer; color: var(--ink); font: inherit; }
   .spot-go b { display: block; font-size: 15px; }
   .spot-go span { color: var(--ink-3); font-size: 13px; }
@@ -438,7 +438,7 @@ const perSecond = Math.round((banT * 1000) / (365.25 * 86400) / BANANA_KG / 100)
   .dotb { background: rgb(255, 214, 60); } .dotp { background: rgb(120, 220, 110); }
   .spot a { color: var(--ink); font-size: 14.5px; font-weight: 600; text-decoration-color: var(--banana-ink); text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 40px; }
   .spot-note { color: var(--ink-3); font-size: 12.5px; margin: 10px 0 0; }
-  .about { margin-top: 28px; padding-top: 18px; border-top: 2px solid var(--ink); max-width: 900px; }
+  .about { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); max-width: 900px; }
   .about h2 { font-size: var(--t-2); margin: 0 0 8px; }
   .about p { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin: 0 0 10px; }
   .src { color: var(--ink-3) !important; font-size: 12.5px !important; }

@@ -53,22 +53,23 @@ import Base from '../../layouts/Base.astro';
 </script>
 
 <style>
-  .head { padding: 34px 0 14px; border-bottom: 2px solid var(--ink); }
+  .head { padding: 34px 0 18px; }
   .head h1 { margin: 0; font-size: var(--t-1); }
   .head p { margin: 6px 0 0; color: var(--ink-2); }
-  .games { list-style: none; margin: 0; padding: 0; }
-  .games li { border-bottom: 2px solid var(--ink); }
-  .games a { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 22px 4px; text-decoration: none; color: var(--ink); }
-  .games a:hover { background: var(--paper-2); }
-  .games a:hover b { text-decoration: underline; text-decoration-color: var(--banana-ink); text-underline-offset: 4px; }
-  .num { width: 56px; height: 56px; border: 2px solid var(--ink); border-radius: 50%; background: var(--banana); color: #231A10; display: grid; place-items: center; font: 400 26px var(--display); transform: rotate(-6deg); }
+  .games { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+  .games a { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 22px 24px; border-radius: var(--r-lg); text-decoration: none; color: var(--ink); transition: transform .2s; }
+  .games li:nth-child(1) a { background: var(--butter); } .games li:nth-child(2) a { background: var(--mint); } .games li:nth-child(3) a { background: var(--sky); }
+  .games a:hover { transform: translateY(-2px); }
+  .games a:hover b { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 4px; }
+  :global(:root[data-theme="banana"]) .games a { border: 2px solid #3A2A0E; box-shadow: 4px 4px 0 #3A2A0E; }
+  .num { width: 56px; height: 56px; border-radius: 50%; background: var(--card); color: var(--ink); display: grid; place-items: center; font: 600 26px var(--display); transform: rotate(-6deg); }
   .txt { display: flex; flex-direction: column; gap: 4px; }
-  .txt b { font: 400 var(--t-2)/1.1 var(--display); }
+  .txt b { font: 600 var(--t-2)/1.1 var(--display); }
   .txt span { color: var(--ink-2); max-width: 64ch; }
-  .txt em { font-style: normal; font-weight: 700; font-size: 15px; color: var(--banana-ink); }
-  .go { font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .txt em { font-style: normal; font-weight: 800; font-size: 15px; color: var(--ink); }
+  .go { font-weight: 800; font-size: 16px; white-space: nowrap; }
   @media (max-width: 600px) {
-    .games a { grid-template-columns: 48px minmax(0, 1fr); gap: 14px; padding: 18px 2px; }
+    .games a { grid-template-columns: 48px minmax(0, 1fr); gap: 14px; padding: 18px 16px; }
     .num { width: 44px; height: 44px; font-size: 21px; }
     .go { display: none; }
   }

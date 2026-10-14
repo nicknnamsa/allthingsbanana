@@ -2,8 +2,8 @@
 import Base from '../layouts/Base.astro';
 import Bananadle from '../components/Bananadle.astro';
 ---
-<Base wide section="home" ticker title="All Things Banana · a daily banana puzzle, prices, recipes and a world league"
-      description="Play today's Bananadle, peel for your country in the Banana Clicker league, and check banana prices, recipes and news. A serious website about bananas.">
+<Base wide section="home" title="All Things Banana · a daily banana puzzle, prices, recipes and a world league"
+      description="Play today's Bananadle (Wikipedia page to Wikipedia page, all the way to Banana), peel for your country in the Banana Clicker league, and find banana recipes, prices and news.">
   <script type="application/ld+json" set:html={JSON.stringify({
     '@context': 'https://schema.org', '@type': 'WebSite', name: 'All Things Banana', alternateName: 'allthingsbanana',
     url: 'https://allthingsbanana.com/', description: 'A daily banana puzzle, banana prices, recipes, news and games.',
@@ -11,102 +11,95 @@ import Bananadle from '../components/Bananadle.astro';
   <h1 class="sr-only">All Things Banana</h1>
 
   <div class="home">
-    <!-- 1. today's puzzle, playable straight away -->
-    <div class="h-puzzle"><Bananadle variant="home" /></div>
+    <div class="h-main">
+      <!-- 1. today's puzzle, playable straight away -->
+      <Bananadle variant="home" />
 
-    <aside class="h-side">
-      <!-- 2. the clicker league: where your country stands -->
-      <section class="box league" id="league">
-        <div class="box-head"><h2>Clicker league</h2><span class="live"><i></i>live</span></div>
-        <p class="league-line" id="leagueLine">Bananas peeled, by country.</p>
-        <ol class="league-list" id="leagueList"></ol>
-        <a class="btn banana league-btn" href="/more/banana-clicker/" id="peelBtn">Peel for your country</a>
+      <!-- 2. news, with pictures -->
+      <section class="news" aria-labelledby="newsH">
+        <div class="sec-head"><h2 id="newsH" data-banana="Fresh bananananana news">Fresh banana news</h2><a href="/news/">All news →</a></div>
+        <div class="news-grid" id="newsGrid">
+          <div class="sk sk-lead"></div>
+          <div class="side-stories">{Array.from({ length: 3 }).map(() => <div class="sk sk-small"></div>)}</div>
+        </div>
+        <ul class="news-list" id="newsList"></ul>
       </section>
 
-      <!-- 3. the market board -->
-      <section class="box board" id="board" hidden>
-        <div class="box-head"><h2>Market board</h2><a href="/bananalytics/">Prices &amp; map →</a></div>
-        <a class="board-main" id="bMain" href="/bananalytics/">
-          <span class="label">Bananas, world price</span>
-          <span class="board-big"><b id="bPrice"></b> <span id="bUnit">/ tonne</span></span>
-          <span id="bChg" class="board-chg"></span>
-          <span id="bChart" class="board-chart"></span>
-          <span class="board-note" id="bNote"></span>
-        </a>
-        <div class="board-rows" id="bRows"></div>
-      </section>
+      <!-- 6. everything else, briefly -->
+      <nav class="explore" aria-label="More on the site">
+        <a href="/bananalytics/world/"><b>Banana World</b><span>Where 139 million tonnes a year grow, on a map</span></a>
+        <a href="/topics/banana-bread/"><b>Banana bread</b><span>Its history, the science, the best recipes</span></a>
+        <a href="/more/banana-cube/"><b>Banana Cube</b><span>A 3D puzzle solver</span></a>
+        <a href="/recipes/"><b>All recipes</b><span>90 of ours, 5,203 from elsewhere</span></a>
+      </nav>
+    </div>
+
+    <aside class="rail">
+      <!-- 3. the clicker league -->
+      <a class="card mint" href="/more/banana-clicker/" id="league">
+        <span class="kicker"><i class="dot d-mint"></i>Clicker league</span>
+        <h2 id="leagueLine">Bananas peeled, by country</h2>
+        <ol class="league" id="leagueList"></ol>
+        <span class="peel" id="peelBtn" data-banana="PEEL!!">Peel for your country</span>
+      </a>
+
+      <!-- 4. the banana price -->
+      <a class="card sky" href="/bananalytics/" id="board" hidden>
+        <span class="kicker"><i class="dot d-sky"></i>Banana price</span>
+        <div class="price"><b id="bPrice"></b> <small>/ tonne</small></div>
+        <p id="bChg"></p>
+        <span id="bChart" class="spark-box"></span>
+        <span class="more">All prices and the map →</span>
+      </a>
+
+      <!-- 5. recipe of the day -->
+      <a class="card peach" href="/recipes/" id="rotd">
+        <span class="kicker"><i class="dot d-peach"></i>Recipe of the day</span>
+        <div class="rotd"><span class="rotd-img" id="rotdImg"></span><div><h2 id="rotdName">Banana recipes</h2><p id="rotdMeta">Breakfast to cocktails.</p></div></div>
+      </a>
     </aside>
-
-    <!-- 4. recipe of the day -->
-    <a class="box rotd" id="rotd" href="/recipes/">
-      <span class="rotd-img" id="rotdImg"></span>
-      <span class="rotd-txt">
-        <span class="label">Recipe of the day</span>
-        <b id="rotdName">Banana recipes</b>
-        <span id="rotdBlurb">Breakfast to cocktails, sorted by how ripe your bananas are.</span>
-        <span class="rotd-meta" id="rotdMeta"></span>
-      </span>
-    </a>
-
-    <!-- 5. news -->
-    <section class="box news">
-      <div class="box-head"><h2>Banana news</h2><span class="upd" id="updated"></span></div>
-      <div class="news-list" id="newsList">{Array.from({ length: 5 }).map(() => <div class="sk"><span></span><span></span></div>)}</div>
-      <div class="news-foot"><a href="/news/">All banana news →</a><span class="buzz-wrap"><span class="buzz-label">Stories per day</span><span id="buzz" class="buzz"></span></span></div>
-    </section>
-
-    <!-- 6. everything else, briefly -->
-    <nav class="h-more" aria-label="More on the site">
-      <a href="/bananalytics/world/"><b>Banana World</b><span>Where 139 million tonnes a year come from, on a map.</span></a>
-      <a href="/topics/banana-bread/"><b>Banana bread</b><span>Its history, the science of brown bananas, the best recipes.</span></a>
-      <a href="/more/banana-cube/"><b>Banana Cube</b><span>A 3D puzzle solver. Never more than 14 moves.</span></a>
-      <a href="/recipes/"><b>All recipes</b><span>90 of ours, 5,203 from elsewhere. Filter by ripeness.</span></a>
-    </nav>
   </div>
 </Base>
 
 <script>
-  import { lineChart, barChart } from '../scripts/charts';
-  import { getMarket, getFeed, lookup, allSeries, money, signed, num, lastChange, sliceYears, label, fmtDate, monthOnly, shortDate, marketLink, esc, type Market, type Feed } from '../scripts/market';
-  import { meta, link, buzzDays, tickTimes } from '../scripts/news';
+  import { sparkline } from '../scripts/charts';
+  import { getMarket, getFeed, lookup, money, num, lastChange, monthOnly, esc, ago, type Market, type Feed, type Item } from '../scripts/market';
+  import { tickTimes } from '../scripts/news';
 
   const $ = (s: string) => document.querySelector(s) as HTMLElement;
-  const every = (ms: number, fn: () => void) => setInterval(() => { if (!document.hidden) fn(); }, ms);   // skip refreshes in background tabs
+  const every = (ms: number, fn: () => void) => setInterval(() => { if (!document.hidden) fn(); }, ms);   // no refreshes in background tabs
+  const time = (it: Item) => `<time datetime="${new Date(it.published).toISOString()}">${ago(it.published)}</time>`;
+  const pic = (it: Item, cls: string) => `<img class="${cls}" src="${esc(it.thumb!)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">`;
 
-  // ---------- news: five stories, small pictures ----------
+  // ---------- news: a lead story with a picture, three with thumbnails, then headlines ----------
   function renderNews(f: Feed) {
-    const items = f.items.slice(0, 5);
-    $('#updated').textContent = f.items.length ? `updated ${new Date(f.updated).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
-    $('#newsList').innerHTML = items.length
-      ? items.map((it, i) => `<article class="n-item">${i < 3 && it.thumb ? `<a class="n-img" href="${esc(it.url)}" target="_blank" rel="noopener nofollow" tabindex="-1"><img src="${esc(it.thumb)}" alt="" loading="lazy" decoding="async" onerror="this.closest('a').remove()"></a>` : ''}<div>${link(it)}${meta(it)}</div></article>`).join('')
-      : '<p class="empty">The banana wires are quiet. Check back in a minute.</p>';
-    if (f.items.length >= 5) { $('#buzz').innerHTML = ''; barChart($('#buzz'), buzzDays(f.items), 44); }
+    const items = f.items;
+    if (!items.length) { $('#newsGrid').innerHTML = '<p class="empty">The banana wires are quiet. Check back in a minute.</p>'; return; }
+    const withPic = items.filter(i => i.thumb), used = new Set<string>();
+    const lead = withPic[0] || items[0]; used.add(lead.id);
+    const smalls = items.filter(i => !used.has(i.id) && i.thumb).slice(0, 3); smalls.forEach(i => used.add(i.id));
+    const rest = items.filter(i => !used.has(i.id)).slice(0, 3);
+    $('#newsGrid').innerHTML = `
+      <a class="story" href="${esc(lead.url)}" target="_blank" rel="noopener nofollow">${lead.thumb ? pic(lead, 'story-img') : ''}<h3>${esc(lead.title)}</h3><span class="src">${esc(lead.source)} · ${time(lead)}</span></a>
+      <div class="side-stories">${smalls.map(it => `<a class="small" href="${esc(it.url)}" target="_blank" rel="noopener nofollow">${pic(it, 'small-img')}<div><h3>${esc(it.title)}</h3><span class="src">${esc(it.source)} · ${time(it)}</span></div></a>`).join('')}</div>`;
+    $('#newsList').innerHTML = rest.map(it => `<li><a href="${esc(it.url)}" target="_blank" rel="noopener nofollow">${esc(it.title)}</a><span>${esc(it.source)} · ${time(it)}</span></li>`).join('');
   }
 
-  // ---------- market board ----------
-  function renderBoard(m: Market) {
+  // ---------- the banana price ----------
+  function renderPrice(m: Market) {
     const g = lookup(m, 'PBANSOP');
     if (!g) return;
-    const last = g.pts[g.pts.length - 1], prev = g.pts[g.pts.length - 2], p = lastChange(g.pts) ?? 0;
+    const last = g.pts[g.pts.length - 1], p = lastChange(g.pts) ?? 0;
     $('#board').hidden = false;
-    $('#bMain').setAttribute('href', marketLink('PBANSOP'));
-    $('#bPrice').textContent = money(g, last.y);
-    $('#bChg').innerHTML = `<span class="${p >= 0 ? 'up' : 'down'}">${p >= 0 ? '▲' : '▼'} ${num(Math.abs(p), 1)}% in ${monthOnly(last.x)}</span>`;
-    $('#bNote').textContent = `Monthly average, ${shortDate(last.x)}. ${Math.abs(p) <= 0.5 ? 'Steady.' : p > 0 ? 'Dearer.' : 'Cheaper.'}`;
-    const box = $('#bChart');
-    box.innerHTML = '';
-    lineChart(box, sliceYears(g.pts, 3), { height: 90, color: 'var(--series)', label: 'World banana price, last 3 years',
-      fmt: v => `${money(g, v)} / tonne`, axisFmt: v => money(g, v, 0), dateFmt: x => fmtDate(x) });
-    const rows = allSeries(m).filter(s => s.code !== 'PBANSOP').slice(0, 4);
-    $('#bRows').innerHTML = rows.map(s => {
-      const pts = s.pts, v = pts[pts.length - 1], c = lastChange(pts) ?? 0;
-      return `<a class="b-row" href="${marketLink(s.code)}"><span>${esc(s.kind === 'US shop price' ? 'US ' + s.name : label(s))}</span><b>${money(s, v.y)}</b><em class="${c >= 0 ? 'up' : 'down'}">${c >= 0 ? '▲' : '▼'} ${num(Math.abs(c), 1)}%</em></a>`;
-    }).join('');
+    $('#bPrice').textContent = money(g, last.y, 0);
+    $('#bChg').innerHTML = `<span class="${p >= 0 ? 'up' : 'down'}">${p >= 0 ? '▲' : '▼'} ${num(Math.abs(p), 1)}%</span> in ${monthOnly(last.x)}. ${Math.abs(p) <= 0.5 ? 'Steady.' : p > 0 ? 'Slightly dearer.' : 'Slightly cheaper.'}`;
+    $('#bChart').innerHTML = sparkline(g.pts.slice(-36).map(q => q.y), 300, 50);
   }
 
-  // ---------- clicker league: where your country stands ----------
+  // ---------- the clicker league: where your country stands ----------
   const regionName = new Intl.DisplayNames(['en'], { type: 'region' });
   const nameOf = (c: string) => (c === 'XX' ? 'Somewhere' : (() => { try { return regionName.of(c) || c; } catch { return c; } })());
+  const short = (c: string) => ({ GB: 'the UK', US: 'the US' } as Record<string, string>)[c] || nameOf(c);
   const flag = (c: string) => (c === 'XX' ? '🏳️' : String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))));
   async function renderLeague() {
     try {
@@ -115,19 +108,18 @@ import Bananadle from '../components/Bananadle.astro';
       const me = rows.findIndex(r => r[0] === d.country);
       const top = rows.slice(0, 4);
       if (me >= 4) top.push(rows[me]);
-      $('#leagueList').innerHTML = top.map(([c, n]) => `<li class="${c === d.country ? 'you' : ''}"><span class="r">${rows.findIndex(r => r[0] === c) + 1}</span><span aria-hidden="true">${flag(c)}</span><span class="nm">${esc(nameOf(c))}${c === d.country ? ' <em>you</em>' : ''}</span><b>${num(n, 0)}</b></li>`).join('')
+      $('#leagueList').innerHTML = top.map(([c, n]) => `<li class="${c === d.country ? 'you' : ''}"><span class="r">${rows.findIndex(r => r[0] === c) + 1}</span><span aria-hidden="true">${flag(c)}</span><span class="nm">${esc(nameOf(c))}</span><b>${num(n, 0)}</b></li>`).join('')
         || '<li class="none">Nobody has peeled a banana yet. Be first.</li>';
-      // the line that makes it personal
-      const mine = d.country && d.country !== 'XX' ? nameOf(d.country) : null;
-      let line = `${num(d.total || 0, 0)} bananas peeled in ${plural(rows.length, 'country', 'countries')}.`;
-      if (mine && me === 0 && rows[1]) line = `${mine} leads. ${nameOf(rows[1][0])} is ${num(rows[0][1] - rows[1][1], 0)} bananas behind. They know.`;
-      else if (mine && me > 0) line = `${mine} is #${me + 1}, ${num(rows[me - 1][1] - rows[me][1] + 1, 0)} bananas from passing ${nameOf(rows[me - 1][0])}.`;
-      else if (mine && me < 0) line = `${mine} hasn't peeled a single banana. Yet.`;
+      const mine = d.country && d.country !== 'XX' ? d.country : null;
+      let line = `${num(d.total || 0, 0)} bananas peeled so far`;
+      if (mine && me === 0 && rows[1]) line = `${nameOf(mine)} leads. ${nameOf(rows[1][0])} is ${num(rows[0][1] - rows[1][1], 0)} behind.`;
+      else if (mine && me === 0) line = `${nameOf(mine)} leads, unopposed. For now.`;
+      else if (mine && me > 0) line = `${nameOf(mine)} is #${me + 1}, ${num(rows[me - 1][1] - rows[me][1] + 1, 0)} from passing ${nameOf(rows[me - 1][0])}.`;
+      else if (mine) line = `${nameOf(mine)} hasn't peeled a single banana. Yet.`;
       $('#leagueLine').textContent = line;
-      if (mine) $('#peelBtn').textContent = `Peel for ${mine}`;
+      if (mine && !document.documentElement.matches('[data-theme="banana"]')) $('#peelBtn').textContent = `Peel for ${short(mine)}`;
     } catch { $('#league').hidden = true; }
   }
-  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
   // ---------- recipe of the day: the same one all day for everyone ----------
   try {
@@ -137,15 +129,13 @@ import Bananadle from '../components/Bananadle.astro';
       const r = idx[(day * 7919) % idx.length];
       $('#rotd').setAttribute('href', `/recipes/${r.s}/`);
       $('#rotdName').textContent = r.n;
-      $('#rotdBlurb').textContent = r.b;
       $('#rotdMeta').textContent = `${r.m} · ${r.o}`;
-      if (r.p) $('#rotdImg').innerHTML = `<img src="${r.p}" alt="" loading="lazy" width="480" height="320">`;
-      else $('#rotdImg').remove();
+      if (r.p) $('#rotdImg').innerHTML = `<img src="${r.p}" alt="" loading="lazy" width="96" height="96">`;
     }
   } catch {}
 
-  getMarket().then(renderBoard).catch(() => {});
-  getFeed().then(renderNews).catch(() => { $('#newsList').innerHTML = '<p class="empty">Couldn’t reach the news. Trying again shortly.</p>'; });
+  getMarket().then(renderPrice).catch(() => {});
+  getFeed().then(renderNews).catch(() => { $('#newsGrid').innerHTML = '<p class="empty">Couldn’t reach the news. Trying again shortly.</p>'; });
   renderLeague();
   every(60_000, () => getFeed(true).then(renderNews).catch(() => {}));
   every(30_000, renderLeague);
@@ -153,102 +143,79 @@ import Bananadle from '../components/Bananadle.astro';
 </script>
 
 <style>
-  .home { display: grid; grid-template-columns: minmax(0, 1fr) 340px; grid-template-areas: "puzzle side" "rotd side" "news news" "more more"; gap: 28px 32px; padding-top: 34px; align-items: start; }
-  .h-puzzle { grid-area: puzzle; min-width: 0; }
-  .h-side { grid-area: side; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
-  .rotd { grid-area: rotd; }
-  .news { grid-area: news; }
-  .h-more { grid-area: more; }
-
-  /* clicker league */
-  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--leaf); }
-  .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--leaf); }
-  @media (prefers-reduced-motion: no-preference) { .live i { animation: pulse 2s infinite; } }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-  .league-line { margin: 10px 14px 4px; font-size: 15px; color: var(--ink-2); }
-  .league-list { list-style: none; margin: 0; padding: 0 14px; }
-  .league-list :global(li) { display: grid; grid-template-columns: 20px 26px minmax(0, 1fr) auto; align-items: center; gap: 4px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 15.5px; }
-  .league-list :global(li.you) { font-weight: 700; }
-  .league-list :global(.r) { color: var(--ink-3); font-weight: 700; font-size: 13px; }
-  .league-list :global(.nm) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-  .league-list :global(.nm em) { font-style: normal; font-size: 12px; font-weight: 700; background: var(--banana); color: var(--on-banana); padding: 1px 6px; margin-left: 4px; }
-  .league-list :global(b) { font-variant-numeric: tabular-nums; }
-  .league-list :global(.none) { display: block; color: var(--ink-3); }
-  .league-btn { margin: 12px 14px 14px; width: calc(100% - 28px); }
-
-  /* market board */
-  .board-main { display: grid; padding: 12px 14px 10px; text-decoration: none; color: var(--ink); border-bottom: 2px solid var(--ink); }
-  .board-big b { font: 400 34px/1.1 var(--display); }
-  .board-big span { font-size: 14px; color: var(--ink-2); }
-  .board-chg { font-weight: 700; font-size: 15px; }
-  .board-chart { display: block; margin: 8px 0 2px; }
-  .board-note { font-size: 13.5px; color: var(--ink-3); }
-  .board-rows :global(.b-row) { display: grid; grid-template-columns: minmax(0, 1fr) auto 72px; gap: 8px; align-items: baseline; padding: 9px 14px; border-bottom: 1px solid var(--line); text-decoration: none; font-size: 15px; min-height: 44px; }
-  .board-rows :global(.b-row:last-child) { border-bottom: 0; }
-  .board-rows :global(.b-row:hover) { background: var(--paper-2); }
-  .board-rows :global(.b-row span) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .board-rows :global(.b-row b) { font-variant-numeric: tabular-nums; }
-  .board-rows :global(.b-row em) { font-style: normal; font-weight: 700; font-size: 14px; text-align: right; }
-
-  /* recipe of the day */
-  .rotd { display: grid; grid-template-columns: 220px minmax(0, 1fr); text-decoration: none; color: var(--ink); }
-  .rotd-img { border-right: 2px solid var(--ink); background: var(--paper-2); min-height: 150px; overflow: hidden; min-width: 0; }
-  .rotd-img :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
-  .rotd-txt { display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; }
-  .rotd-txt b { font: 400 var(--t-2)/1.1 var(--display); }
-  .rotd-txt span:not(.label) { color: var(--ink-2); font-size: 15.5px; }
-  .rotd-meta { font-size: 14px !important; color: var(--ink-3) !important; margin-top: auto; }
-  .rotd:hover b { text-decoration: underline; text-decoration-color: var(--banana-ink); }
+  .home { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; padding-top: 28px; align-items: start; }
+  .h-main { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
+  .rail { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 18px; }
 
   /* news */
-  .upd { font-size: 13px; color: var(--ink-3); }
-  .news-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .news-list :global(.n-item) { padding: 14px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .news-list :global(.n-item:last-child) { border-right: 0; }
-  .news-list :global(.n-img img) { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border: 2px solid var(--ink); }
-  .news-list :global(.hl) { font-weight: 700; font-size: 16px; line-height: 1.35; text-decoration: none; color: var(--ink); }
-  .news-list :global(.hl:hover) { text-decoration: underline; }
-  .news-list :global(.meta) { font-size: 13px; color: var(--ink-3); margin-top: 4px; }
-  .news-list .sk { padding: 14px; display: grid; gap: 8px; }
-  .news-list .sk span { height: 12px; background: var(--paper-2); }
-  .news-list .sk span:last-child { width: 60%; }
-  .empty { padding: 14px; color: var(--ink-3); grid-column: 1 / -1; }
-  .news-foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 8px 14px; border-top: 2px solid var(--ink); flex-wrap: wrap; }
-  .news-foot > a { font-weight: 700; min-height: 44px; display: inline-flex; align-items: center; }
-  .buzz-wrap { display: flex; align-items: center; gap: 10px; }
-  .buzz-label { font-size: 13px; color: var(--ink-3); }
-  .buzz { width: 180px; display: block; }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .sec-head h2 { font-size: 27px; margin: 0; }
+  .sec-head a { font-weight: 700; text-underline-offset: 3px; }
+  .news-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; }
+  .news-grid :global(.story) { text-decoration: none; display: flex; flex-direction: column; gap: 8px; }
+  .news-grid :global(.story-img) { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--r-lg); display: block; background: var(--line); }
+  .news-grid :global(.story h3) { font: 600 22px/1.25 var(--display); margin: 0; }
+  .news-grid :global(.story:hover h3), .news-grid :global(.small:hover h3) { text-decoration: underline; text-decoration-color: var(--butter-d); text-decoration-thickness: 3px; }
+  .news-grid :global(.src) { font-size: 14.5px; color: var(--ink-2); }
+  .news-grid :global(.side-stories) { display: flex; flex-direction: column; gap: 16px; }
+  .news-grid :global(.small) { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; text-decoration: none; align-items: start; }
+  .news-grid :global(.small-img) { width: 112px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-md); display: block; background: var(--line); }
+  .news-grid :global(.small h3) { font: 700 16.5px/1.35 var(--text); margin: 0; }
+  .news-grid :global(.small .src) { display: block; margin-top: 3px; font-size: 14px; }
+  .news-grid .sk { background: var(--paper-2); border-radius: var(--r-lg); }
+  .sk-lead { aspect-ratio: 16 / 12; }
+  .side-stories .sk-small { height: 84px; }
+  .news-grid :global(.empty) { color: var(--ink-2); }
+  .news-list { list-style: none; margin: 18px 0 0; padding: 0; border-top: 1px solid var(--line); }
+  .news-list :global(li) { padding: 12px 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; }
+  .news-list :global(a) { text-decoration: none; font-weight: 700; }
+  .news-list :global(a:hover) { text-decoration: underline; text-decoration-color: var(--butter-d); }
+  .news-list :global(span) { color: var(--ink-2); font-size: 14.5px; white-space: nowrap; }
 
-  /* more */
-  .h-more { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 2px solid var(--ink); }
-  .h-more a { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; text-decoration: none; border-right: 2px solid var(--ink); min-height: 44px; }
-  .h-more a:last-child { border-right: 0; }
-  .h-more b { font: 400 20px/1.15 var(--display); }
-  .h-more span { font-size: 14.5px; color: var(--ink-2); }
-  .h-more a:hover { background: var(--paper-2); }
+  /* rail cards */
+  .card { border-radius: var(--r-lg); padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: var(--ink); transition: transform .2s; }
+  .card:hover { transform: translateY(-2px); }
+  .card.mint { background: var(--mint); } .card.sky { background: var(--sky); } .card.peach { background: var(--peach); }
+  .kicker { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+  .card h2 { font-size: 21px; margin: 0; }
+  .card p { margin: 0; color: var(--ink-2); font-size: 15.5px; }
+  .card .more { font-weight: 700; font-size: 15px; }
+  .league { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 5px; }
+  .league :global(li) { display: grid; grid-template-columns: 18px auto minmax(0, 1fr) auto; gap: 8px; align-items: center; font-weight: 700; font-size: 15.5px; padding: 7px 10px; border-radius: var(--r-sm); background: rgba(255, 255, 255, .7); }
+  :global(:root[data-theme="dark"]) .league :global(li) { background: rgba(255, 255, 255, .05); }
+  .league :global(.r) { color: var(--ink-2); font-size: 13.5px; }
+  .league :global(.nm) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .league :global(b) { font-variant-numeric: tabular-nums; }
+  .league :global(li.you) { box-shadow: inset 0 0 0 2px var(--mint-d); }
+  .league :global(.none) { display: block; }
+  .peel { align-self: flex-start; margin-top: 4px; padding: 11px 16px; border-radius: var(--r-md); background: var(--ink); color: var(--paper); font-weight: 800; font-size: 15.5px; }
+  .price b { font: 600 34px/1 var(--display); }
+  .price small { font-size: 15px; color: var(--ink-2); font-weight: 700; }
+  .spark-box :global(svg) { width: 100%; height: 50px; }
+  .spark-box :global(path) { stroke: var(--banana-ink) !important; stroke-width: 2.5; }
+  .rotd { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+  .rotd-img { width: 96px; height: 96px; border-radius: var(--r-md); overflow: hidden; background: rgba(255, 255, 255, .5); }
+  .rotd-img :global(img) { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .rotd h2 { font-size: 19px; }
 
-  @media (max-width: 1060px) {
-    .news-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .news-list :global(.n-item) { border-bottom: 1px solid var(--line); }
-    .h-more { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .h-more a:nth-child(2) { border-right: 0; }
-    .h-more a:nth-child(-n+2) { border-bottom: 2px solid var(--ink); }
-  }
-  @media (max-width: 900px) {
-    .home { grid-template-columns: 1fr; grid-template-areas: "puzzle" "side" "rotd" "news" "more"; padding-top: 30px; gap: 24px; }
+  .explore { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .explore a { text-decoration: none; padding: 16px 18px; border-radius: var(--r-lg); background: var(--card); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; min-height: 44px; }
+  .explore b { font: 600 18px var(--display); }
+  .explore span { color: var(--ink-2); font-size: 15px; }
+  .explore a:hover b { text-decoration: underline; text-decoration-color: var(--butter-d); }
+  :global(:root[data-theme="banana"]) .explore a { border: 2px solid #3A2A0E; box-shadow: 4px 4px 0 #3A2A0E; }
+
+  @media (max-width: 960px) {
+    /* one column: puzzle, clicker league, news, price, recipe, more */
+    .home { display: flex; flex-direction: column; gap: 24px; align-items: stretch; padding-top: 20px; }
+    .h-main, .rail { display: contents; }
+    .h-main > :global(.bd) { order: 1; } #league { order: 2; } .news { order: 3; } #board { order: 4; } #rotd { order: 5; } .explore { order: 6; }
+    .news-grid { grid-template-columns: minmax(0, 1fr); }
+    .explore { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 600px) {
-    .rotd { grid-template-columns: 112px minmax(0, 1fr); }
-    .rotd-img { min-height: 0; }
-    .rotd-txt { padding: 10px 12px; }
-    .rotd-txt b { font-size: 21px; }
-    .rotd-txt #rotdBlurb { display: none; }
-    .news-list { grid-template-columns: 1fr; }
-    .news-list :global(.n-item) { flex-direction: row; border-right: 0; }
-    .news-list :global(.n-img) { flex: none; width: 96px; }
-    .buzz-wrap { display: none; }
-    .h-more { grid-template-columns: 1fr; }
-    .h-more a { border-right: 0 !important; border-bottom: 2px solid var(--ink); }
-    .h-more a:last-child { border-bottom: 0; }
+    .news-list :global(li) { flex-direction: column; gap: 0; }
+    .news-grid :global(.small) { grid-template-columns: 96px minmax(0, 1fr); }
+    .news-grid :global(.small-img) { width: 96px; }
   }
 </style>

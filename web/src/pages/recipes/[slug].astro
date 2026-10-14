@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
-import { recipes, formatTime, MEALS, RIPENESS, recipePhoto, recipeNutrition, type Recipe } from '../../data/recipes';
+import { recipes, formatTime, MEALS, RIPENESS, recipePhoto, recipeNutrition, recipeExtra, type Recipe } from '../../data/recipes';
 
 export function getStaticPaths() {
   return recipes.map(r => ({ params: { slug: r.slug }, props: { recipe: r } }));
@@ -24,22 +24,21 @@ const nutRows = nut ? [
 ] : [];
 const perLabel = nut ? (nut.per === 'serving' ? `per serving (serves ${nut.servings})` : `per ${nut.per} (makes about ${nut.servings})`) : '';
 
-// a step's name: its first clause, cut to a few words ("Mix the crushed biscuits with the melted butter")
-const stepName = (text: string) => {
-  const first = text.split(/[.,;:]\s/)[0].replace(/\.$/, '');
-  const words = first.split(/\s+/);
-  return words.length > 8 ? words.slice(0, 8).join(' ') + '…' : first;
-};
+const x = recipeExtra(r.slug);
+const rest = r.mins - x.prep - x.cook;
+const restLabel = /chill|fridge|freez|set/i.test(x.method.map(m => m[1]).join(' ')) ? 'Chill' : 'Rest';
+const times: [string, number][] = [['Prep', x.prep], ...(x.cook ? [['Cook', x.cook] as [string, number]] : []), ...(rest >= 10 ? [[restLabel, rest] as [string, number]] : [])];
 
 // structured data so search engines can show it as a recipe
 const jsonLd = {
   '@context': 'https://schema.org', '@type': 'Recipe',
-  name: r.name, description: r.blurb, recipeYield: r.serves,
-  totalTime: `PT${r.mins}M`, recipeCategory: r.meals.map(mealLabel).join(', '), recipeCuisine: r.origin,
+  name: r.name, description: `${r.blurb} ${x.intro}`, recipeYield: r.serves,
+  prepTime: `PT${x.prep}M`, ...(x.cook ? { cookTime: `PT${x.cook}M` } : {}), totalTime: `PT${r.mins}M`,
+  recipeCategory: r.meals.map(mealLabel).join(', '), recipeCuisine: r.origin,
   keywords: ['banana', ...r.meals, ...r.diet].join(', '),
   recipeIngredient: r.ingredients,
-  // each step gets a short name (its opening words) and its own link, so search results can point at a step
-  recipeInstructions: r.steps.map((text, i) => ({ '@type': 'HowToStep', name: stepName(text), text, url: `${new URL(`/recipes/${r.slug}/`, Astro.site).href}#step-${i + 1}` })),
+  // each step has a name and its own link, so search results can point at a step
+  recipeInstructions: x.method.map(([name, text], i) => ({ '@type': 'HowToStep', name, text, url: `${new URL(`/recipes/${r.slug}/`, Astro.site).href}#step-${i + 1}` })),
   ...(r.diet.includes('vegan') ? { suitableForDiet: 'https://schema.org/VeganDiet' } : r.diet.includes('gluten-free') ? { suitableForDiet: 'https://schema.org/GlutenFreeDiet' } : {}),
   author: { '@type': 'Organization', name: 'All Things Banana' },
   ...(photo ? { image: new URL(photo.src, Astro.site).href } : {}),
@@ -49,6 +48,8 @@ const jsonLd = {
     fatContent: `${g(nut.fat)} g`, saturatedFatContent: `${g(nut.sat)} g`, fiberContent: `${g(nut.fibre)} g`, sodiumContent: `${Math.round(nut.salt * 400)} mg`,
   } } : {}),
 };
+const tips = x.tips ?? (r.tip ? [r.tip] : []);   // the extras repeat (and expand) the short tip
+const ripeTone = ({ green: 'var(--r1)', yellow: 'var(--r4)', spotty: 'var(--r5)', brown: 'var(--r7)' } as Record<string, string>)[r.ripeness[0]] ?? 'var(--r4)';
 ---
 <Base image={photo ? `/recipes/img/og/${r.slug}.jpg` : '/og/recipes.jpg'} wide section="recipes" title={`${r.name} · Banacipes banana recipes · All Things Banana`} description={`${r.blurb} ${formatTime(r.mins)}, serves ${r.serves}.`}>
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
@@ -60,52 +61,102 @@ const jsonLd = {
       { '@type': 'ListItem', position: 3, name: r.name, item: `https://allthingsbanana.com/recipes/${r.slug}/` },
     ],
   })} />
-  <nav class="crumbs"><a href="/recipes/">Banacipes</a> › {mealLabel(r.meals[0])} › {r.name}</nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/recipes/">Banacipes</a> › <a href={`/recipes/?meal=${r.meals[0]}`}>{mealLabel(r.meals[0])}</a> › <span>{r.name}</span></nav>
 
   <article class="recipe">
-    <header class="top">
+    <header class="hero">
+      <div class="hero-text">
+        <div class="tags">
+          {r.meals.map(m => <a class="tag soft" href={`/recipes/?meal=${m}`}>{mealLabel(m)}</a>)}
+          <span class="origin">{r.origin}</span>
+        </div>
+        <h1>{r.name}</h1>
+        <p class="blurb">{r.blurb}</p>
+        <p class="intro">{x.intro}</p>
+        <div class="actions">
+          <a class="btn banana" href="#recipe">Jump to recipe ↓</a>
+          <button class="btn plain" type="button" onclick="window.print()">Print</button>
+        </div>
+      </div>
       {photo
         ? <figure class="photo">
             <img src={photo.src} alt={r.name} width={photo.w} height={photo.h} fetchpriority="high">
             <figcaption>Illustrative photo, not made from this recipe: <a href={photo.page} rel="nofollow noopener" target="_blank">{photo.author}</a>, <a href={photo.licenseUrl} rel="license nofollow noopener" target="_blank">{photo.license}</a>, via {photo.source}.</figcaption>
           </figure>
-        : <div class="art" style={`background:${({ green: 'var(--r1)', yellow: 'var(--r4)', spotty: 'var(--r5)', brown: 'var(--r7)' } as Record<string, string>)[r.ripeness[0]] ?? 'var(--r4)'}`} aria-hidden="true">
+        : <div class="art" style={`background:${ripeTone}`} aria-hidden="true">
             <svg viewBox="0 0 32 32"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z" fill="#FFD23F" stroke="#231A10" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 8.5 4.6 4.4l3 1.3" fill="none" stroke="#231A10" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>}
-      <div class="intro">
-        <div class="tags">
-          {r.meals.map(m => <a href={`/recipes/?meal=${m}`}>{mealLabel(m)}</a>)}
-          <span>{r.origin}</span>
-        </div>
-        <h1>{r.name}</h1>
-        <p class="blurb">{r.blurb}</p>
-        <dl class="facts">
-          <div><dt>Time</dt><dd>{formatTime(r.mins)}</dd></div>
-          <div><dt>Serves</dt><dd>{r.serves}</dd></div>
-          <div><dt>Difficulty</dt><dd class="cap">{r.difficulty}</dd></div>
-          <div><dt>Bananas</dt><dd>{r.bananaNote ?? `${r.bananas} ${r.bananas === 1 ? 'banana' : 'bananas'}`}</dd></div>
-        </dl>
-        <div class="row">
-          <span class="meter" title={`Banana-o-meter: ${r.level} out of 5`}>
-            <b>Banana-o-meter</b> <span class="pips" aria-label={`${r.level} of 5`}>{[1, 2, 3, 4, 5].map(i => <i class={i <= r.level ? 'on' : ''}></i>)}</span>
-          </span>
-          <span class="ripeness">
-            <b>Best with</b>
-            {ripe.map(x => <a href={`/recipes/?ripe=${x.id}`} class="ripe-chip"><i style={`background:${x.colour}`}></i>{x.label.toLowerCase()} bananas</a>)}
-          </span>
-        </div>
-        {r.diet.length > 0 && <div class="diet">{r.diet.map(d => <span>{dietLabel[d]}</span>)}</div>}
-      </div>
     </header>
 
+    <section class="card-facts" id="recipe" aria-label="At a glance">
+      <dl class="facts">
+        {times.map(([k, v]) => <div><dt>{k}</dt><dd>{v ? formatTime(v) : 'None'}</dd></div>)}
+        <div class="total"><dt>Total</dt><dd>{formatTime(r.mins)}</dd></div>
+        <div><dt>Serves</dt><dd>{r.serves}</dd></div>
+        <div><dt>Difficulty</dt><dd class="cap">{r.difficulty}</dd></div>
+      </dl>
+      <div class="about">
+        <span class="meter" title={`Banana-o-meter: ${r.level} out of 5`}>
+          <b>Banana-o-meter</b> <span class="pips" aria-label={`${r.level} of 5`}>{[1, 2, 3, 4, 5].map(i => <i class={i <= r.level ? 'on' : ''}></i>)}</span>
+        </span>
+        <span class="ripeness">
+          <b>Uses</b> {r.bananaNote ?? `${r.bananas} ${r.bananas === 1 ? 'banana' : 'bananas'}`},
+          {ripe.map(x => <a href={`/recipes/?ripe=${x.id}`} class="ripe-chip"><i style={`background:${x.colour}`}></i>{x.label.toLowerCase()}</a>)}
+        </span>
+        {r.diet.length > 0 && <span class="diet">{r.diet.map(d => <span>{dietLabel[d]}</span>)}</span>}
+      </div>
+    </section>
+
     <div class="cols">
-      <section class="ings">
-        <div class="col-head"><h2>Ingredients</h2><button id="resetIngs" class="link">Untick all</button></div>
-        <ul id="ings">
-          {r.ingredients.map((x, i) => (
-            <li><label><input type="checkbox" data-i={i}> <span>{x}</span></label></li>
-          ))}
-        </ul>
+      <aside class="ings">
+        <div class="ings-card">
+          <div class="col-head"><h2>Ingredients</h2><button id="resetIngs" class="link" type="button">Untick all</button></div>
+          <p class="yield">Serves {r.serves}</p>
+          <ul id="ings">
+            {r.ingredients.map((ing, i) => (
+              <li><label><input type="checkbox" data-i={i}> <span>{ing}</span></label></li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+
+      <div class="main">
+        <section class="method" aria-labelledby="method-h">
+          <div class="col-head"><h2 id="method-h">Method</h2><span class="note">Tap a step when it’s done</span></div>
+          <ol id="steps">
+            {x.method.map(([name, text], i) => (
+              <li id={`step-${i + 1}`}>
+                <button type="button">
+                  <span class="n" aria-hidden="true">{i + 1}</span>
+                  <span class="st"><b>{name}</b><span>{text}</span></span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {tips.length > 0 && (
+          <section class="panel lilac" aria-labelledby="tips-h">
+            <h2 id="tips-h">Tips</h2>
+            <ul>{tips.map(t => <li>{t}</li>)}</ul>
+          </section>
+        )}
+        <div class="panels">
+          {x.keep && (
+            <section class="panel sky" aria-labelledby="keep-h">
+              <h2 id="keep-h">Keeping it</h2>
+              <p>{x.keep}</p>
+            </section>
+          )}
+          {x.swaps && x.swaps.length > 0 && (
+            <section class="panel mint" aria-labelledby="swaps-h">
+              <h2 id="swaps-h">Make it your own</h2>
+              <ul>{x.swaps.map(t => <li>{t}</li>)}</ul>
+            </section>
+          )}
+        </div>
+        {/banana-bread/.test(r.slug) && <a class="hub" href="/topics/banana-bread/">Everything about banana bread: the history, the science of ripeness and the internet’s favourite recipes →</a>}
+
         {nut && (
           <section class="nutrition" aria-labelledby="nut-h">
             <div class="col-head"><h2 id="nut-h">Nutrition</h2><span class="per">{perLabel}</span></div>
@@ -119,16 +170,7 @@ const jsonLd = {
             </p>
           </section>
         )}
-      </section>
-      <section class="method">
-        <div class="col-head"><h2>Method</h2><button class="link" onclick="window.print()">Print</button></div>
-        <ol id="steps">
-          {r.steps.map((s, i) => <li id={`step-${i + 1}`}><button>{s}</button></li>)}
-        </ol>
-        {r.tip && <aside class="tip"><b>Tip</b> {r.tip}</aside>}
-        {/banana-bread/.test(r.slug) && <a class="hub" href="/topics/banana-bread/">Everything about banana bread: history, the science of ripeness and the internet's favourite recipes →</a>}
-        <p class="note">Tap a step to mark it done.</p>
-      </section>
+      </div>
     </div>
   </article>
 
@@ -152,93 +194,133 @@ const jsonLd = {
   document.getElementById('resetIngs')!.addEventListener('click', () => { boxes.forEach(b => (b.checked = false)); save(); });
   document.getElementById('steps')!.addEventListener('click', e => {
     const li = (e.target as HTMLElement).closest('li');
-    li?.classList.toggle('done');
+    if (!li) return;
+    li.classList.toggle('done');
+    li.querySelector('button')!.setAttribute('aria-pressed', String(li.classList.contains('done')));
   });
 </script>
 
 <style>
   .crumbs { padding-top: 22px; font-size: 14.5px; color: var(--ink-2); }
-  .crumbs a { color: var(--ink); text-decoration-color: var(--banana-ink); text-underline-offset: 3px; }
-  .top { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 30px; margin-top: 16px; align-items: start; }
-  .art { aspect-ratio: 1; display: grid; place-items: center; border: 2px solid var(--ink); }
-  .art svg { width: 45%; transform: rotate(-8deg); }
+  .crumbs a { color: var(--ink-2); text-decoration-color: var(--butter-d); text-underline-offset: 3px; }
+  .crumbs span { color: var(--ink); }
+
+  .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 36px; margin-top: 18px; align-items: center; }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tags .tag { text-decoration: none; }
+  .origin { font-size: 14.5px; color: var(--ink-2); font-weight: 600; }
+  h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.05; margin: 14px 0 10px; }
+  .blurb { font: 600 20px/1.4 var(--text); margin: 0; }
+  .intro { font-size: 17px; line-height: 1.65; color: var(--ink-2); margin: 14px 0 0; max-width: 60ch; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
   .photo { margin: 0; }
-  .photo img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border: 2px solid var(--ink); background: var(--paper-2); }
-  .photo figcaption { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--ink-3); }
+  .photo img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-lg); background: var(--paper-2); box-shadow: var(--shadow); }
+  .photo figcaption { margin-top: 8px; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
   .photo figcaption a { color: var(--ink-3); }
-  .nutrition { margin-top: 28px; }
+  .art { aspect-ratio: 4 / 3; display: grid; place-items: center; border-radius: var(--r-lg); }
+  .art svg { width: 38%; transform: rotate(-8deg); }
+
+  .card-facts { margin-top: 30px; background: var(--butter); border-radius: var(--r-lg); padding: 18px 22px; scroll-margin-top: 16px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 10px 0; margin: 0; }
+  .facts div { padding: 2px 22px 2px 0; margin-right: 22px; border-right: 1px solid rgba(58, 42, 14, .15); }
+  .facts div:last-child { border-right: 0; margin-right: 0; }
+  .facts dt { font-size: 13px; font-weight: 800; color: var(--ink-2); }
+  .facts dd { margin: 2px 0 0; font: 600 21px/1.2 var(--display); }
+  .facts .total dd { color: var(--banana-ink); }
+  .cap { text-transform: capitalize; }
+  .about { display: flex; gap: 10px 26px; flex-wrap: wrap; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(58, 42, 14, .12); font-size: 15px; }
+  .about b { font-weight: 800; margin-right: 6px; }
+  .meter, .ripeness { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ripe-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); text-decoration: none; background: var(--card); border-radius: 99px; padding: 4px 12px 4px 5px; font-weight: 700; min-height: 34px; }
+  .ripe-chip:hover { box-shadow: inset 0 0 0 2px var(--butter-d); }
+  .ripe-chip i { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); }
+  .diet { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .diet span { font-size: 13.5px; font-weight: 800; background: var(--mint); color: var(--ink); border-radius: 99px; padding: 4px 11px; }
+
+  .cols { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 36px; margin-top: 34px; align-items: start; }
+  .ings { position: sticky; top: 16px; }
+  .ings-card { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 20px 22px; }
+  .col-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .col-head h2 { font-size: var(--t-2); margin: 0; }
+  .yield { margin: 0 0 6px; color: var(--ink-2); font-size: 14.5px; font-weight: 600; }
+  .link { font: 700 14.5px var(--text); color: var(--ink-2); background: none; border: none; cursor: pointer; padding: 8px 0; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+  .ings ul { list-style: none; margin: 0; padding: 0; }
+  .ings li + li { border-top: 1px solid var(--line); }
+  .ings label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; cursor: pointer; font-size: 16px; line-height: 1.45; min-height: 44px; }
+  .ings input { width: 21px; height: 21px; margin-top: 1px; accent-color: var(--mint-d); flex: none; }
+  .ings input:checked + span { color: var(--ink-3); text-decoration: line-through; }
+
+  .main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .note { color: var(--ink-3); font-size: 14px; }
+  .method ol { margin: 0; padding: 0; list-style: none; }
+  .method li { scroll-margin-top: 16px; }
+  .method li + li { border-top: 1px solid var(--line); }
+  .method li button { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; width: 100%; text-align: left; font: inherit; color: var(--ink); background: none; border: none; padding: 16px 0; cursor: pointer; }
+  .n { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--butter); font: 600 18px var(--display); color: #3A2A0E; }
+  .st { display: flex; flex-direction: column; gap: 3px; }
+  .st b { font: 600 19px/1.3 var(--display); }
+  .st span { font-size: 16.5px; line-height: 1.65; }
+  .method li:target .n { box-shadow: 0 0 0 3px var(--butter-d); }
+  .method li.done .st { color: var(--ink-3); }
+  .method li.done .n { background: var(--mint); font-size: 0; }
+  .method li.done .n::after { content: '✓'; font: 800 17px var(--text); color: #1F4D2E; }
+
+  .panel { border-radius: var(--r-lg); padding: 18px 22px; }
+  .panel.lilac { background: var(--lilac); } .panel.sky { background: var(--sky); } .panel.mint { background: var(--mint); }
+  .panel h2 { font-size: 21px; margin: 0 0 8px; }
+  .panel p { margin: 0; line-height: 1.6; }
+  .panel ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.55; }
+  .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .hub { display: block; padding: 14px 18px; border-radius: var(--r-lg); background: var(--peach); color: var(--ink); font-weight: 700; text-decoration: none; }
+  .hub:hover { text-decoration: underline; }
+
+  .nutrition { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 20px 22px; }
   .nutrition .per { font-size: 14px; color: var(--ink-2); }
   .kcal { font-size: 15px; color: var(--ink-2); margin: 2px 0 8px; }
-  .kcal b { font: 400 34px/1 var(--display); color: var(--ink); margin-right: 2px; }
-  .nutrition table { width: 100%; border-collapse: collapse; font-size: 15.5px; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
-  .nutrition th, .nutrition td { padding: 8px 2px; border-bottom: 1px solid var(--line); }
+  .kcal b { font: 600 34px/1 var(--display); color: var(--ink); margin-right: 2px; }
+  .nutrition table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
+  .nutrition th, .nutrition td { padding: 7px 2px; border-top: 1px solid var(--line); }
   .nutrition th { text-align: left; font-weight: 600; }
   .nutrition td { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
   .nutrition tr.sub th { font-weight: 500; color: var(--ink-2); padding-left: 14px; }
   .nutrition tr.sub td { font-weight: 500; color: var(--ink-2); }
-  .nut-note { font-size: 14px; color: var(--ink-3); line-height: 1.5; margin: 10px 0 0; }
+  .nut-note { font-size: 13.5px; color: var(--ink-3); line-height: 1.5; margin: 10px 0 0; }
   .nut-note a { color: var(--ink-2); }
-  .tags { display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 15px; font-weight: 600; }
-  .tags a { color: var(--ink); text-decoration-color: var(--banana-ink); text-underline-offset: 3px; }
-  .tags span { color: var(--ink-2); font-weight: 500; }
-  h1 { font-size: var(--t-1); margin: 8px 0 8px; }
-  .blurb { font-size: 18px; color: var(--ink-2); margin: 0; }
-  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 20px 0 0; border: 2px solid var(--ink); background: var(--card); }
-  .facts div { padding: 10px 12px; border-right: 2px solid var(--ink); }
-  .facts div:last-child { border-right: 0; }
-  .facts dt { font: 700 var(--t-label) var(--text); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
-  .facts dd { margin: 2px 0 0; font: 400 20px/1.2 var(--display); }
-  .cap { text-transform: capitalize; }
-  .row { display: flex; gap: 10px 24px; flex-wrap: wrap; align-items: center; margin-top: 16px; font-size: 15px; }
-  .row b { font-weight: 700; margin-right: 8px; }
-  .meter { display: inline-flex; align-items: center; }
-  .ripe-chip { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; border: 2px solid var(--ink); border-radius: var(--r-ctl); padding: 4px 10px 4px 5px; margin-right: 6px; font-weight: 600; min-height: 40px; }
-  .ripe-chip:hover { background: var(--paper-2); }
-  .ripe-chip i { width: 26px; height: 26px; border: 2px solid var(--ink); border-radius: 50%; }
-  .diet { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-  .diet span { font-size: 14px; font-weight: 700; color: var(--leaf); border: 2px solid currentColor; border-radius: var(--r-ctl); padding: 2px 10px; }
 
-  .cols { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 40px; margin-top: 32px; padding-top: 22px; border-top: 2px solid var(--ink); }
-  .col-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .col-head h2 { font-size: var(--t-2); margin: 0; }
-  .link { font: 600 15px var(--text); color: var(--ink-2); background: none; border: none; cursor: pointer; padding: 10px 0; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
-  .ings ul { list-style: none; margin: 0; padding: 0; }
-  .ings li { border-bottom: 1px solid var(--line); }
-  .ings label { display: flex; gap: 12px; align-items: flex-start; padding: 11px 2px; cursor: pointer; font-size: 16px; min-height: 44px; }
-  .ings input { width: 22px; height: 22px; margin-top: 1px; accent-color: var(--leaf); flex: none; }
-  .ings input:checked + span { color: var(--ink-3); text-decoration: line-through; }
-  .method ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
-  .method li { counter-increment: step; }
-  .method li button { display: grid; grid-template-columns: 38px 1fr; gap: 12px; width: 100%; text-align: left; font: 400 16.5px/1.55 var(--text); color: var(--ink);
-    background: none; border: none; border-bottom: 1px solid var(--line); padding: 13px 2px; cursor: pointer; }
-  .method li button::before { content: counter(step); display: grid; place-items: center; width: 34px; height: 34px; border: 2px solid var(--ink); border-radius: 50%; background: var(--banana); color: #231A10; font: 400 17px var(--display); }
-  .method li.done button { color: var(--ink-3); }
-  .method li.done button::before { content: '✓'; background: var(--paper-2); color: var(--leaf); font-family: var(--text); font-weight: 700; }
-  .tip { margin-top: 18px; border: 2px dashed var(--ink); padding: 12px 14px; font-size: 16px; }
-  .tip b { margin-right: 6px; }
-  .note { color: var(--ink-3); font-size: 14px; }
-  .hub { display: block; margin-top: 18px; padding: 12px 14px; border: 2px solid var(--ink); color: var(--ink); font-weight: 600; text-decoration: none; font-size: 16px; background: var(--card); }
-  .hub:hover { background: var(--paper-2); }
+  :global(:root[data-theme="banana"]) :is(.ings-card, .nutrition, .card-facts, .panel, .hub) { border: 2px solid #3A2A0E; box-shadow: 4px 4px 0 #3A2A0E; }
+  :global(:root[data-theme="dark"]) .facts div { border-color: rgba(255, 255, 255, .12); }
+  :global(:root[data-theme="dark"]) .about { border-color: rgba(255, 255, 255, .1); }
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme])) .facts div { border-color: rgba(255, 255, 255, .12); }
+    :global(:root:not([data-theme])) .about { border-color: rgba(255, 255, 255, .1); }
+  }
 
-  .more { margin-top: 44px; padding-top: 20px; border-top: 2px solid var(--ink); }
+  .more { margin-top: 48px; }
   .more-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
   .more-head h2 { font-size: var(--t-2); margin: 0; }
-  .more-head a { color: var(--ink); font-weight: 600; font-size: 15px; text-decoration-color: var(--banana-ink); }
+  .more-head a { color: var(--ink); font-weight: 700; font-size: 15px; text-decoration-color: var(--butter-d); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 
-  @media (max-width: 860px) {
-    .top { grid-template-columns: 1fr; }
-    .art { aspect-ratio: auto; height: 200px; }
-    .art svg { width: 110px; }
-    .photo img { aspect-ratio: 3 / 2; }
-    .cols { grid-template-columns: 1fr; }
-    .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .facts div:nth-child(2) { border-right: 0; }
-    .facts div:nth-child(-n+2) { border-bottom: 2px solid var(--ink); }
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .photo, .art { order: -1; }
+    .cols { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .ings { position: static; }
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   }
+  @media (max-width: 560px) {
+    .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+    .facts div { border: 0; padding: 0; margin: 0; }
+    .facts dd { font-size: 18px; }
+    .card-facts { padding: 16px; }
+    .ings-card, .nutrition, .panel { padding: 16px 18px; }
+    .photo img { aspect-ratio: 3 / 2; }
+  }
   @media print {
-    :global(.mast), :global(.board-strip), :global(.foot), .crumbs, .art, .photo, .more, .link, .note { display: none !important; }
-    :global(:root) { --paper: #fff; --card: #fff; --ink: #000; --ink-2: #222; --ink-3: #555; --line: #ccc; }
+    :global(header.site), :global(.mast), :global(.dock), :global(.foot), :global(footer), .crumbs, .art, .photo, .more, .link, .note, .actions, .hub { display: none !important; }
+    :global(:root) { --paper: #fff; --card: #fff; --ink: #000; --ink-2: #222; --ink-3: #555; --line: #ccc; --butter: #fff; --mint: #fff; --sky: #fff; --lilac: #fff; }
+    .cols { grid-template-columns: 1fr 1.6fr; }
+    .ings-card, .nutrition, .panel, .card-facts { box-shadow: none; border: 1px solid #ccc; }
+    .ings { position: static; }
   }
 </style>
