@@ -98,7 +98,7 @@ button, input, select, textarea { font-family: inherit; }
 :root[data-theme="dark"] .tag.soft { background: rgba(255, 255, 255, .07); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme]) .tag.soft { background: rgba(255, 255, 255, .07); } }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.d-butter { background: var(--butter-d); } .d-mint { background: var(--mint-d); } .d-peach { background: var(--peach-d); } .d-sky { background: var(--sky-d); }
+.d-butter { background: var(--butter-d); } .d-mint { background: var(--mint-d); } .d-peach { background: var(--peach-d); } .d-sky { background: var(--sky-d); } .d-lilac { background: #B79CF0; }
 
 /* the sticker: kept for the par badge, softened */
 .sticker { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 72px; height: 54px; border-radius: 50%;

@@ -17,6 +17,7 @@ const links = [
   { id: 'clicker', href: '/more/banana-clicker/', label: 'Clicker', dot: 'd-mint' },
   { id: 'recipes', href: '/recipes/', label: 'Recipes', dot: 'd-peach' },
   { id: 'prices', href: '/bananalytics/', label: 'Prices', dot: 'd-sky' },
+  { id: 'banadaw', href: '/banadaw/', label: 'BanaDAW', dot: 'd-lilac' },
 ];
 const mark = `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9c1.5 10.5 10.5 17.5 21 13.8-1.6 3.4-5.5 5.4-10.2 5.4C10 28.2 4.6 20 6 9z" fill="#F2CF5B" stroke="#3B3127" stroke-width="2" stroke-linejoin="round"/><path d="M6 9 5.2 5l2.8 1.2" fill="none" stroke="#3B3127" stroke-width="2" stroke-linecap="round"/></svg>`;
 ---
@@ -296,9 +297,9 @@ const mark = `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9c1.5 10.5
     .mast-in { height: 62px; gap: 12px; }
     .logo .word { font-size: 20px; }
     body { padding-bottom: 82px; }
-    .dock { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 30; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 24px rgba(60, 45, 15, .16); padding: 6px; }
+    .dock { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 30; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 24px rgba(60, 45, 15, .16); padding: 6px; }
     :root[data-theme="banana"] .dock { border: 2px solid #3A2A0E; }
-    .dock a { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; font-weight: 800; font-size: 13px; padding: 8px 0; border-radius: 12px; color: var(--ink-2); min-height: 52px; justify-content: center; }
+    .dock a { display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; font-weight: 800; font-size: 12.5px; padding: 8px 0; border-radius: 12px; color: var(--ink-2); min-height: 52px; justify-content: center; }
     .dock a .dot { width: 24px; height: 8px; border-radius: 999px; opacity: .6; }
     .dock a.on { color: var(--ink); background: var(--butter); }
     .dock a.on .dot { opacity: 1; }
