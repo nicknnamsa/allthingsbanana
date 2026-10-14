@@ -23,18 +23,21 @@
 		{ "pattern": "www.allthingsbanana.com", "custom_domain": true }
 	],
 	// Banana Clicker: one shared tally of peeled bananas per country.
-	// Bananadle: everyone's daily results, anonymously. Banana popularity: page views per day, anonymously
+	// Bananadle: everyone's daily results, anonymously. Banana popularity: page views per day, anonymously.
+	// BanaDAW board: posted loops and their upvotes
 	"durable_objects": {
 		"bindings": [
 			{ "name": "PEELS", "class_name": "PeelCounter" },
 			{ "name": "DEGREES", "class_name": "DegreesStats" },
-			{ "name": "VISITS", "class_name": "VisitCounter" }
+			{ "name": "VISITS", "class_name": "VisitCounter" },
+			{ "name": "BEATS", "class_name": "BeatBoard" }
 		]
 	},
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["PeelCounter"] },
 		{ "tag": "v2", "new_sqlite_classes": ["DegreesStats"] },
-		{ "tag": "v3", "new_sqlite_classes": ["VisitCounter"] }
+		{ "tag": "v3", "new_sqlite_classes": ["VisitCounter"] },
+		{ "tag": "v4", "new_sqlite_classes": ["BeatBoard"] }
 	],
 	"triggers": {
 		"crons": [

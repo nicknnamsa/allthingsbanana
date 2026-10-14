@@ -31,7 +31,8 @@ import Base from '../layouts/Base.astro';
       </div>
       <button class="t-btn txt" id="fresh" title="Empty every channel and start again (undo brings it back)">Start from scratch</button>
       <label class="tb-f"><span class="sr-only">Load a starter loop</span><select id="starter"></select></label>
-      <button class="t-btn txt hl" id="share">Share</button>
+      <button class="t-btn txt hl" id="post" title="Put your loop on the board for everyone to hear and vote on">Post to the board</button>
+      <button class="t-btn txt" id="share">Share link</button>
       <button class="t-btn txt" id="wav" title="Download the loop, played a few times, as a WAV file">WAV</button>
     </div>
 
@@ -87,6 +88,30 @@ import Base from '../layouts/Base.astro';
     </section>
     <div class="toast" id="toast" role="status" hidden></div>
   </div>
+
+  <section class="bd-board" id="board" aria-labelledby="boardH">
+    <div class="bd-start-h">
+      <div><h2 id="boardH">The board</h2><p id="boardSub">Loops people made here. Play one, remix it, and give the best ones a banana.</p></div>
+      <div class="bd-tabs" role="tablist" aria-label="Sort the board">
+        <button role="tab" data-sort="week" aria-selected="true">Top this week</button>
+        <button role="tab" data-sort="all" aria-selected="false">Top ever</button>
+        <button role="tab" data-sort="new" aria-selected="false">Newest</button>
+      </div>
+    </div>
+    <div class="bd-list" id="boardList" aria-live="polite"></div>
+    <button class="btn plain bd-more" id="boardMore" hidden>Show more</button>
+  </section>
+
+  <dialog class="bd-dialog" id="postDlg" aria-labelledby="postH">
+    <form method="dialog" id="postForm">
+      <h2 id="postH">Post to the board</h2>
+      <p>Everyone can play your loop, remix it and vote for it. Names are public, so keep them friendly.</p>
+      <label>Loop name <input id="postName" maxlength="40" required></label>
+      <label>Your name <small>(optional)</small> <input id="postAuthor" maxlength="24" placeholder="Anonymous banana"></label>
+      <p class="bd-err" id="postErr" role="alert" hidden></p>
+      <div class="bd-dlg-acts"><button class="btn plain" value="cancel" formnovalidate>Cancel</button><button class="btn banana" id="postGo" value="post">Post it</button></div>
+    </form>
+  </dialog>
 
   <section class="bd-start" aria-labelledby="startH">
     <div class="bd-start-h"><h2 id="startH">Start from a bunch</h2><p>Every loop is yours to change. Undo brings back whatever you had.</p></div>
@@ -239,6 +264,111 @@ import Base from '../layouts/Base.astro';
     else { const st = STARTERS.find(s => s.id === b.dataset.id)!; edit(() => { song = st.make(); selId = ''; }); load(song); toast(`Loaded ${st.label}. Press play.`); }
     $('app').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
+  // ---------- the board: post, list, play, vote ----------
+  type Beat = { id: string; name: string; author: string; bpm: number; bars: number; chans: number; created: number; votes: number; mine: boolean; own?: boolean };
+  let boardSort = 'week', boardOffset = 0;
+  const ago = (t: number) => { const m = (Date.now() - t) / 6e4; return m < 1 ? 'just now' : m < 60 ? `${Math.floor(m)} min ago` : m < 1440 ? `${Math.floor(m / 60)} h ago` : `${Math.floor(m / 1440)} d ago`; };
+  const BANANA_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z"/></svg>';
+  const beatCard = (b: Beat, i: number) => `
+    <article class="bd-beat${b.own ? ' own' : ''}" data-id="${b.id}">
+      ${boardSort === 'new' ? '' : `<span class="rank">${boardOffset + i + 1}</span>`}
+      <div class="bd-beat-t"><b>${esc(b.name)}</b><span>by ${esc(b.author)}${b.own ? ' (you)' : ''}</span><small>${b.bpm} BPM · ${b.bars} ${b.bars === 1 ? 'bar' : 'bars'} · ${b.chans} sounds · ${ago(b.created)}</small></div>
+      <div class="bd-beat-a">
+        <button class="btn banana sm" data-act="play">▶ Play</button>
+        <button class="btn plain sm" data-act="load" title="Open it in the studio to change it">Remix</button>
+        <button class="bd-vote" data-act="vote" aria-pressed="${b.mine}" aria-label="${b.mine ? 'Take back your banana' : 'Give it a banana'} (${b.votes})">${BANANA_SVG}<span>${b.votes}</span></button>
+      </div>
+      <button class="bd-report" data-act="report">Report</button>
+    </article>`;
+  async function loadBoard(more = false) {
+    if (!more) boardOffset = 0;
+    const list = $('boardList');
+    if (!more) list.innerHTML = '<p class="bd-empty">Fetching the bunch…</p>';
+    try {
+      const r = await fetch(`/api/beats?sort=${boardSort}&offset=${boardOffset}`);
+      if (!r.ok) throw 0;
+      const d: { beats: Beat[]; more: boolean; total: number } = await r.json();
+      const html = d.beats.map((b, i) => beatCard(b, i)).join('');
+      if (more) list.insertAdjacentHTML('beforeend', html);
+      else list.innerHTML = html || (boardSort === 'week' && d.total
+        ? '<p class="bd-empty">Nothing new this week yet. Check “Top ever”, or post the first one.</p>'
+        : '<p class="bd-empty">No loops yet. Make something, then press <b>Post to the board</b> to be the first.</p>');
+      boardOffset += d.beats.length;
+      $('boardMore').hidden = !d.more;
+      $('boardSub').textContent = d.total ? `${d.total.toLocaleString('en-GB')} ${d.total === 1 ? 'loop' : 'loops'} made here so far. Play one, remix it, and give the best ones a banana.` : 'Loops people made here. Play one, remix it, and give the best ones a banana.';
+    } catch { if (!more) list.innerHTML = '<p class="bd-empty">Couldn’t reach the board. Try again in a minute.</p>'; }
+  }
+  $('board').querySelector('.bd-tabs')!.addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-sort]'); if (!b) return;
+    boardSort = b.dataset.sort!;
+    $('board').querySelectorAll('[data-sort]').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    loadBoard();
+  });
+  $('boardMore').addEventListener('click', () => loadBoard(true));
+  async function openBeat(id: string, play: boolean) {
+    try {
+      const r = await fetch(`/api/beats/${id}`), d = await r.json();
+      if (!r.ok) { toast(d.error || 'Couldn’t open that loop.'); return; }
+      const s = await decodeSong(d.code);
+      if (!s) { toast('That loop couldn’t be read.'); return; }
+      edit(() => { song = s; selId = ''; }); load(song);
+      history.replaceState(null, '', `#beat=${id}`);
+      if (play) { engine.setSong(song); engine.play(); playBtn(); }
+      toast(`${play ? 'Playing' : 'Opened'} “${d.name}” by ${d.author}. Change anything: it’s your remix now.`);
+      $('app').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    } catch { toast('Couldn’t reach the board.'); }
+  }
+  $('boardList').addEventListener('click', async e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]'); if (!b) return;
+    const card = b.closest<HTMLElement>('.bd-beat')!, id = card.dataset.id!;
+    if (b.dataset.act === 'play' || b.dataset.act === 'load') return openBeat(id, b.dataset.act === 'play');
+    if (b.dataset.act === 'vote') {
+      const on = b.getAttribute('aria-pressed') !== 'true', n = b.querySelector('span')!;
+      b.setAttribute('aria-pressed', String(on)); n.textContent = String(+n.textContent! + (on ? 1 : -1));   // feels instant; the server has the last word
+      try { const r = await fetch(`/api/beats/${id}/vote`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ on }) }); const d = await r.json(); if (r.ok) { n.textContent = String(d.votes); b.setAttribute('aria-pressed', String(d.mine)); } } catch {}
+      b.setAttribute('aria-label', `${on ? 'Take back your banana' : 'Give it a banana'} (${n.textContent})`);
+      return;
+    }
+    if (b.dataset.act === 'report') {
+      if (!confirm('Report this loop? If a few people do, it comes off the board until we check it.')) return;
+      await fetch(`/api/beats/${id}/report`, { method: 'POST' }).catch(() => {});
+      card.remove(); toast('Thanks. We’ll take a look.');
+    }
+  });
+  // posting
+  const dlg = $<HTMLDialogElement>('postDlg');
+  $('post').addEventListener('click', () => {
+    const notes = song.ch.reduce((a, c) => a + (c.kind === 'drum' ? c.steps.filter(Boolean).length : c.notes.length), 0);
+    if (!notes) { toast('Your loop is empty. Add some notes first.'); return; }
+    $<HTMLInputElement>('postName').value = song.name === 'Untitled bunch' ? '' : song.name;
+    $<HTMLInputElement>('postAuthor').value = store.get('banadaw-author') || '';
+    $('postErr').hidden = true;
+    dlg.showModal();
+  });
+  $('postForm').addEventListener('submit', async e => {
+    const sub = (e as SubmitEvent).submitter as HTMLButtonElement | null;
+    if (sub?.value !== 'post') return;
+    e.preventDefault();
+    const name = $<HTMLInputElement>('postName').value.trim(), author = $<HTMLInputElement>('postAuthor').value.trim();
+    if (!name) return;
+    const go = $<HTMLButtonElement>('postGo'); go.disabled = true; go.textContent = 'Posting…';
+    try {
+      if (name !== song.name) edit(() => { song.name = name; });
+      store.set('banadaw-author', author);
+      const r = await fetch('/api/beats', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, author, code: await encodeSong(song) }) });
+      const d = await r.json();
+      if (!r.ok) { $('postErr').textContent = d.error || 'Couldn’t post that. Try again?'; $('postErr').hidden = false; return; }
+      dlg.close();
+      const url = `${location.origin}/banadaw/#beat=${d.id}`;
+      history.replaceState(null, '', `#beat=${d.id}`);
+      try { await navigator.clipboard.writeText(url); } catch {}
+      toast(d.existing ? 'That exact loop is already on the board. Link copied.' : 'Posted! It’s on the board, and the link is copied.');
+      boardSort = 'new'; $('board').querySelectorAll('[data-sort]').forEach(x => x.setAttribute('aria-selected', String((x as HTMLElement).dataset.sort === 'new')));
+      loadBoard();
+    } catch { $('postErr').textContent = 'Couldn’t reach the board. Try again in a minute.'; $('postErr').hidden = false; }
+    finally { go.disabled = false; go.textContent = 'Post it'; }
+  });
+
   $('undo').addEventListener('click', undo);
   $('redo').addEventListener('click', redo);
 
@@ -713,12 +843,14 @@ import Base from '../layouts/Base.astro';
 
   // ---------- start: a shared link, the last loop on this device, or Red Circle ----------
   (async () => {
-    const m = location.hash.match(/s=([\w-]+)/);
+    const m = location.hash.match(/[#&]s=([\w-]+)/), beat = location.hash.match(/beat=([a-f0-9]{10})/);
     let s: Song | null = null;
     if (m) { s = await decodeSong(m[1]); if (!s) toast('That link is from an older BanaDAW, so here’s a starter loop instead.'); else toast('You opened someone’s loop. Change anything: it’s your remix now.'); }
     if (!s) { try { const saved = JSON.parse(store.get('banadaw2') || 'null'); if (validSong(saved)) s = saved; } catch {} }
     load(s ?? STARTERS[0].make());
     requestAnimationFrame(frame);
+    loadBoard();
+    if (beat) openBeat(beat[1], false);
   })();
 </script>
 
@@ -847,6 +979,44 @@ import Base from '../layouts/Base.astro';
   .bdaw .toast { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--banana); color: #3B3127; font-weight: 800; padding: 10px 16px; border-radius: var(--r-md); box-shadow: 0 8px 20px rgba(60, 40, 10, .25); z-index: 10; max-width: calc(100% - 32px); }
   :root[data-theme="banana"] .bdaw :is(.rk, .knob-row) { border-top: 2px solid #3A2A0E; border-right: 2px solid #3A2A0E; border-bottom: 2px solid #3A2A0E; box-shadow: 3px 3px 0 #3A2A0E; }
   :root[data-theme="banana"] .bdaw :is(.t-btn, .tog, .seg, select, input, .lcd) { border: 2px solid #3A2A0E; }
+
+  /* the board */
+  .bd-board { margin: 34px 0 10px; scroll-margin-top: 16px; }
+  .bd-board .bd-start-h p { margin: 4px 0 0; }
+  .bd-tabs { display: inline-flex; background: var(--paper-2); border-radius: 99px; padding: 4px; gap: 2px; }
+  .bd-tabs button { font: 700 15px var(--text); color: var(--ink-2); background: none; border: 0; border-radius: 99px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
+  .bd-tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+  .bd-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+  .bd-beat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center; background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 16px 18px 14px; }
+  .bd-beat.own { box-shadow: inset 0 0 0 2px var(--butter-d), var(--shadow); }
+  .bd-beat:not(:has(.rank)) { grid-template-columns: minmax(0, 1fr); }
+  .bd-beat .rank { font: 600 26px var(--display); color: var(--banana-ink); min-width: 18px; text-align: center; grid-row: 1 / 3; align-self: start; }
+  .bd-beat-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding-right: 50px; }
+  .bd-beat-t b { font: 600 19px/1.25 var(--display); overflow-wrap: anywhere; }
+  .bd-beat-t span { font-size: 15px; color: var(--ink-2); font-weight: 700; }
+  .bd-beat-t small { font-size: 13.5px; color: var(--ink-2); }
+  .bd-beat-a { grid-column: -2; display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .btn.sm { padding: 7px 14px; min-height: 38px; font-size: 15px; }
+  .bd-vote { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; align-items: center; gap: 0; background: var(--paper-2); border: 0; border-radius: var(--r-md); padding: 6px 8px 4px; cursor: pointer; font: 800 14px var(--text); color: var(--ink); min-width: 48px; }
+  .bd-vote svg { width: 26px; height: 26px; fill: var(--line); stroke: var(--ink-2); stroke-width: 2; stroke-linejoin: round; transform: rotate(-15deg); transition: transform .15s; }
+  .bd-vote:hover svg { transform: rotate(-15deg) scale(1.12); }
+  .bd-vote[aria-pressed="true"] { background: var(--butter); }
+  .bd-vote[aria-pressed="true"] svg { fill: var(--banana); stroke: var(--ink); }
+  .bd-report { position: absolute; right: 14px; bottom: 12px; background: none; border: 0; color: var(--ink-3); font: 600 12.5px var(--text); cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); padding: 6px 0; }
+  .bd-empty { color: var(--ink-2); grid-column: 1 / -1; margin: 6px 0; }
+  .bd-more { margin-top: 14px; }
+  .bd-dialog { border: 0; border-radius: var(--r-lg); padding: 24px; width: min(440px, calc(100vw - 32px)); background: var(--card); color: var(--ink); box-shadow: 0 20px 50px rgba(40, 30, 10, .35); }
+  .bd-dialog::backdrop { background: rgba(40, 30, 10, .45); }
+  .bd-dialog h2 { margin: 0 0 6px; font-size: 26px; }
+  .bd-dialog p { margin: 0 0 14px; color: var(--ink-2); font-size: 15.5px; }
+  .bd-dialog label { display: flex; flex-direction: column; gap: 5px; font-weight: 800; margin-bottom: 12px; }
+  .bd-dialog label small { font-weight: 600; color: var(--ink-2); }
+  .bd-dialog input { font: 600 16px var(--text); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; }
+  .bd-dialog input:focus-visible { outline: 3px solid var(--butter-d); }
+  .bd-err { color: var(--stamp) !important; font-weight: 700; }
+  .bd-dlg-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+  :root[data-theme="banana"] :is(.bd-beat, .bd-dialog) { border: 2px solid #3A2A0E; box-shadow: 4px 4px 0 #3A2A0E; }
+  @media (prefers-reduced-motion: reduce) { .bd-vote svg { transition: none; } }
 
   /* starter loops, as cards in the site's style */
   .bd-start { margin: 34px 0 40px; }
