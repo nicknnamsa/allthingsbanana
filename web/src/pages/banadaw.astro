@@ -73,11 +73,13 @@ import Base from '../layouts/Base.astro';
           <div class="view" id="view">
             <div class="scroll" id="scroll"><div id="spacer"></div></div>
             <canvas id="grid" aria-hidden="true"></canvas>
+            <i class="phead" id="phead" hidden></i>
           </div>
           <div class="vel-l" title="How hard each note or hit plays: green is soft, brown hits hardest">Ripeness</div>
           <canvas id="vel" aria-label="Velocity: drag up and down"></canvas>
         </div>
         <div class="auto-view" id="autoView" hidden>
+          <i class="phead" id="aphead" hidden></i>
           <div class="av-top"><div class="av-corner">Track and knob</div><canvas id="avRuler" aria-hidden="true"></canvas></div>
           <div class="av-lanes" id="lanes"></div>
         </div>
@@ -100,7 +102,7 @@ import Base from '../layouts/Base.astro';
             </div>
             <div class="pv-box">
               <div class="pv-l"><b>Slices</b> <small>hold a key to repeat that part of the loop</small></div>
-              <canvas id="padStrip" aria-hidden="true"></canvas>
+              <div class="strip-w"><canvas id="padStrip" aria-hidden="true"></canvas><i class="phead" id="pphead" hidden></i></div>
               <div class="pv-keys" id="slices"></div>
               <div class="pv-l"><b>Stutter</b> <small>hold to repeat what's playing</small></div>
               <div class="pv-keys" id="stutters"></div>
@@ -237,7 +239,6 @@ import Base from '../layouts/Base.astro';
   function setKnob(el: HTMLElement, v: number) {
     const k = knobs.get(el.dataset.k!)!;
     k.set(clamp(v, k.min ?? 0, k.max ?? 1)); paintKnob(el); engine.setSong(song);
-    if (el.closest('.rack')) drawRackPreviews();
   }
   $('app').addEventListener('pointerdown', e => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('.knob'); if (!el) return;
@@ -630,14 +631,13 @@ import Base from '../layouts/Base.astro';
     RIPE.length = 0; for (let i = 1; i <= 7; i++) RIPE.push(cs.getPropertyValue(`--r${i}`).trim());
   }
   readColors();
-  const recolor = () => { readColors(); drawRackPreviews(); dirty = true; };
+  const recolor = () => { readColors(); drawRackPreviews(); dirty = true; stripKey = ''; if (tab === 'auto') paintLanes(null); };
   new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor);
 
   function fit(cv: HTMLCanvasElement, w: number, h: number) {
     const dpr = devicePixelRatio || 1;
-    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    cv.style.width = `${w}px`; cv.style.height = `${h}px`;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = `${w}px`; cv.style.height = `${h}px`; }
     const g = cv.getContext('2d')!; g.setTransform(dpr, 0, 0, dpr, 0, 0); return g;
   }
   const viewMid = () => TOP - Math.floor((scroll.scrollTop + scroll.clientHeight / 2) / rowH);
@@ -713,14 +713,19 @@ import Base from '../layouts/Base.astro';
       g.fillStyle = 'rgba(245, 201, 62, .14)'; g.fillRect(x, y, w, h);
       g.setLineDash([5, 4]); g.strokeStyle = C.text; g.lineWidth = 1.2; g.strokeRect(x + 0.5, y + 0.5, w, h); g.setLineDash([]);
     }
-    if (pos != null) { g.fillStyle = C.play; g.fillRect(pos * cw - 1, sy, 2, H); }
     g.restore();
     // an empty channel says what to do
-    if (pos == null && ((c.kind === 'synth' && !c.notes.length && mode === 'piano') || (mode === 'drum' && drums().every(d => d.kind === 'drum' && !d.steps.some(Boolean))))) {
+    if (((c.kind === 'synth' && !c.notes.length && mode === 'piano') || (mode === 'drum' && drums().every(d => d.kind === 'drum' && !d.steps.some(Boolean))))) {
       g.font = `600 16px Fredoka, Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.fillStyle = C.dim;
       g.fillText(mode === 'drum' ? 'Click the squares to add hits' : 'Click anywhere to plant a note', W / 2, H / 2); g.textAlign = 'left';
     }
     drawRuler(pos); drawKeys(); drawVel();
+  }
+  // the playhead is a thin line laid over the canvas, so playing doesn't redraw the whole grid every frame
+  function movePlayhead(el: HTMLElement, x: number | null, max: number) {
+    if (x == null || x < -2 || x > max + 2) { if (!el.hidden) el.hidden = true; return; }
+    if (el.hidden) el.hidden = false;
+    el.style.transform = `translateX(${x.toFixed(1)}px)`;
   }
   function grid(g: CanvasRenderingContext2D, s0: number, s1: number, y0: number, y1: number, light = false) {
     for (let s = s0; s <= s1; s++) {
@@ -972,7 +977,7 @@ import Base from '../layouts/Base.astro';
   // ---------- tabs: Notes, Automation, Pads ----------
   const HELP = {
     auto: 'Pick a knob for any track, then click its line to add a point and drag points to shape it. Right-click or double-click a point to remove it. Hold Alt (Option) to place points between the grid lines.',
-    pads: 'Click an empty pad to save the editor’s loop there. Keys 1 to 9 launch pads, 0 stops at the end of the bar, hold Q to I to repeat a slice, hold Z, X or C to stutter. Space starts and stops.',
+    pads: 'Click an empty pad to save the editor’s loop there. Keys 1 to 9 launch pads (press the playing one again to restart it), 0 stops at the end of the bar, hold Q to I to repeat a slice, hold Z, X or C to stutter. Space starts and stops.',
   };
   function setTab(v: typeof tab) {
     if (v === tab) return;
@@ -1069,7 +1074,6 @@ import Base from '../layouts/Base.astro';
         g.setLineDash([6, 5]); g.strokeStyle = color; g.lineWidth = 1.6; g.beginPath(); g.moveTo(G.xOf(0), y); g.lineTo(G.xOf(steps), y); g.stroke(); g.setLineDash([]);
         if (!G.small) { g.font = '700 12.5px Nunito, system-ui, sans-serif'; g.fillStyle = C.dim; g.textAlign = 'center'; g.fillText('Click the line to start automating', G.W / 2, y > G.H / 2 ? y - 10 : y + 18); g.textAlign = 'left'; }
       }
-      if (pos != null) { g.fillStyle = C.play; g.fillRect(G.xOf(pos) - 1, 0, 2, G.H); }
     });
     // the ruler over the lanes
     if (first) {
@@ -1145,7 +1149,7 @@ import Base from '../layouts/Base.astro';
   // ---------- pads: save loops to keys 1-9 and perform with them ----------
   let pads: (Song | null)[] = Array(9).fill(null), padSel = 0;
   try { const saved = JSON.parse(store.get('banadaw-pads') || 'null'); if (Array.isArray(saved)) pads = Array.from({ length: 9 }, (_, i) => (validSong(saved[i]) ? saved[i] : null)); } catch {}
-  const savePads = () => { store.set('banadaw-pads', JSON.stringify(pads)); if (tab === 'pads') engine.setBank(pads.slice() as Song[]); };
+  const savePads = () => { stripKey = ''; store.set('banadaw-pads', JSON.stringify(pads)); if (tab === 'pads') engine.setBank(pads.slice() as Song[]); };
   const PAD_TINTS = ['#F5C93E', '#F2A57C', '#EE8FB0', '#B79CF0', '#7DB6E8', '#6FCDB8', '#8CC56A', '#D9B07A', '#F5C93E'];
   $('slices').innerHTML = [...SLICE_KEYS].map((k, i) => `<button class="pk-btn" data-hold="s${i}" data-kind="slice" data-n="${i}"><kbd>${k.toUpperCase()}</kbd><span>${i + 1}</span></button>`).join('');
   $('stutters').innerHTML = Object.entries(STUTTER_KEYS).map(([k, [n, label]]) => `<button class="pk-btn" data-hold="t${k}" data-kind="stutter" data-n="${n}"><kbd>${k.toUpperCase()}</kbd><span>${label}</span></button>`).join('');
@@ -1220,8 +1224,13 @@ import Base from '../layouts/Base.astro';
     for (const k of SLICE_KEYS) $('slices').querySelector(`[data-n="${SLICE_KEYS.indexOf(k)}"]`)!.classList.toggle('key', held.has('k' + k));
     for (const k in STUTTER_KEYS) $('stutters').querySelector(`[data-hold="t${k}"]`)!.classList.toggle('key', held.has('k' + k));
     // the playing loop, cut into 8 slices
-    const p = engine.playing && st.active >= 0 ? pads[st.active] : pads[padSel], cv = $<HTMLCanvasElement>('padStrip');
-    const W = cv.parentElement!.clientWidth - 2, H = 54, g = fit(cv, W, H);
+    const pi = engine.playing && st.active >= 0 ? st.active : padSel, p = pads[pi], cv = $<HTMLCanvasElement>('padStrip');
+    const W = cv.parentElement!.clientWidth - 2, H = 54;
+    movePlayhead($('pphead'), p && pos != null && engine.playing ? (pos / stepsOf(p)) * W - 1 : null, W);
+    const key = `${pi}:${W}:${p ? p.name + p.ch.length : ''}:${C.row}`;
+    if (key === stripKey) return;
+    stripKey = key;
+    const g = fit(cv, W, H);
     g.fillStyle = C.row; g.fillRect(0, 0, W, H);
     if (!p) return;
     const steps = stepsOf(p), sw = W / steps;
@@ -1232,7 +1241,6 @@ import Base from '../layouts/Base.astro';
       else c.notes.forEach(n => g.fillRect(n.s * sw, y, Math.max(1.5, n.l * sw - 0.5), h));
     });
     for (let i = 1; i < 8; i++) { g.fillStyle = C.bar; g.fillRect((i * W) / 8 - 0.5, 0, 1, H); }
-    if (pos != null && engine.playing) { g.fillStyle = C.text; g.fillRect(pos * sw - 1, 0, 2, H); }
   }
 
   // ---------- a smaller channel rack ----------
@@ -1242,7 +1250,7 @@ import Base from '../layouts/Base.astro';
 
   // ---------- the frame loop: playhead, position display and level meter ----------
   const meterCv = $<HTMLCanvasElement>('meter');
-  let shownPos = '', peakHold = 0, knobsMoving = false;
+  let shownPos = '', peakHold = 0, knobsMoving = false, rulerPos: number | null = null, stripKey = '';
   function frame() {
     const pos = engine.position();
     // knobs with automation follow their line while the editor's loop plays
@@ -1255,12 +1263,21 @@ import Base from '../layouts/Base.astro';
         });
       } else if (knobsMoving) { knobsMoving = false; refreshAutoMarks(); }
     }
-    if (tab === 'auto' && (pos != null || ldrag)) paintLanes(pos);
+    if (tab === 'auto') {
+      const cv = lanes.querySelector<HTMLCanvasElement>('canvas.al-c');
+      if (cv && pos != null) {
+        const av = $('autoView').getBoundingClientRect(), r = cv.getBoundingClientRect();
+        movePlayhead($('aphead'), r.left - av.left + 10 + (pos / stepsOf(song)) * (r.width - 20), av.width);
+      } else movePlayhead($('aphead'), null, 0);
+    }
     if (tab === 'pads') padFrame(pos);
-    if (tab === 'notes' && (pos != null || dirty || (flash && performance.now() - flash.t < 300))) {
+    if (tab === 'notes') {
       // follow the playhead when the loop is wider than the screen
       if (pos != null && !drag) { const x = pos * cw; if (x > scroll.scrollLeft + scroll.clientWidth - 24 || x < scroll.scrollLeft) scroll.scrollLeft = Math.max(0, x - 24); }
-      draw(pos); dirty = false;
+      if (dirty || (flash && performance.now() - flash.t < 300)) { draw(pos); dirty = false; }
+      else if (pos != null || rulerPos != null) drawRuler(pos);
+      rulerPos = pos;
+      movePlayhead($('phead'), pos == null ? null : pos * cw - scroll.scrollLeft - 1, scroll.clientWidth);
     }
     const p = pos == null ? '1.1.1' : `${Math.floor(pos / 16) + 1}.${Math.floor((pos % 16) / 4) + 1}.${Math.floor(pos % 4) + 1}`;
     if (p !== shownPos) {
@@ -1389,6 +1406,9 @@ import Base from '../layouts/Base.astro';
   .bdaw .scroll { position: absolute; inset: 0; overflow: auto; z-index: 1; cursor: crosshair; }
   .bdaw #spacer { pointer-events: none; }
   .bdaw #grid { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
+  .bdaw .phead { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--g-play); pointer-events: none; z-index: 2; will-change: transform; }
+  .bdaw .auto-view { position: relative; } .bdaw #aphead { top: 23px; }
+  .bdaw .strip-w { position: relative; }
   .bdaw .vel-l { background: var(--g-ruler); color: var(--ink-2); font-size: 11px; font-weight: 800; display: grid; place-items: center; border-top: 1px solid var(--line); cursor: help; }
   .bdaw #vel { border-top: 1px solid var(--line); cursor: ns-resize; touch-action: none; }
   .bdaw .help { margin: 0; padding: 9px 14px 11px; color: var(--ink-2); font-size: 13.5px; font-weight: 600; border-top: 1px solid var(--line); background: var(--paper-2); }

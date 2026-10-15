@@ -14,7 +14,7 @@ const shortcuts: [string, string, string][] = [
   ['Notes', '← →', 'Move the selection earlier or later'],
   ['Notes', 'Delete', 'Delete the selection'],
   ['Notes', 'Esc', 'Let go of the selection'],
-  ['Pads', '1 … 9', 'Launch a pad'],
+  ['Pads', '1 … 9', 'Launch a pad (press the playing one again to restart it)'],
   ['Pads', '0', 'Stop at the end of the bar'],
   ['Pads', 'Q W E R T Y U I', 'Hold to repeat one of the 8 slices of the loop'],
   ['Pads', 'Z X C', 'Hold to stutter: repeat the last beat, 1/8 or 1/16'],
@@ -153,6 +153,7 @@ const shortcuts: [string, string, string][] = [
       <ol class="steps">
         <li>Make a loop in the Notes tab, open <b>Pads</b> and <b>click an empty pad</b> to save it there. Go back, change the loop, save it to the next pad, and so on. Pads are saved on this device.</li>
         <li>Press <kbd>1</kbd> to <kbd>9</kbd> to launch a pad. Launching while another plays waits for the next bar (or the next beat, or switches straight away: see <em>Launch on</em>), so the switch is always in time. A waiting pad blinks.</li>
+        <li><b>Press the playing pad again</b> and it starts over from the top straight away, like a sampler. Tap it two or three times for a quick stab.</li>
         <li><b>Hold</b> <kbd>Q</kbd> to <kbd>I</kbd> to repeat one of the 8 slices of the playing loop. Let go and the loop carries on where it would have been, like a DJ's cue juggling.</li>
         <li><b>Hold</b> <kbd>Z</kbd>, <kbd>X</kbd> or <kbd>C</kbd> to stutter: repeat the last beat, eighth or sixteenth, the classic build-up roll.</li>
         <li><kbd>0</kbd> stops at the end of the bar. The toolbar's master <b>Filter</b> still works, so sweep it while you play.</li>

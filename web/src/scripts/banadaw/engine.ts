@@ -7,6 +7,7 @@ type Strip = { input: GainNode; fader: GainNode; pan: StereoPannerNode; duck: Ga
 type Graph = {
   key: string; strips: Map<string, Strip>; sum: GainNode; hp: BiquadFilterNode; lp: BiquadFilterNode; pre: GainNode; shaper: WaveShaperNode; post: GainNode;
   out: GainNode; meter: AnalyserNode; dl: DelayNode; dr: DelayNode; noise: AudioBuffer; final: AudioNode;
+  shared: Map<string, { fs: BiquadFilterNode[]; dest: AudioNode }>; driveK?: number;
 };
 
 const hz = (m: number) => 440 * 2 ** ((m - 69) / 12);
@@ -41,7 +42,7 @@ function buildGraph(ctx: Ctx, songs: Song[], raw = false): Graph {
   clip.connect(meter); clip.connect(ctx.destination);
   // reverb (filtered so it never muddies the low end) and a ping-pong delay, both back into the master
   const revIn = ctx.createGain(), revHp = ctx.createBiquadFilter(), verb = ctx.createConvolver();
-  revHp.type = 'highpass'; revHp.frequency.value = 280; verb.buffer = impulse(ctx, 2.6);
+  revHp.type = 'highpass'; revHp.frequency.value = 280; verb.buffer = impulse(ctx, 2.2);
   revIn.connect(revHp).connect(verb).connect(sum);
   const dIn = ctx.createGain(), dHp = ctx.createBiquadFilter(), dl = ctx.createDelay(2), dr = ctx.createDelay(2), dLp = ctx.createBiquadFilter(), fbA = ctx.createGain(), fbB = ctx.createGain(), pl = ctx.createStereoPanner(), pr = ctx.createStereoPanner();
   dHp.type = 'highpass'; dHp.frequency.value = 350; dLp.type = 'lowpass'; dLp.frequency.value = 4500;
@@ -59,7 +60,7 @@ function buildGraph(ctx: Ctx, songs: Song[], raw = false): Graph {
     duck.connect(rev).connect(revIn); duck.connect(dly).connect(dIn);
     strips.set(c.id, { input, fader, pan, duck, rev, dly });
   }
-  const g: Graph = { key: keyOf(songs), strips, sum, hp, lp, pre, shaper, post, out, meter, dl, dr, noise, final: clip };
+  const g: Graph = { key: keyOf(songs), strips, sum, hp, lp, pre, shaper, post, out, meter, dl, dr, noise, final: clip, shared: new Map() };
   for (const s of songs) applyChannels(ctx, g, s, true);
   applyMaster(ctx, g, songs[0].master, songs[0].bpm, true);
   return g;
@@ -85,7 +86,8 @@ function applyMaster(ctx: Ctx, g: Graph, m: Song['master'], bpm: number, now = f
   set(g.hp.frequency, f > 0 ? 18 * (2600 / 18) ** f : 18);
   set(g.lp.Q, f < 0 ? 0.7 + -f * 3 : 0.7); set(g.hp.Q, f > 0 ? 0.7 + f * 3 : 0.7);
   set(g.pre.gain, 1 + m.drive * 2.5);
-  g.shaper.curve = curve(1 + m.drive * 3);
+  const k = Math.round((1 + m.drive * 3) * 10) / 10;
+  if (g.driveK !== k) { g.shaper.curve = curve(k); g.driveK = k; }   // swapping the curve is expensive, so only when it changes
   set(g.post.gain, 1 / (1 + m.drive * 1.6));
   set(g.out.gain, m.vol * m.vol * 1.25);
   const d = (60 / bpm) * 0.75;   // dotted eighth, the delay everyone uses
@@ -93,14 +95,52 @@ function applyMaster(ctx: Ctx, g: Graph, m: Song['master'], bpm: number, now = f
 }
 
 // ---------- drums ----------
+// the 808's metallic hats and cymbals are six square waves; we render them once, so each hit is one sample, not six oscillators
+const HAT_RATIOS = [2, 3, 4.16, 5.43, 6.79, 8.21], RIDE_RATIOS = [2, 3, 4.16, 5.43, 6.79, 8.21, 11.3];
+const METAL = new Map<number, { hat: AudioBuffer; ride: AudioBuffer }>();
+const METAL_READY = new Map<number, Promise<void>>();
+export function prepareMetal(rate: number) {
+  if (!METAL_READY.has(rate)) METAL_READY.set(rate, (async () => {
+    const make = (base: number, ratios: number[]) => {
+      const oc = new OfflineAudioContext(1, Math.ceil(rate * 4), rate), mix = oc.createGain();
+      mix.gain.value = 0.22; mix.connect(oc.destination);
+      for (const k of ratios) { const o = oc.createOscillator(); o.type = 'square'; o.frequency.value = base * k; o.connect(mix); o.start(0); }
+      return oc.startRendering();
+    };
+    const [hat, ride] = await Promise.all([make(40, HAT_RATIOS), make(60, RIDE_RATIOS)]);
+    METAL.set(rate, { hat, ride });
+  })().catch(() => {}));
+  return METAL_READY.get(rate)!;
+}
 // how loud each drum sits in the mix at full velocity (set by measuring the starter loops)
 const TRIM: Record<DrumChannel['sound'], number> = { kick: 1, clap: 1.6, snare: 0.85, hat: 2.5, open: 1.8, ride: 2.5, crash: 1.25, rim: 1.8, tom: 2, cowbell: 2.5, shaker: 2.5, impact: 0.9 };
+// these drums' filters are the same for every hit, so each channel shares one set instead of building them per hit
+const SHARED: Partial<Record<DrumChannel['sound'], (p: DrumChannel['p'], tune: number) => [BiquadFilterType, number, number][]>> = {
+  hat: p => [['bandpass', 10000, 0.9], ['highpass', 6500 + p.tone * 2000, 0.7]],
+  open: p => [['bandpass', 10000, 0.9], ['highpass', 6500 + p.tone * 2000, 0.7]],
+  ride: () => [['bandpass', 7600, 1.2], ['highpass', 3500, 0.7]],
+  crash: () => [['highpass', 2400, 0.7]],
+  shaker: (p, tune) => [['bandpass', (6500 + p.tone * 3500) * tune, 2.4]],
+  clap: (p, tune) => [['bandpass', (1050 + p.tone * 1300) * tune, 1.6], ['highpass', 650, 0.7]],
+};
+function sharedFilters(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, tune: number): AudioNode {
+  const spec = SHARED[c.sound]!(c.p, tune), key = `${c.id}:${c.sound}`;
+  let ch = g.shared.get(key);
+  if (!ch || ch.dest !== dest) {
+    const fs = spec.map(([type, , q]) => { const b = ctx.createBiquadFilter(); b.type = type; b.Q.value = q; return b; });
+    fs.reduce((a, b) => (a.connect(b), b)).connect(dest);
+    ch = { fs, dest }; g.shared.set(key, ch);
+  }
+  spec.forEach(([, f], i) => ch!.fs[i].frequency.setValueAtTime(Math.min(f, 20000), t));
+  return ch.fs[0];
+}
 function drum(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, v: number) {
   const p = c.p, tune = 2 ** ((p.tune - 0.5) * 1.4), dm = 0.35 + p.decay * 1.3;
   const out = ctx.createGain(); out.gain.value = v * v * TRIM[c.sound];
   let into: AudioNode = out;
-  if (p.drive > 0.02) { const sh = ctx.createWaveShaper(), pg = ctx.createGain(); sh.curve = curve(1 + p.drive * 10); sh.oversample = '2x'; pg.gain.value = 1 / (1 + p.drive * 1.1); sh.connect(pg).connect(out); into = sh; }
-  out.connect(dest);
+  if (p.drive > 0.02) { const sh = ctx.createWaveShaper(), pg = ctx.createGain(); sh.curve = curve(1 + p.drive * 10); pg.gain.value = 1 / (1 + p.drive * 1.1); sh.connect(pg).connect(out); into = sh; }
+  out.connect(SHARED[c.sound] ? sharedFilters(ctx, g, dest, c, t, tune) : dest);
+  const dry = () => { const d = ctx.createGain(); d.gain.value = out.gain.value; d.connect(dest); return d; };   // for parts that skip the shared filters
   const stopAll: AudioScheduledSourceNode[] = [];
   const noise = () => { const n = ctx.createBufferSource(); n.buffer = g.noise; n.loop = true; n.start(t, Math.random() * 1.5); stopAll.push(n); return n; };
   const osc = (type: OscillatorType, f: number) => { const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; o.start(t); stopAll.push(o); return o; };
@@ -111,7 +151,11 @@ function drum(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, v:
   };
   const filt = (type: BiquadFilterType, f: number, Q = 0.7) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = Math.min(f, 20000); b.Q.value = Q; return b; };
   let len = 0.5;
-  const metal = (base: number, ratios = [2, 3, 4.16, 5.43, 6.79, 8.21]) => { const mix = ctx.createGain(); mix.gain.value = 0.22; for (const r of ratios) osc('square', base * r).connect(mix); return mix; };
+  const metal = (base: number, ride = false): AudioNode => {
+    const pre = METAL.get(ctx.sampleRate);
+    if (pre) { const n = ctx.createBufferSource(); n.buffer = ride ? pre.ride : pre.hat; n.loop = true; n.playbackRate.value = base / (ride ? 60 : 40); n.start(t, Math.random() * 0.5); stopAll.push(n); return n; }
+    const mix = ctx.createGain(); mix.gain.value = 0.22; for (const k of ride ? RIDE_RATIOS : HAT_RATIOS) osc('square', base * k).connect(mix); return mix;   // until the rendered ones are ready
+  };
 
   switch (c.sound) {
     case 'kick': {
@@ -131,7 +175,7 @@ function drum(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, v:
       q.setValueAtTime(0, t);
       for (const d of [0, 0.0095, 0.019, 0.029]) { q.setValueAtTime(1, t + d); q.exponentialRampToValueAtTime(0.18, t + d + 0.0085); }
       q.exponentialRampToValueAtTime(0.0005, t + 0.03 + tail); q.setValueAtTime(0, t + 0.035 + tail);
-      noise().connect(filt('bandpass', (1050 + p.tone * 1300) * tune, 1.6)).connect(filt('highpass', 650)).connect(e).connect(into);
+      noise().connect(e).connect(into);
       len = 0.04 + tail;
       break;
     }
@@ -149,15 +193,15 @@ function drum(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, v:
       const bus = ctx.createGain();
       metal(40 * tune).connect(bus);
       const nz = ctx.createGain(); nz.gain.value = 0.25 + p.tone * 0.6; noise().connect(nz).connect(bus);
-      bus.connect(filt('bandpass', 10000, 0.9)).connect(filt('highpass', 6500 + p.tone * 2000)).connect(env(0.5, dec)).connect(into);
+      bus.connect(env(0.5, dec)).connect(into);
       len = dec;
       break;
     }
     case 'ride': {
       const dec = 1.1 * dm, bus = ctx.createGain();
-      metal(60 * tune, [2, 3, 4.16, 5.43, 6.79, 8.21, 11.3]).connect(bus);
-      bus.connect(filt('bandpass', 7600, 1.2)).connect(filt('highpass', 3500)).connect(env(0.45, dec)).connect(into);
-      osc('sine', 620 * tune).connect(env(0.06 + p.tone * 0.1, dec * 0.6)).connect(into);
+      metal(60 * tune, true).connect(bus);
+      bus.connect(env(0.45, dec)).connect(into);
+      osc('sine', 620 * tune).connect(env(0.06 + p.tone * 0.1, dec * 0.6)).connect(dry());
       len = dec;
       break;
     }
@@ -166,7 +210,7 @@ function drum(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, v:
       metal(55 * tune).connect(bus);
       const nz = ctx.createGain(); nz.gain.value = 0.9; noise().connect(nz).connect(bus);
       const lp = filt('lowpass', 12000); lp.frequency.setValueAtTime(14000, t); lp.frequency.exponentialRampToValueAtTime(4000 + p.tone * 6000, t + dec);
-      bus.connect(filt('highpass', 2400)).connect(lp).connect(env(0.5, dec, 0.003)).connect(into);
+      bus.connect(lp).connect(env(0.5, dec, 0.003)).connect(into);
       len = dec;
       break;
     }
@@ -196,7 +240,7 @@ function drum(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, v:
     }
     case 'shaker': {
       const dec = 0.07 * dm;
-      noise().connect(filt('bandpass', (6500 + p.tone * 3500) * tune, 2.4)).connect(env(0.7, dec, 0.014)).connect(into);
+      noise().connect(env(0.7, dec, 0.014)).connect(into);
       len = dec + 0.02;
       break;
     }
@@ -417,6 +461,7 @@ export class Engine {
   pad: PadState = { active: -1, queued: null, stopping: false };
   private virt = 0; private next = 0; private timer: number | null = null;
   private queue: { t: number; step: number; virt: number }[] = [];
+  private restart = false;
   private repeats: Repeat[] = [];
   private pendingRepeats: Repeat[] = [];
   private buf: Float32Array<ArrayBuffer> | null = null;
@@ -425,7 +470,7 @@ export class Engine {
 
   private songs() { return this.bank ? [this.studio, ...this.bank.filter(Boolean)] : [this.song]; }
   private ensure() {
-    if (!this.ctx) this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
+    if (!this.ctx) { this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' }); prepareMetal(this.ctx.sampleRate); }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     if (!this.g || this.g.key !== keyOf(this.songs())) this.rebuild();
   }
@@ -461,6 +506,7 @@ export class Engine {
   launch(i: number) {
     if (!this.bank?.[i]) return;
     if (!this.playing) { this.song = this.bank[i]; this.pad = { active: i, queued: null, stopping: false }; this.play(); return; }
+    if (this.pad.active === i && this.pad.queued == null) { this.restart = true; this.pad.stopping = false; return; }   // like a sampler: hit it again, it starts again
     this.pad.queued = i; this.pad.stopping = false;
     if (this.quantize === 'now') this.cutTo(i);
   }
@@ -483,14 +529,15 @@ export class Engine {
   }
   stop() {
     this.playing = false; if (this.timer != null) clearInterval(this.timer); this.timer = null; this.queue = [];
-    this.player?.mono.clear(); this.repeats = []; this.pendingRepeats = []; this.pad.queued = null; this.pad.stopping = false;
+    this.player?.mono.clear(); this.repeats = []; this.pendingRepeats = []; this.pad.queued = null; this.pad.stopping = false; this.restart = false;
   }
   private schedule() {
     if (!this.ctx || !this.player || !this.playing) return;
-    while (this.next < this.ctx.currentTime + 0.1) {
+    while (this.next < this.ctx.currentTime + 0.08) {
       const v = this.virt, q = this.quantize === 'beat' ? 4 : 16;
       if (this.bank && this.pad.stopping && v % 16 === 0 && v > 0) { this.stop(); return; }
       if (this.bank && this.pad.queued != null && v % q === 0 && v > 0) this.cutTo(this.pad.queued);
+      if (this.restart) { this.restart = false; this.cutTo(this.pad.active); this.player.mono.forEach(m => m.h.cut(this.next)); this.player.mono.clear(); }
       const vv = this.virt, steps = stepsOf(this.song), stepDur = 60 / this.bpm() / 4;
       // slices and stutters start on the next step
       for (const r of this.pendingRepeats) {
@@ -572,6 +619,7 @@ export async function renderWav(song: Song, loops = 4) {
   const stepDur = 60 / song.bpm / 4, steps = stepsOf(song);
   const total = steps * loops * stepDur + 3;
   const rate = 44100, ctx = new OfflineAudioContext(2, Math.ceil(total * rate), rate);
+  await prepareMetal(rate);
   const g = buildGraph(ctx, [song]), player = new Player(ctx, g, song);
   let t = 0.05;
   for (let r = 0; r < loops; r++) for (let s = 0; s < steps; s++) { player.step(s, t + swingAt(song, s, stepDur), stepDur); t += stepDur; }
@@ -592,6 +640,7 @@ function wav(buf: AudioBuffer) {
 // for testing: render the loop once and measure each channel on its own
 export async function measure(song: Song, raw = true) {
   const res: Record<string, { peak: number; rms: number }> = {};
+  await prepareMetal(44100);
   const run = async (s: Song) => {
     const stepDur = 60 / s.bpm / 4, steps = stepsOf(s), ctx = new OfflineAudioContext(2, Math.ceil((steps * stepDur + 1.5) * 44100), 44100);
     const g = buildGraph(ctx, [s], raw), p = new Player(ctx, g, s);
