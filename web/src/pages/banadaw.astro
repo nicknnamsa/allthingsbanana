@@ -6,15 +6,16 @@ import Base from '../layouts/Base.astro';
   <header class="bd-intro">
     <div class="bd-tags"><span class="tag"><i class="dot d-butter"></i>Beta</span><span class="tag soft">Works best with headphones</span></div>
     <h1>BanaDAW</h1>
-    <p>A banana-powered loop studio. Pick a sound from the bunch, draw notes in the piano roll, turn the knobs. Space plays.</p>
+    <p>A banana-powered loop studio. Pick a sound from the bunch, draw notes in the piano roll, turn the knobs. Space plays. <a href="/banadaw/how-to/">How BanaDAW works →</a></p>
   </header>
 
-  <div class="bdaw" id="app" data-no-banana>
+  <div class="bdaw" id="app" data-view="notes" data-no-banana>
     <!-- toolbar -->
     <div class="tb">
       <div class="tb-g">
         <button class="t-btn play" id="play" title="Play / stop (Space)" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z"/></svg></button>
         <button class="t-btn" id="stop" title="Stop" aria-label="Stop"><svg viewBox="0 0 20 20"><rect x="5" y="5" width="10" height="10" rx="1"/></svg></button>
+        <button class="t-btn" id="metro" aria-pressed="false" title="Metronome (M)" aria-label="Metronome"><svg viewBox="0 0 20 20"><path d="M7.2 2.5h5.6l3.2 15H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 13.5 14.5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 14.5h10" stroke="currentColor" stroke-width="1.6"/></svg></button>
         <output class="lcd" id="lcd" aria-label="Position">1.1.1</output>
         <span class="mascot" id="mascot" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z" fill="var(--banana)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M5.5 8.5 4.6 4.4l3 1.3" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/></svg></span>
       </div>
@@ -40,7 +41,7 @@ import Base from '../layouts/Base.astro';
       <!-- channel rack -->
       <aside class="rack" aria-label="Channel rack">
         <div class="pane-h"><input class="song-name" id="songName" aria-label="Loop name" maxlength="40"></div>
-        <div class="rack-t"><span>The bunch</span><small id="rackCount"></small></div>
+        <div class="rack-t"><span>The bunch</span><small id="rackCount"></small><button class="mini-tog" id="compact" aria-pressed="false" title="Make the rows smaller">Compact</button></div>
         <div class="rack-list" id="rack"></div>
         <label class="rack-add"><span class="sr-only">Add a channel</span><select id="add"></select></label>
       </aside>
@@ -48,15 +49,21 @@ import Base from '../layouts/Base.astro';
       <!-- piano roll / drum roll -->
       <section class="editor" aria-label="Editor">
         <div class="pane-h ed-h">
-          <span class="ed-title"><i id="edSw"></i><b id="edName"></b><small id="edKind"></small></span>
+          <span class="ed-tabs" role="tablist" aria-label="Editor">
+            <button role="tab" data-view="notes" aria-selected="true">Notes</button>
+            <button role="tab" data-view="auto" aria-selected="false">Automation</button>
+            <button role="tab" data-view="pads" aria-selected="false">Pads</button>
+          </span>
+          <span class="ed-title notes-only"><i id="edSw"></i><b id="edName"></b><small id="edKind"></small></span>
           <span class="ed-tools">
+            <button class="tog auto-only" id="condense" aria-pressed="false" title="Make every lane small">Condense all</button>
             <label class="tb-f syn">Draw <select id="chord"></select></label>
             <label class="tb-f syn">Length <select id="len"><option value="1">1/16</option><option value="2">1/8</option><option value="4">1/4</option><option value="8">1/2</option><option value="16">1 bar</option></select></label>
-            <label class="tb-f">Snap <select id="snap"><option value="1">1/16</option><option value="2">1/8</option><option value="4">1/4</option><option value="16">Bar</option></select></label>
+            <label class="tb-f not-pads">Snap <select id="snap"><option value="1">1/16</option><option value="2">1/8</option><option value="4">1/4</option><option value="16">Bar</option></select></label>
             <button class="tog syn" id="lock" aria-pressed="true" title="New and moved notes stay in the key">Scale lock</button>
             <button class="tog syn" id="ghost" aria-pressed="true" title="Show the other instruments' notes faintly">Ghosts</button>
-            <span class="zoom"><button class="tog" id="zOut" aria-label="Zoom out">−</button><button class="tog" id="zIn" aria-label="Zoom in">+</button></span>
-            <button class="tog" id="clear">Clear</button>
+            <span class="zoom notes-only"><button class="tog" id="zOut" aria-label="Zoom out">−</button><button class="tog" id="zIn" aria-label="Zoom in">+</button></span>
+            <button class="tog notes-only" id="clear">Clear</button>
           </span>
         </div>
         <div class="roll" id="roll">
@@ -69,6 +76,36 @@ import Base from '../layouts/Base.astro';
           </div>
           <div class="vel-l" title="How hard each note or hit plays: green is soft, brown hits hardest">Ripeness</div>
           <canvas id="vel" aria-label="Velocity: drag up and down"></canvas>
+        </div>
+        <div class="auto-view" id="autoView" hidden>
+          <div class="av-top"><div class="av-corner">Track and knob</div><canvas id="avRuler" aria-hidden="true"></canvas></div>
+          <div class="av-lanes" id="lanes"></div>
+        </div>
+        <div class="pad-view" id="padView" hidden>
+          <div class="pv-grid" id="padGrid" aria-label="Pads: keys 1 to 9"></div>
+          <div class="pv-side">
+            <div class="pv-box">
+              <div class="pv-sel"><b id="padSelName">Pad 1</b><small id="padSelMeta"></small></div>
+              <div class="pv-acts">
+                <button class="tog" id="padSave">Save the editor's loop here</button>
+                <button class="tog" id="padOpen">Open in the editor</button>
+                <button class="tog" id="padClear">Empty this pad</button>
+              </div>
+            </div>
+            <div class="pv-box pv-row">
+              <label class="tb-f">Launch on <select id="padQ"><option value="bar">the next bar</option><option value="beat">the next beat</option><option value="now">straight away</option></select></label>
+              <button class="tog" id="padTempo" aria-pressed="true" title="Every pad plays at the BPM in the toolbar">Same tempo</button>
+              <button class="tog" id="padStop" title="Stop at the end of the bar (0)">Stop <kbd>0</kbd></button>
+              <button class="tog rec" id="padRec" aria-pressed="false">● Record</button>
+            </div>
+            <div class="pv-box">
+              <div class="pv-l"><b>Slices</b> <small>hold a key to repeat that part of the loop</small></div>
+              <canvas id="padStrip" aria-hidden="true"></canvas>
+              <div class="pv-keys" id="slices"></div>
+              <div class="pv-l"><b>Stutter</b> <small>hold to repeat what's playing</small></div>
+              <div class="pv-keys" id="stutters"></div>
+            </div>
+          </div>
         </div>
         <p class="help" id="help"></p>
       </section>
@@ -125,6 +162,7 @@ import Base from '../layouts/Base.astro';
     type Song, type Channel, type Note, type Bars, type Chord, type DrumSound, type SynthPreset,
     STARTERS, SCALES, NOTE_NAMES, COLORS, DRUMS, SYNTHS, DRUM_KNOBS, SYNTH_KNOBS, BAR_CHOICES, CHORDS, STEPS_PER_BAR,
     blankSong, newId, stepsOf, setBars, encodeSong, decodeSong, validSong, noteName, inScale, snapToScale, chordAt, drumChannel, synthChannel, drumDefaults,
+    type AutoParam, MASTER_AUTO, autoParams, autoParam, autoKey, autoAt, knobValue, scaleStep,
   } from '../scripts/banadaw/song';
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -152,14 +190,16 @@ import Base from '../layouts/Base.astro';
   function save() { engine.setSong(song); store.set('banadaw2', snapshot()); }
   function edit(fn: () => void) { const b = snapshot(); fn(); commit(b); refresh(); }
   function load(s: Song) {
-    song = s;
+    song = s; selection = new Set();
     if (!song.ch.some(c => c.id === selId)) selId = song.ch.find(c => c.kind === 'synth')?.id ?? song.ch[0]?.id ?? '';
     engine.setSong(song);
     refresh(true);
   }
   function undo() { const p = past.pop(); if (!p) return; future.push(snapshot()); song = JSON.parse(p); load(song); save(); }
   function redo() { const f = future.pop(); if (!f) return; past.push(snapshot()); song = JSON.parse(f); load(song); save(); }
-  function refresh(recenter = false) { drawTop(); drawRack(); drawChan(); layout(recenter); }
+  function refresh(recenter = false) { drawTop(); drawRack(); drawChan(); layout(recenter); if (tab === 'auto') drawLanes(); }
+  let selection = new Set<Note>();   // notes picked with Alt-drag in the piano roll
+  let tab: 'notes' | 'auto' | 'pads' = 'notes';
 
   let toastT = 0;
   function toast(msg: string) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = window.setTimeout(() => (t.hidden = true), 2600); }
@@ -168,9 +208,10 @@ import Base from '../layouts/Base.astro';
   type Knob = { label: string; get: () => number; set: (v: number) => void; def: number; min?: number; max?: number; fmt: (v: number) => string; bi?: boolean };
   const knobs = new Map<string, Knob>();
   const pct = (v: number) => `${Math.round(v * 100)}%`;
-  function knobHTML(key: string, k: Knob, size = '') {
+  const isAuto = (ak?: string) => !!(ak && song.auto?.[ak]?.length);
+  function knobHTML(key: string, k: Knob, size = '', ak?: string) {
     knobs.set(key, k);
-    return `<div class="knob ${size}" data-k="${key}" role="slider" tabindex="0" aria-label="${esc(k.label)}"><svg viewBox="0 0 40 40" aria-hidden="true"><circle class="k-bg" cx="20" cy="20" r="15"/><path class="k-tr" d="${arc(-135, 135)}"/><path class="k-arc"/><line class="k-tick" x1="20" y1="20" x2="20" y2="8"/></svg><span class="k-l">${esc(k.label)}</span><span class="k-v"></span></div>`;
+    return `<div class="knob ${size}${isAuto(ak) ? ' auto' : ''}" data-k="${key}"${ak ? ` data-ak="${ak}"` : ''} role="slider" tabindex="0" aria-label="${esc(k.label)}"><svg viewBox="0 0 40 40" aria-hidden="true"><circle class="k-bg" cx="20" cy="20" r="15"/><path class="k-tr" d="${arc(-135, 135)}"/><path class="k-arc"/><line class="k-tick" x1="20" y1="20" x2="20" y2="8"/></svg><span class="k-l">${esc(k.label)}</span><span class="k-v"></span></div>`;
   }
   function arc(a0: number, a1: number) {
     const p = (a: number) => [20 + 15 * Math.sin((a * Math.PI) / 180), 20 - 15 * Math.cos((a * Math.PI) / 180)];
@@ -178,14 +219,19 @@ import Base from '../layouts/Base.astro';
     const [x0, y0] = p(a0), [x1, y1] = p(a1);
     return `M${x0.toFixed(2)} ${y0.toFixed(2)}A15 15 0 ${Math.abs(a1 - a0) > 180 ? 1 : 0} ${a1 > a0 ? 1 : 0} ${x1.toFixed(2)} ${y1.toFixed(2)}`;
   }
-  function paintKnob(el: HTMLElement) {
+  function paintKnob(el: HTMLElement, over?: number) {
     const k = knobs.get(el.dataset.k!); if (!k) return;
-    const min = k.min ?? 0, max = k.max ?? 1, v = k.get(), n = (v - min) / (max - min), a = -135 + n * 270;
+    const min = k.min ?? 0, max = k.max ?? 1, v = over ?? k.get(), n = (v - min) / (max - min), a = -135 + n * 270;
     el.querySelector('.k-arc')!.setAttribute('d', k.bi ? arc(Math.min(0, a), Math.max(0, a)) : arc(-135, a));
     el.querySelector('.k-tick')!.setAttribute('transform', `rotate(${a} 20 20)`);
     el.querySelector('.k-v')!.textContent = k.fmt(v);
     el.setAttribute('aria-valuemin', String(min)); el.setAttribute('aria-valuemax', String(max));
     el.setAttribute('aria-valuenow', v.toFixed(2)); el.setAttribute('aria-valuetext', k.fmt(v));
+    el.title = el.classList.contains('auto') ? `${k.label} is automated: the line in the Automation tab turns it while the loop plays` : '';
+  }
+  // knobs with a line in the Automation tab get a pink dot (and follow the line while playing)
+  function refreshAutoMarks() {
+    $('app').querySelectorAll<HTMLElement>('.knob[data-ak]').forEach(el => { el.classList.toggle('auto', isAuto(el.dataset.ak)); paintKnob(el); });
   }
   const paintKnobs = (root: ParentNode) => root.querySelectorAll<HTMLElement>('.knob').forEach(paintKnob);
   function setKnob(el: HTMLElement, v: number) {
@@ -219,6 +265,24 @@ import Base from '../layouts/Base.astro';
   $('add').innerHTML = `<option value="">+ Add channel</option><optgroup label="Drums">${(Object.keys(DRUMS) as DrumSound[]).map(d => `<option value="d:${d}">${DRUMS[d].label}</option>`).join('')}</optgroup>`
     + ['Bass', 'Lead', 'Chords', 'Keys', 'FX'].map(gr => `<optgroup label="${gr}">${(Object.keys(SYNTHS) as SynthPreset[]).filter(p => SYNTHS[p].group === gr).map(p => `<option value="s:${p}">${SYNTHS[p].label}</option>`).join('')}</optgroup>`).join('');
 
+  const fmtFilter = (v: number) => (v < -0.02 ? `Dark ${pct(-v)}` : v > 0.02 ? `Thin ${pct(v)}` : 'Open');
+  const fmtPan = (v: number) => (Math.abs(v) < 0.04 ? 'Centre' : `${pct(Math.abs(v))} ${v < 0 ? 'L' : 'R'}`);
+  const hzFmt = (v: number) => { const f = 30 * 2 ** (v * 9.3); return f >= 1000 ? `${(f / 1000).toFixed(1)} kHz` : `${Math.round(f)} Hz`; };
+  const secs = (s: number) => (s < 1 ? `${Math.round(s * 1000)} ms` : `${s.toFixed(2)} s`);
+  const fmtTune = (v: number) => `${v >= 0.5 ? '+' : '−'}${Math.abs(Math.round((v - 0.5) * 14 * 1.2))} st`;
+  // how a knob's value reads, for knobs and automation points alike
+  function fmtParam(owner: string, k: string, v: number) {
+    if (owner === 'm') return k === 'filter' ? fmtFilter(v) : pct(v);
+    const c = song.ch.find(x => x.id === owner);
+    if (k === 'pan') return fmtPan(v);
+    if (k === 'duck') return v < 0.02 ? 'Off' : pct(v);
+    if (c?.kind === 'drum' && k === 'tune') return fmtTune(v);
+    if (k === 'cutoff') return hzFmt(v);
+    if (k === 'attack') return secs(0.0015 + v ** 3 * 2.5);
+    if (k === 'release') return secs(0.015 + v * v * 2.5);
+    if (k === 'glide') return secs(0.035 + v * v * 0.4);
+    return pct(v);
+  }
   function drawTop() {
     $<HTMLInputElement>('songName').value = song.name;
     $<HTMLInputElement>('bpm').value = String(song.bpm);
@@ -227,9 +291,9 @@ import Base from '../layouts/Base.astro';
     $('bars').querySelectorAll<HTMLButtonElement>('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.b! === song.bars)));
     $('masterKnobs').innerHTML = [
       knobHTML('swing', { label: 'Swing', get: () => song.swing, set: v => (song.swing = v), def: 0, max: 0.6, fmt: v => pct(v / 0.6) }, 'sm'),
-      knobHTML('mfilter', { label: 'Filter', get: () => song.master.filter, set: v => (song.master.filter = Math.abs(v) < 0.03 ? 0 : v), def: 0, min: -1, max: 1, bi: true, fmt: v => (v < -0.02 ? `Dark ${pct(-v)}` : v > 0.02 ? `Thin ${pct(v)}` : 'Open') }, 'sm'),
-      knobHTML('mdrive', { label: 'Drive', get: () => song.master.drive, set: v => (song.master.drive = v), def: 0.15, fmt: pct }, 'sm'),
-      knobHTML('mvol', { label: 'Master', get: () => song.master.vol, set: v => (song.master.vol = v), def: 0.8, fmt: pct }, 'sm'),
+      knobHTML('mfilter', { label: 'Filter', get: () => song.master.filter, set: v => (song.master.filter = Math.abs(v) < 0.03 ? 0 : v), def: 0, min: -1, max: 1, bi: true, fmt: fmtFilter }, 'sm', 'm:filter'),
+      knobHTML('mdrive', { label: 'Drive', get: () => song.master.drive, set: v => (song.master.drive = v), def: 0.15, fmt: pct }, 'sm', 'm:drive'),
+      knobHTML('mvol', { label: 'Master', get: () => song.master.vol, set: v => (song.master.vol = v), def: 0.8, fmt: pct }, 'sm', 'm:vol'),
     ].join('');
     paintKnobs($('masterKnobs'));
   }
@@ -374,19 +438,68 @@ import Base from '../layouts/Base.astro';
 
   // ---------- transport ----------
   const playBtn = () => { $('play').classList.toggle('on', engine.playing); $('play').setAttribute('aria-label', engine.playing ? 'Stop' : 'Play'); };
-  const toggle = () => { if (engine.playing) engine.stop(); else { engine.setSong(song); engine.play(); } playBtn(); };
+  const toggle = () => {
+    if (tab === 'pads') { if (engine.playing) engine.stop(); else { const i = pads[padSel] ? padSel : pads.findIndex(Boolean); if (i >= 0) engine.launch(i); else toast('Save a loop to a pad first.'); } playBtn(); return; }
+    if (engine.playing) engine.stop(); else { engine.setSong(song); engine.play(); } playBtn();
+  };
+  // metronome: a click on every beat while you play (never in the WAV)
+  engine.metronome = store.get('banadaw-metro') === '1';
+  const metroBtn = () => $('metro').setAttribute('aria-pressed', String(engine.metronome));
+  const toggleMetro = () => { engine.metronome = !engine.metronome; store.set('banadaw-metro', engine.metronome ? '1' : '0'); metroBtn(); toast(engine.metronome ? 'Metronome on.' : 'Metronome off.'); };
+  $('metro').addEventListener('click', toggleMetro); metroBtn();
   $('play').addEventListener('click', toggle);
   $('stop').addEventListener('click', () => { engine.stop(); playBtn(); dirty = true; });
   // the computer keyboard plays the selected synth, like a little piano: A W S E D F T G Y H U J K
   const KEYMAP = 'awsedftgyhujk';
+  const SLICE_KEYS = 'qwertyui', STUTTER_KEYS: Record<string, [number, string]> = { z: [4, '1 beat'], x: [2, '1/8'], c: [1, '1/16'] };
   addEventListener('keydown', e => {
-    const typing = (e.target as HTMLElement).closest('input, select, textarea, .knob');
+    const typing = (e.target as HTMLElement).closest('input, select, textarea, .knob, dialog');
     if (typing) return;
+    const k = e.key.toLowerCase(), mod = e.metaKey || e.ctrlKey;
     if (e.code === 'Space') { e.preventDefault(); toggle(); return; }
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
-    const i = KEYMAP.indexOf(e.key.toLowerCase());
-    if (i >= 0 && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) { const c = sel(); engine.preview(c, 12 * Math.floor(viewMid() / 12) + i, 0.8); flash = { m: 12 * Math.floor(viewMid() / 12) + i, t: performance.now() }; dirty = true; }
+    if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+    if (k === 'm' && !mod && !e.altKey) { toggleMetro(); return; }
+    // pads: 1-9 launch, 0 stops, Q-I hold slices, Z X C hold stutters
+    if (tab === 'pads') {
+      if (e.repeat) { if ('123456789qwertyuizxc'.includes(k)) e.preventDefault(); return; }
+      const d = /^Digit([0-9])$/.exec(e.code)?.[1];
+      if (d === '0') { engine.stopAtBar(); return; }
+      if (d) { const i = +d - 1; if (pads[i]) { padSel = i; engine.launch(i); playBtn(); drawPads(); } else toast(`Pad ${d} is empty. Click it to save the editor's loop there.`); return; }
+      if (SLICE_KEYS.includes(k) && !mod) { engine.hold('k' + k, 'slice', SLICE_KEYS.indexOf(k)); held.add('k' + k); return; }
+      if (k in STUTTER_KEYS && !mod) { engine.hold('k' + k, 'stutter', STUTTER_KEYS[k][0]); held.add('k' + k); return; }
+      return;
+    }
+    // piano roll: work on the selected notes
+    const c = sel();
+    if (tab === 'notes' && c.kind === 'synth') {
+      if (mod && k === 'a') { e.preventDefault(); selection = new Set(c.notes); dirty = true; return; }
+      if (k === 'escape') { selection.clear(); dirty = true; return; }
+      if (selection.size) {
+        const nudge = (fn: () => void) => { e.preventDefault(); const b = snapshot(); fn(); commit(b); drawRackPreviews(); dirty = true; };
+        if (k === 'delete' || k === 'backspace') return nudge(() => { c.notes = c.notes.filter(n => !selection.has(n)); selection.clear(); });
+        if (mod && k === 'd') return nudge(() => {   // duplicate the selection right after itself
+          const list = [...selection], lo = Math.min(...list.map(n => n.s)), span = Math.max(...list.map(n => n.s + n.l)) - lo;
+          const copies = list.map(n => ({ ...n, s: n.s + span })).filter(n => n.s < stepsOf(song)).map(n => ({ ...n, l: Math.min(n.l, stepsOf(song) - n.s) }));
+          c.notes.push(...copies); selection = new Set(copies);
+        });
+        if (k === 'arrowup' || k === 'arrowdown') return nudge(() => {
+          const dir = k === 'arrowup' ? 1 : -1;
+          for (const n of selection) n.m = clamp(e.shiftKey ? n.m + 12 * dir : lock ? scaleStep(song, n.m, dir) : n.m + dir, LOW, TOP);
+          const first = [...selection][0]; engine.preview(c, first.m, first.v);
+        });
+        if (k === 'arrowleft' || k === 'arrowright') return nudge(() => {
+          const list = [...selection], d = (k === 'arrowright' ? 1 : -1) * snap, lo = Math.min(...list.map(n => n.s)), hi = Math.max(...list.map(n => n.s + n.l));
+          const dd = clamp(d, -lo, stepsOf(song) - hi); for (const n of list) n.s += dd;
+        });
+      }
+    }
+    // the computer keyboard plays the selected synth, like a little piano: A W S E D F T G Y H U J K
+    const i = KEYMAP.indexOf(k);
+    if (i >= 0 && !e.repeat && !mod && !e.altKey) { engine.preview(c, 12 * Math.floor(viewMid() / 12) + i, 0.8); flash = { m: 12 * Math.floor(viewMid() / 12) + i, t: performance.now() }; dirty = true; }
   });
+  const held = new Set<string>();
+  addEventListener('keyup', e => { const id = 'k' + e.key.toLowerCase(); if (held.has(id)) { held.delete(id); engine.release(id); } });
+  addEventListener('blur', () => { for (const id of held) engine.release(id); held.clear(); });
 
   $('share').addEventListener('click', async () => {
     const url = `${location.origin}/banadaw/#s=${await encodeSong(song)}`;
@@ -410,7 +523,7 @@ import Base from '../layouts/Base.astro';
       <div class="rk${c.id === selId ? ' on' : ''}${c.mix.mute ? ' muted' : ''}" data-id="${c.id}" style="--c:${COLORS[c.color]}">
         <button class="led" data-act="mute" aria-pressed="${!c.mix.mute}" title="${c.mix.mute ? 'Peeled (muted): click to unmute' : 'Click to mute'}" aria-label="${c.mix.mute ? 'Unmute' : 'Mute'} ${esc(c.name)}"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 8.5c1.5 11 11 18.5 22 14.5-1.5 3.5-5.5 5.5-10.5 5.5C9.5 28.5 4 20 5.5 8.5z"/></svg></button>
         <button class="solo${c.mix.solo ? ' on' : ''}" data-act="solo" aria-pressed="${c.mix.solo}" title="Solo">S</button>
-        ${knobHTML(`ch:${c.id}:vol`, { label: 'Volume', get: () => c.mix.vol, set: v => (c.mix.vol = v), def: 0.78, fmt: pct }, 'xs')}
+        ${knobHTML(`ch:${c.id}:vol`, { label: 'Volume', get: () => c.mix.vol, set: v => (c.mix.vol = v), def: 0.78, fmt: pct }, 'xs', autoKey(c.id, 'vol'))}
         <button class="rk-name" data-act="pick"><b>${esc(c.name)}</b>${c.name === instLabel(c) ? '' : `<small>${esc(instLabel(c))}</small>`}</button>
         <canvas class="rk-prev" data-act="pick" width="150" height="30"></canvas>
       </div>`).join('');
@@ -440,7 +553,7 @@ import Base from '../layouts/Base.astro';
   $('rack').addEventListener('click', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]'); if (!b) return;
     const id = b.closest<HTMLElement>('.rk')!.dataset.id!, c = song.ch.find(x => x.id === id)!;
-    if (b.dataset.act === 'pick') { if (selId !== id) { selId = id; drawRack(); drawChan(); layout(true); } engine.preview(c, c.kind === 'synth' ? (c.notes[0]?.m ?? SYNTHS[c.preset].low + 12) : 60); return; }
+    if (b.dataset.act === 'pick') { if (selId !== id) { selId = id; selection.clear(); drawRack(); drawChan(); layout(true); } engine.preview(c, c.kind === 'synth' ? (c.notes[0]?.m ?? SYNTHS[c.preset].low + 12) : 60); return; }
     edit(() => { if (b.dataset.act === 'mute') c.mix.mute = !c.mix.mute; else c.mix.solo = !c.mix.solo; });
   });
   $('add').addEventListener('change', e => {
@@ -462,19 +575,17 @@ import Base from '../layouts/Base.astro';
     $('inst').innerHTML = c.kind === 'drum'
       ? (Object.keys(DRUMS) as DrumSound[]).map(d => `<option value="${d}"${d === c.sound ? ' selected' : ''}>${DRUMS[d].label}</option>`).join('')
       : ['Bass', 'Lead', 'Chords', 'Keys', 'FX'].map(gr => `<optgroup label="${gr}">${(Object.keys(SYNTHS) as SynthPreset[]).filter(p => SYNTHS[p].group === gr).map(p => `<option value="${p}"${p === c.preset ? ' selected' : ''}>${SYNTHS[p].label}</option>`).join('')}</optgroup>`).join('');
-    const hzFmt = (v: number) => { const f = 30 * 2 ** (v * 9.3); return f >= 1000 ? `${(f / 1000).toFixed(1)} kHz` : `${Math.round(f)} Hz`; };
-    const secs = (s: number) => (s < 1 ? `${Math.round(s * 1000)} ms` : `${s.toFixed(2)} s`);
     $('soundKnobs').innerHTML = c.kind === 'drum'
       ? DRUM_KNOBS.map(({ k, label }) => knobHTML(`ch:${c.id}:p:${k}`, { label, get: () => c.p[k], set: v => (c.p[k] = v), def: drumDefaults()[k], bi: k === 'tune', min: 0, max: 1,
-          fmt: v => (k === 'tune' ? `${v >= 0.5 ? '+' : '−'}${Math.abs(Math.round((v - 0.5) * 14 * 1.2))} st` : pct(v)) })).join('')
+          fmt: v => fmtParam(c.id, k, v) }, '', autoKey(c.id, k))).join('')
       : SYNTH_KNOBS.filter(({ k }) => k !== 'glide' || SYNTHS[c.preset].mono).map(({ k, label }) => knobHTML(`ch:${c.id}:p:${k}`, { label, get: () => c.p[k], set: v => (c.p[k] = v), def: SYNTHS[c.preset].p[k],
-          fmt: v => (k === 'cutoff' ? hzFmt(v) : k === 'attack' ? secs(0.0015 + v ** 3 * 2.5) : k === 'release' ? secs(0.015 + v * v * 2.5) : k === 'glide' ? secs(0.035 + v * v * 0.4) : pct(v)) })).join('');
+          fmt: v => fmtParam(c.id, k, v) }, '', autoKey(c.id, k))).join('');
     $('mixKnobs').innerHTML = [
-      knobHTML(`ch:${c.id}:vol2`, { label: 'Volume', get: () => c.mix.vol, set: v => (c.mix.vol = v), def: 0.78, fmt: pct }),
-      knobHTML(`ch:${c.id}:pan`, { label: 'Pan', get: () => c.mix.pan, set: v => (c.mix.pan = Math.abs(v) < 0.04 ? 0 : v), def: 0, min: -1, max: 1, bi: true, fmt: v => (Math.abs(v) < 0.04 ? 'Centre' : `${pct(Math.abs(v))} ${v < 0 ? 'L' : 'R'}`) }),
-      knobHTML(`ch:${c.id}:rev`, { label: 'Reverb', get: () => c.mix.rev, set: v => (c.mix.rev = v), def: 0.1, fmt: pct }),
-      knobHTML(`ch:${c.id}:dly`, { label: 'Delay', get: () => c.mix.dly, set: v => (c.mix.dly = v), def: 0, fmt: pct }),
-      knobHTML(`ch:${c.id}:duck`, { label: 'Sidechain', get: () => c.mix.duck, set: v => (c.mix.duck = v), def: 0, fmt: v => (v < 0.02 ? 'Off' : pct(v)) }),
+      knobHTML(`ch:${c.id}:vol2`, { label: 'Volume', get: () => c.mix.vol, set: v => (c.mix.vol = v), def: 0.78, fmt: pct }, '', autoKey(c.id, 'vol')),
+      knobHTML(`ch:${c.id}:pan`, { label: 'Pan', get: () => c.mix.pan, set: v => (c.mix.pan = Math.abs(v) < 0.04 ? 0 : v), def: 0, min: -1, max: 1, bi: true, fmt: fmtPan }, '', autoKey(c.id, 'pan')),
+      knobHTML(`ch:${c.id}:rev`, { label: 'Reverb', get: () => c.mix.rev, set: v => (c.mix.rev = v), def: 0.1, fmt: pct }, '', autoKey(c.id, 'rev')),
+      knobHTML(`ch:${c.id}:dly`, { label: 'Delay', get: () => c.mix.dly, set: v => (c.mix.dly = v), def: 0, fmt: pct }, '', autoKey(c.id, 'dly')),
+      knobHTML(`ch:${c.id}:duck`, { label: 'Sidechain', get: () => c.mix.duck, set: v => (c.mix.duck = v), def: 0, fmt: v => fmtParam(c.id, 'duck', v) }, '', autoKey(c.id, 'duck')),
     ].join('');
     paintKnobs($('chan'));
     $<HTMLButtonElement>('del').disabled = song.ch.length <= 1;
@@ -493,10 +604,14 @@ import Base from '../layouts/Base.astro';
     const c = sel(), i = song.ch.indexOf(c), copy: Channel = JSON.parse(JSON.stringify(c));
     copy.id = newId(); copy.name = `${c.name} 2`.slice(0, 24); copy.color = (c.color + 1) % COLORS.length;
     song.ch.splice(i + 1, 0, copy); selId = copy.id;
+    for (const key in song.auto ?? {}) if (key.startsWith(c.id + ':')) song.auto![copy.id + key.slice(c.id.length)] = JSON.parse(JSON.stringify(song.auto![key]));
   }));
   $('del').addEventListener('click', () => {
     const c = sel(); if (song.ch.length <= 1) return;
-    edit(() => { const i = song.ch.indexOf(c); song.ch.splice(i, 1); selId = song.ch[Math.min(i, song.ch.length - 1)].id; });
+    edit(() => {
+      const i = song.ch.indexOf(c); song.ch.splice(i, 1); selId = song.ch[Math.min(i, song.ch.length - 1)].id;
+      for (const key in song.auto ?? {}) if (key.startsWith(c.id + ':')) delete song.auto![key];
+    });
     toast(`Deleted ${c.name}. Undo brings it back.`);
   });
 
@@ -534,9 +649,9 @@ import Base from '../layouts/Base.astro';
     $('edSw').style.background = COLORS[c.color];
     $('edName').textContent = c.name;
     $('edKind').textContent = mode === 'drum' ? 'Drum roll · every drum channel' : `Piano roll · ${instLabel(c)}`;
-    $('help').textContent = mode === 'drum'
+    if (tab === 'notes') $('help').textContent = mode === 'drum'
       ? (coarse ? 'Tap a square to add or remove a hit. Drag along the velocity strip to make hits softer or harder.' : 'Click squares to add or remove hits (drag to paint). Right-click erases. Drag in the velocity strip to make hits softer or harder.')
-      : (coarse ? 'Tap the grid to add a note, tap a note to remove it. Swipe to scroll. Length sets how long new notes are.' : 'Click to add a note, drag it to move, drag its right edge to make it longer, click it again to remove it. Right-click erases. Keys A to K play along.');
+      : (coarse ? 'Tap the grid to add a note, tap a note to remove it. Swipe to scroll. Length sets how long new notes are.' : 'Click to add a note, drag to move, drag its end to lengthen, click again to remove. Alt (Option) + drag selects notes; Shift + drag copies. Keys A to K play along.');
     const steps = stepsOf(song), W = scroll.clientWidth || 600;
     const fitW = (W - 2) / steps;
     cw = clamp(fitW, coarse ? 22 : 14, 60) * zoom;
@@ -571,9 +686,11 @@ import Base from '../layouts/Base.astro';
       if (c.kind === 'synth') for (const n of c.notes) {
         const x = n.s * cw, y = (TOP - n.m) * rowH, w = Math.max(3, n.l * cw - 1);
         if (x > sx + W || x + w < sx || y > sy + H || y + rowH < sy) continue;
-        g.fillStyle = COLORS[c.color]; g.globalAlpha = 0.55 + n.v * 0.45;
+        const picked = selection.has(n);
+        g.fillStyle = picked ? '#EE7FA6' : COLORS[c.color]; g.globalAlpha = picked ? 1 : 0.55 + n.v * 0.45;
         round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.fill();
-        g.globalAlpha = 1; g.strokeStyle = C.edge; g.lineWidth = 1; round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.stroke();
+        g.globalAlpha = 1; g.strokeStyle = picked ? C.text : C.edge; g.lineWidth = picked ? 2.2 : 1; round(g, x + 0.5, y + 0.5, w - 1, rowH - 2, 3); g.stroke();
+
         if (w > 30 && rowH >= 14) { g.fillStyle = '#2b2116'; g.font = `600 ${rowH - 5}px Nunito, system-ui, sans-serif`; g.textBaseline = 'middle'; g.fillText(noteName(n.m), x + 4, y + rowH / 2); }
       }
     } else {
@@ -590,6 +707,11 @@ import Base from '../layouts/Base.astro';
         }
       });
       grid(g, s0, s1, sy, sy + H, true);
+    }
+    if (box) {
+      const x = Math.min(box.x0, box.x1), y = Math.min(box.y0, box.y1), w = Math.abs(box.x1 - box.x0), h = Math.abs(box.y1 - box.y0);
+      g.fillStyle = 'rgba(245, 201, 62, .14)'; g.fillRect(x, y, w, h);
+      g.setLineDash([5, 4]); g.strokeStyle = C.text; g.lineWidth = 1.2; g.strokeRect(x + 0.5, y + 0.5, w, h); g.setLineDash([]);
     }
     if (pos != null) { g.fillStyle = C.play; g.fillRect(pos * cw - 1, sy, 2, H); }
     g.restore();
@@ -672,7 +794,8 @@ import Base from '../layouts/Base.astro';
     }
     return null;
   }
-  type Drag = { kind: 'move' | 'resize' | 'erase' | 'paint'; notes: Note[]; orig: Note[]; x0: number; m0: number; moved: boolean; created: boolean; before: string; paint?: number; heard?: number };
+  type Drag = { kind: 'move' | 'resize' | 'erase' | 'paint' | 'box'; notes: Note[]; orig: Note[]; x0: number; m0: number; moved: boolean; created: boolean; before: string; paint?: number; heard?: number; lead?: Note; copy?: boolean; y0?: number; keep?: Set<Note> };
+  let box: { x0: number; y0: number; x1: number; y1: number } | null = null;
   let drag: Drag | null = null, touchStart: { x: number; y: number; e: PointerEvent } | null = null;
 
   scroll.addEventListener('contextmenu', e => e.preventDefault());
@@ -696,12 +819,27 @@ import Base from '../layouts/Base.astro';
       paintAt(e);
     } else if (c.kind === 'synth') {
       if (e.button === 2) { drag = { kind: 'erase', notes: [], orig: [], x0: 0, m0: 0, moved: false, created: false, before }; eraseAt(e); }
-      else {
+      else if (e.altKey) {   // Alt / Option + drag: draw a box to select notes (add Shift to add to what's selected)
+        drag = { kind: 'box', notes: [], orig: [], x0: p.x, y0: p.y, m0: 0, moved: false, created: false, before, keep: e.shiftKey ? new Set(selection) : new Set() };
+        box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+        if (!e.shiftKey) selection.clear();
+      } else {
         const h = hitNote(p.x, p.y);
         if (h) {
           lastLen = h.n.l; syncLen();
-          drag = { kind: h.edge ? 'resize' : 'move', notes: [h.n], orig: [{ ...h.n }], x0: p.step, m0: p.m, moved: false, created: false, before, heard: h.n.m };
+          const group = selection.has(h.n) ? [...selection] : [h.n];
+          if (!selection.has(h.n)) selection.clear();
+          if (e.shiftKey) {   // Shift + drag: pull out a copy (of the whole selection, if this note is in it)
+            const copies = group.map(n => ({ ...n }));
+            c.notes.push(...copies);
+            selection = new Set(group.length > 1 ? copies : []);
+            drag = { kind: 'move', notes: copies, orig: copies.map(n => ({ ...n })), x0: p.step, m0: p.m, moved: false, created: true, copy: true, before, heard: h.n.m, lead: copies[group.indexOf(h.n)], keep: new Set(group.length > 1 ? group : []) };
+          } else {
+            drag = { kind: h.edge ? 'resize' : 'move', notes: group, orig: group.map(n => ({ ...n })), x0: p.step, m0: p.m, moved: false, created: false, before, heard: h.n.m, lead: h.n };
+          }
           if (!h.edge) engine.preview(c, h.n.m, h.n.v);
+        } else if (selection.size) {   // a click on empty space with notes selected just lets go of them
+          selection.clear(); dirty = true; return;
         } else {
           const s = clamp(Math.floor(p.step / snap) * snap, 0, stepsOf(song) - 1);
           const ms = chordAt(song, lock ? snapToScale(song, p.m) : p.m, chord).filter(m => m >= LOW && m <= TOP);
@@ -746,31 +884,46 @@ import Base from '../layouts/Base.astro';
   }
   scroll.addEventListener('pointermove', e => {
     if (!drag) {   // the cursor tells you what a click will do
-      if (mode === 'piano' && e.pointerType === 'mouse') { const p = at(e), h = hitNote(p.x, p.y); scroll.style.cursor = h ? (h.edge ? 'ew-resize' : 'grab') : 'crosshair'; }
+      if (mode === 'piano' && e.pointerType === 'mouse') { const p = at(e), h = hitNote(p.x, p.y); scroll.style.cursor = e.altKey ? 'cell' : h ? (h.edge ? 'ew-resize' : e.shiftKey ? 'copy' : 'grab') : 'crosshair'; }
       return;
     }
     const p = at(e), c = sel(), steps = stepsOf(song);
     if (drag.kind === 'paint') return paintAt(e);
     if (drag.kind === 'erase') return eraseAt(e);
     if (c.kind !== 'synth') return;
-    if (drag.kind === 'move') {
+    if (drag.kind === 'box') {
+      box!.x1 = p.x; box!.y1 = p.y;
+      const x0 = Math.min(box!.x0, p.x), x1 = Math.max(box!.x0, p.x), y0 = Math.min(box!.y0, p.y), y1 = Math.max(box!.y0, p.y);
+      selection = new Set([...drag.keep!, ...c.notes.filter(n => n.s * cw < x1 && (n.s + n.l) * cw > x0 && (TOP - n.m) * rowH < y1 && (TOP - n.m + 1) * rowH > y0)]);
+    } else if (drag.kind === 'move') {
       const ds = Math.round((p.step - drag.x0) / snap) * snap, dm = p.m - drag.m0;
+      const lo = Math.min(...drag.orig.map(o => o.s)), hi = Math.max(...drag.orig.map(o => o.s + o.l));
+      const dsc = clamp(ds, -lo, steps - hi);   // the group moves together and stays inside the loop
       drag.notes.forEach((n, i) => {
         const o = drag!.orig[i];
-        n.s = clamp(o.s + ds, 0, steps - Math.min(o.l, steps)); n.m = clamp(lock ? snapToScale(song, o.m + dm) : o.m + dm, LOW, TOP);
+        n.s = o.s + dsc; n.m = clamp(lock ? snapToScale(song, o.m + dm) : o.m + dm, LOW, TOP);
       });
       if (ds || dm) drag.moved = true;
-      if (drag.notes[0].m !== drag.heard) { drag.heard = drag.notes[0].m; engine.preview(c, drag.heard, drag.notes[0].v); }
+      const lead = drag.lead ?? drag.notes[0];
+      if (lead.m !== drag.heard) { drag.heard = lead.m; engine.preview(c, drag.heard, lead.v); }
     } else if (drag.kind === 'resize') {
-      const n = drag.notes[0], end = Math.max(n.s + snap, Math.round(p.step / snap) * snap);
-      n.l = clamp(end - n.s, Math.min(snap, 1), steps - n.s); lastLen = n.l; syncLen(); drag.moved = true;
+      const lead = drag.lead!, li = drag.notes.indexOf(lead), o = drag.orig[li];
+      const end = Math.max(o.s + snap, Math.round(p.step / snap) * snap), dl = end - o.s - o.l;
+      drag.notes.forEach((n, i) => { n.l = clamp(drag!.orig[i].l + dl, Math.min(snap, 1), steps - n.s); });
+      lastLen = lead.l; syncLen(); drag.moved = true;
     }
     dirty = true;
   });
   const endDrag = () => {
     if (!drag) return;
     const c = sel();
-    if (drag.kind === 'move' && !drag.created && !drag.moved && c.kind === 'synth') c.notes.splice(c.notes.indexOf(drag.notes[0]), 1);   // a click on a note removes it
+    if (c.kind === 'synth') {
+      // a click on a note (without dragging) removes it
+      if (drag.kind === 'move' && !drag.created && !drag.moved) { const n = drag.lead ?? drag.notes[0]; c.notes.splice(c.notes.indexOf(n), 1); selection.delete(n); }
+      // Shift-click without dragging: no copy after all
+      if (drag.copy && !drag.moved) { c.notes = c.notes.filter(n => !drag!.notes.includes(n)); selection = drag.keep ?? new Set(); }
+    }
+    box = null;
     commit(drag.before); drag = null; drawRackPreviews(); dirty = true;
   };
   scroll.addEventListener('pointerup', e => { if (e.pointerType !== 'touch') endDrag(); });
@@ -816,12 +969,295 @@ import Base from '../layouts/Base.astro';
   });
   syncLen();
 
+  // ---------- tabs: Notes, Automation, Pads ----------
+  const HELP = {
+    auto: 'Pick a knob for any track, then click its line to add a point and drag points to shape it. Right-click or double-click a point to remove it. Hold Alt (Option) to place points between the grid lines.',
+    pads: 'Click an empty pad to save the editor’s loop there. Keys 1 to 9 launch pads, 0 stops at the end of the bar, hold Q to I to repeat a slice, hold Z, X or C to stutter. Space starts and stops.',
+  };
+  function setTab(v: typeof tab) {
+    if (v === tab) return;
+    const fromPads = tab === 'pads';
+    tab = v;
+    $('app').dataset.view = v;
+    $('app').querySelectorAll<HTMLElement>('.ed-tabs [data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
+    $('roll').hidden = v !== 'notes'; $('autoView').hidden = v !== 'auto'; $('padView').hidden = v !== 'pads';
+    if (fromPads) { for (const id of held) engine.release(id); held.clear(); engine.setBank(null); playBtn(); }
+    if (v === 'pads') { engine.stop(); engine.setBank(pads.slice() as Song[]); playBtn(); drawPads(); }
+    if (v === 'auto') drawLanes();
+    if (v === 'notes') layout(); else $('help').textContent = HELP[v];
+  }
+  $('app').querySelector('.ed-tabs')!.addEventListener('click', e => { const b = (e.target as HTMLElement).closest<HTMLElement>('[data-view]'); if (b) setTab(b.dataset.view as typeof tab); });
+
+  // ---------- automation: a lane per track, a line per knob ----------
+  type Lane = { owner: string; name: string; color: string; params: AutoParam[]; muted?: boolean };
+  const laneParam: Record<string, string> = {};
+  const folded = new Set<string>();
+  let condenseAll = false, ldrag: { owner: string; key: string; i: number; before: string; el: HTMLElement } | null = null, lhover: { owner: string; i: number } | null = null;
+  const lanesList = (): Lane[] => [
+    { owner: 'm', name: 'Master', color: '#8A6400', params: MASTER_AUTO },
+    ...song.ch.map(c => ({ owner: c.id, name: c.name, color: COLORS[c.color], params: autoParams(c), muted: c.mix.mute })),
+  ];
+  function paramFor(l: Lane) {
+    const chosen = laneParam[l.owner];
+    if (chosen && l.params.some(p => p.k === chosen)) return chosen;
+    const done = l.params.find(p => song.auto?.[autoKey(l.owner, p.k)]?.length);
+    if (done) return done.k;
+    const c = song.ch.find(x => x.id === l.owner);
+    return l.owner === 'm' ? 'filter' : c?.kind === 'synth' ? 'cutoff' : 'vol';
+  }
+  function drawLanes() {
+    $('lanes').innerHTML = lanesList().map(l => {
+      const k = paramFor(l), key = autoKey(l.owner, k), small = condenseAll || folded.has(l.owner), has = !!song.auto?.[key]?.length;
+      const groups = [...new Set(l.params.map(p => p.group))];
+      const opts = groups.map(gr => `<optgroup label="${gr}">${l.params.filter(p => p.group === gr).map(p => `<option value="${p.k}"${p.k === k ? ' selected' : ''}>${song.auto?.[autoKey(l.owner, p.k)]?.length ? '● ' : ''}${esc(p.label)}</option>`).join('')}</optgroup>`).join('');
+      return `<div class="al${small ? ' small' : ''}${l.muted ? ' muted' : ''}" data-o="${l.owner}" data-k="${k}" style="--c:${l.color}">
+        <div class="al-h">
+          <button class="al-fold" data-act="fold" aria-expanded="${!small}" aria-label="${small ? 'Expand' : 'Condense'} ${esc(l.name)}">${small ? '▸' : '▾'}</button>
+          <span class="al-n"><i class="sw"></i><b>${esc(l.name)}</b></span>
+          <select data-act="param" aria-label="Knob to automate on ${esc(l.name)}">${opts}</select>
+          <button class="al-clear" data-act="clear"${has ? '' : ' disabled'} title="Remove this line">Clear</button>
+        </div>
+        <div class="al-cw"><canvas class="al-c" aria-label="Automation line for ${esc(l.name)}"></canvas></div>
+      </div>`;
+    }).join('');
+    paintLanes(engine.position());
+  }
+  function laneGeo(el: HTMLElement) {
+    const owner = el.dataset.o!, k = el.dataset.k!, key = autoKey(owner, k), small = el.classList.contains('small');
+    const cv = el.querySelector<HTMLCanvasElement>('canvas')!, W = Math.max(60, cv.parentElement!.clientWidth), H = small ? 30 : 92, steps = stepsOf(song);
+    const PX = 10, PY = small ? 4 : 10;
+    return {
+      owner, k, key, small, cv, W, H, steps,
+      xOf: (st: number) => PX + (st / steps) * (W - 2 * PX), stepOf: (x: number) => ((x - PX) / (W - 2 * PX)) * steps,
+      yOf: (v: number) => PY + (1 - v) * (H - 2 * PY), vOf: (y: number) => 1 - (y - PY) / (H - 2 * PY),
+    };
+  }
+  function paintLanes(pos: number | null) {
+    const steps = stepsOf(song);
+    let first: ReturnType<typeof laneGeo> | null = null;
+    $('lanes').querySelectorAll<HTMLElement>('.al').forEach(el => {
+      const G = laneGeo(el); first ??= G;
+      const g = fit(G.cv, G.W, G.H), pts = song.auto?.[G.key], color = el.style.getPropertyValue('--c');
+      g.fillStyle = C.row; g.fillRect(0, 0, G.W, G.H);
+      for (let b = 0; b < steps / 4; b++) if (b % 2) { g.fillStyle = C.black; g.fillRect(G.xOf(b * 4), 0, G.xOf(4) - G.xOf(0), G.H); }
+      for (let st = 0; st <= steps; st += 4) { g.fillStyle = st % 16 === 0 ? C.bar : C.beat; g.fillRect(G.xOf(st) - 0.5, 0, st % 16 === 0 ? 1.5 : 1, G.H); }
+      // the other knobs this track automates, faintly
+      const ownerCh = song.ch.find(c => c.id === G.owner);
+      for (const p of G.owner === 'm' ? MASTER_AUTO : ownerCh ? autoParams(ownerCh) : []) {
+        const other = song.auto?.[autoKey(G.owner, p.k)];
+        if (p.k === G.k || !other?.length) continue;
+        g.strokeStyle = color; g.globalAlpha = 0.3; g.lineWidth = 1.2; g.beginPath();
+        other.forEach(([x, v], i) => (i ? g.lineTo(G.xOf(x), G.yOf(v)) : g.moveTo(G.xOf(x), G.yOf(v))));
+        g.stroke(); g.globalAlpha = 1;
+      }
+      if (pts?.length) {
+        const path = () => { g.beginPath(); g.moveTo(G.xOf(0), G.yOf(pts[0][1])); for (const [x, v] of pts) g.lineTo(G.xOf(x), G.yOf(v)); g.lineTo(G.xOf(steps), G.yOf(pts[pts.length - 1][1])); };
+        path(); g.lineTo(G.xOf(steps), G.H); g.lineTo(G.xOf(0), G.H); g.closePath(); g.fillStyle = color; g.globalAlpha = 0.18; g.fill(); g.globalAlpha = 1;
+        path(); g.strokeStyle = color; g.lineWidth = 2.2; g.stroke();
+        pts.forEach(([x, v], i) => {
+          const hot = (lhover?.owner === G.owner && lhover.i === i) || (ldrag?.owner === G.owner && ldrag.i === i);
+          g.beginPath(); g.arc(G.xOf(x), G.yOf(v), G.small ? 3 : hot ? 6.5 : 5, 0, 7); g.fillStyle = hot ? color : C.keyw; g.fill(); g.strokeStyle = C.text; g.lineWidth = 1.5; g.stroke();
+          if (hot && !G.small) {
+            const p = autoParam(song, G.key)!, label = fmtParam(G.owner, G.k, p.min + v * (p.max - p.min));
+            g.font = '800 12px Nunito, system-ui, sans-serif'; const tw = g.measureText(label).width + 12;
+            const tx = clamp(G.xOf(x) - tw / 2, 2, G.W - tw - 2), ty = G.yOf(v) > 34 ? G.yOf(v) - 30 : G.yOf(v) + 12;
+            g.fillStyle = C.text; round(g, tx, ty, tw, 20, 5); g.fill(); g.fillStyle = C.bg; g.textBaseline = 'middle'; g.fillText(label, tx + 6, ty + 10);
+          }
+        });
+      } else {
+        const y = G.yOf(clamp(knobValue(song, G.key), 0, 1));
+        g.setLineDash([6, 5]); g.strokeStyle = color; g.lineWidth = 1.6; g.beginPath(); g.moveTo(G.xOf(0), y); g.lineTo(G.xOf(steps), y); g.stroke(); g.setLineDash([]);
+        if (!G.small) { g.font = '700 12.5px Nunito, system-ui, sans-serif'; g.fillStyle = C.dim; g.textAlign = 'center'; g.fillText('Click the line to start automating', G.W / 2, y > G.H / 2 ? y - 10 : y + 18); g.textAlign = 'left'; }
+      }
+      if (pos != null) { g.fillStyle = C.play; g.fillRect(G.xOf(pos) - 1, 0, 2, G.H); }
+    });
+    // the ruler over the lanes
+    if (first) {
+      const G = first as ReturnType<typeof laneGeo>, g = fit($<HTMLCanvasElement>('avRuler'), G.W, 22);
+      g.fillStyle = C.ruler; g.fillRect(0, 0, G.W, 22);
+      g.font = '700 11px Nunito, system-ui, sans-serif'; g.textBaseline = 'middle';
+      for (let st = 0; st <= steps; st += 4) { g.fillStyle = st % 16 === 0 ? C.bar : C.beat; g.fillRect(G.xOf(st), st % 16 === 0 ? 4 : 14, 1, st % 16 === 0 ? 18 : 8); if (st % 16 === 0 && st < steps) { g.fillStyle = C.text; g.fillText(String(st / 16 + 1), G.xOf(st) + 4, 10); } }
+    }
+  }
+  const lanes = $('lanes');
+  const laneAt = (e: PointerEvent | MouseEvent) => {
+    const cv = (e.target as HTMLElement).closest<HTMLCanvasElement>('canvas.al-c'); if (!cv) return null;
+    const el = cv.closest<HTMLElement>('.al')!, G = laneGeo(el), r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const pts = song.auto?.[G.key], hit = pts ? pts.findIndex(([px, pv]) => Math.hypot(G.xOf(px) - x, G.yOf(pv) - y) < 10) : -1;
+    return { el, G, x, y, pts, hit };
+  };
+  function dropPoint(key: string, i: number) {
+    const pts = song.auto?.[key]; if (!pts) return;
+    pts.splice(i, 1);
+    if (!pts.length) delete song.auto![key];
+  }
+  const afterAuto = () => { refreshAutoMarks(); drawLanes(); };
+  lanes.addEventListener('contextmenu', e => { if ((e.target as HTMLElement).closest('canvas')) e.preventDefault(); });
+  lanes.addEventListener('pointerdown', e => {
+    const L = laneAt(e); if (!L) return;
+    e.preventDefault();
+    const { G } = L, before = snapshot();
+    if (e.button === 2) { if (L.hit >= 0) { dropPoint(G.key, L.hit); commit(before); afterAuto(); } return; }
+    let i = L.hit, pts = L.pts;
+    if (i < 0) {
+      if (!pts) { song.auto ??= {}; const v0 = clamp(knobValue(song, G.key), 0, 1); pts = song.auto[G.key] = [[0, v0], [G.steps, v0]]; }
+      const st = clamp(e.altKey ? G.stepOf(L.x) : Math.round(G.stepOf(L.x) / snap) * snap, 0, G.steps);
+      const lv = autoAt(pts, st), v = Math.abs(G.yOf(lv) - L.y) < 10 ? lv : clamp(G.vOf(L.y), 0, 1);
+      i = pts.findIndex(p => p[0] === st);
+      if (i >= 0) pts[i][1] = v; else { pts.push([st, v]); pts.sort((a, b) => a[0] - b[0]); i = pts.findIndex(p => p[0] === st); }
+    }
+    ldrag = { owner: G.owner, key: G.key, i, before, el: L.el };
+    L.G.cv.setPointerCapture(e.pointerId);
+    refreshAutoMarks(); paintLanes(engine.position());
+  });
+  lanes.addEventListener('pointermove', e => {
+    if (ldrag) {
+      const G = laneGeo(ldrag.el), r = G.cv.getBoundingClientRect(), pts = song.auto?.[ldrag.key]; if (!pts) return;
+      const x = e.clientX - r.left, y = e.clientY - r.top, i = ldrag.i;
+      const lo = i > 0 ? pts[i - 1][0] : 0, hi = i < pts.length - 1 ? pts[i + 1][0] : G.steps;
+      const st = e.altKey ? G.stepOf(x) : Math.round(G.stepOf(x) / snap) * snap;
+      pts[i] = [clamp(st, lo, hi), clamp(G.vOf(y), 0, 1)];
+      paintLanes(engine.position()); refreshAutoMarks();
+      return;
+    }
+    const L = laneAt(e), h = L && L.hit >= 0 ? { owner: L.G.owner, i: L.hit } : null;
+    if (L) L.G.cv.style.cursor = h ? 'grab' : 'copy';
+    if (h?.owner !== lhover?.owner || h?.i !== lhover?.i) { lhover = h; paintLanes(engine.position()); }
+  });
+  const endLane = () => { if (!ldrag) return; const b = ldrag.before; ldrag = null; commit(b); afterAuto(); };
+  lanes.addEventListener('pointerup', endLane);
+  lanes.addEventListener('lostpointercapture', endLane);
+  lanes.addEventListener('pointerleave', () => { if (lhover && !ldrag) { lhover = null; paintLanes(engine.position()); } });
+  lanes.addEventListener('dblclick', e => { const L = laneAt(e); if (L && L.hit >= 0) { const b = snapshot(); dropPoint(L.G.key, L.hit); commit(b); afterAuto(); } });
+  lanes.addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('button[data-act]'); if (!b) return;
+    const el = b.closest<HTMLElement>('.al')!, owner = el.dataset.o!, key = autoKey(owner, el.dataset.k!);
+    if (b.dataset.act === 'fold') { folded.has(owner) ? folded.delete(owner) : folded.add(owner); if (condenseAll && !folded.has(owner)) { condenseAll = false; $('condense').setAttribute('aria-pressed', 'false'); song.ch.forEach(c => c.id !== owner && folded.add(c.id)); if (owner !== 'm') folded.add('m'); } drawLanes(); }
+    if (b.dataset.act === 'clear') { edit(() => { delete song.auto![key]; }); afterAuto(); }
+  });
+  lanes.addEventListener('change', e => {
+    const sl = e.target as HTMLSelectElement; if (sl.dataset.act !== 'param') return;
+    laneParam[sl.closest<HTMLElement>('.al')!.dataset.o!] = sl.value; drawLanes();
+  });
+  $('condense').addEventListener('click', () => { condenseAll = !condenseAll; if (!condenseAll) folded.clear(); $('condense').setAttribute('aria-pressed', String(condenseAll)); drawLanes(); });
+  new ResizeObserver(() => { if (tab === 'auto') paintLanes(engine.position()); }).observe($('autoView'));
+
+  // ---------- pads: save loops to keys 1-9 and perform with them ----------
+  let pads: (Song | null)[] = Array(9).fill(null), padSel = 0;
+  try { const saved = JSON.parse(store.get('banadaw-pads') || 'null'); if (Array.isArray(saved)) pads = Array.from({ length: 9 }, (_, i) => (validSong(saved[i]) ? saved[i] : null)); } catch {}
+  const savePads = () => { store.set('banadaw-pads', JSON.stringify(pads)); if (tab === 'pads') engine.setBank(pads.slice() as Song[]); };
+  const PAD_TINTS = ['#F5C93E', '#F2A57C', '#EE8FB0', '#B79CF0', '#7DB6E8', '#6FCDB8', '#8CC56A', '#D9B07A', '#F5C93E'];
+  $('slices').innerHTML = [...SLICE_KEYS].map((k, i) => `<button class="pk-btn" data-hold="s${i}" data-kind="slice" data-n="${i}"><kbd>${k.toUpperCase()}</kbd><span>${i + 1}</span></button>`).join('');
+  $('stutters').innerHTML = Object.entries(STUTTER_KEYS).map(([k, [n, label]]) => `<button class="pk-btn" data-hold="t${k}" data-kind="stutter" data-n="${n}"><kbd>${k.toUpperCase()}</kbd><span>${label}</span></button>`).join('');
+  function drawPads() {
+    $('padGrid').innerHTML = pads.map((p, i) => `<button class="pad${p ? ' full' : ''}${i === padSel ? ' sel' : ''}" data-i="${i}" style="--c:${PAD_TINTS[i]}" aria-label="Pad ${i + 1}: ${p ? esc(p.name) : 'empty'}">
+      <span class="pk">${i + 1}</span>${p ? `<b>${esc(p.name)}</b><small>${p.bpm} BPM · ${p.bars} ${p.bars === 1 ? 'bar' : 'bars'}</small>` : `<small><span class="lg">Empty: click to save the editor’s loop here</span><span class="sm">+ Save here</span></small>`}<i class="pbar"></i></button>`).join('');
+    const p = pads[padSel];
+    $('padSelName').textContent = `Pad ${padSel + 1}`;
+    $('padSelMeta').textContent = p ? ` · ${p.name}` : ' · empty';
+    $<HTMLButtonElement>('padOpen').disabled = !p; $<HTMLButtonElement>('padClear').disabled = !p;
+    $('padSave').textContent = p ? 'Replace it with the editor’s loop' : 'Save the editor’s loop here';
+  }
+  function savePad(i: number) {
+    const notes = song.ch.reduce((a, c) => a + (c.kind === 'drum' ? c.steps.filter(Boolean).length : c.notes.length), 0);
+    if (!notes) { toast('The editor’s loop is empty. Make something in the Notes tab first.'); return; }
+    pads[i] = JSON.parse(snapshot()); savePads(); drawPads();
+    toast(`Saved “${song.name}” to pad ${i + 1}. Press ${i + 1} to play it.`);
+  }
+  $('padGrid').addEventListener('pointerdown', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('.pad'); if (!b) return;
+    const i = +b.dataset.i!; padSel = i;
+    if (!pads[i]) savePad(i); else { engine.launch(i); playBtn(); }
+    drawPads();
+  });
+  $('padSave').addEventListener('click', () => { if (pads[padSel] && !confirm(`Replace pad ${padSel + 1} with the editor’s loop?`)) return; savePad(padSel); });
+  $('padOpen').addEventListener('click', () => {
+    const p = pads[padSel]; if (!p) return;
+    setTab('notes'); edit(() => { song = JSON.parse(JSON.stringify(p)); selId = ''; }); load(song);
+    toast(`Opened pad ${padSel + 1} in the editor. Save it back to the pad when you’re done.`);
+  });
+  $('padClear').addEventListener('click', () => {
+    if (!pads[padSel] || !confirm(`Empty pad ${padSel + 1}?`)) return;
+    if (engine.pad.active === padSel) { engine.stop(); playBtn(); }
+    pads[padSel] = null; savePads(); drawPads();
+  });
+  $('padQ').addEventListener('change', e => (engine.quantize = (e.target as HTMLSelectElement).value as typeof engine.quantize));
+  $('padTempo').addEventListener('click', () => { engine.ownTempo = !engine.ownTempo; $('padTempo').setAttribute('aria-pressed', String(!engine.ownTempo)); engine.setBank(pads.slice() as Song[]); });
+  $('padStop').addEventListener('click', () => engine.stopAtBar());
+  $('padRec').addEventListener('click', () => {
+    if (engine.recording) { engine.stopRecording(); return; }
+    if (!engine.startRecording()) { toast('This browser can’t record. Try Chrome, Edge or Firefox.'); return; }
+    $('padRec').setAttribute('aria-pressed', 'true'); $('padRec').textContent = '■ Stop recording';
+    toast('Recording. Play your pads, then press Stop recording to download it.');
+  });
+  engine.onRecorded = blob => {
+    $('padRec').setAttribute('aria-pressed', 'false'); $('padRec').textContent = '● Record';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `banadaw-performance.${blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'}`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast('Saved your performance.');
+  };
+  // slices and stutters you hold with the mouse or a finger
+  $('padView').addEventListener('pointerdown', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-hold]'); if (!b) return;
+    e.preventDefault(); b.setPointerCapture(e.pointerId);
+    const id = 'p' + b.dataset.hold!;
+    engine.hold(id, b.dataset.kind as 'slice' | 'stutter', +b.dataset.n!); b.classList.add('on');
+    const up = () => { engine.release(id); b.classList.remove('on'); };
+    b.addEventListener('pointerup', up, { once: true }); b.addEventListener('pointercancel', up, { once: true });
+  });
+  let shownBeat: number | null = null;
+  function padFrame(pos: number | null) {
+    const st = engine.pad, blink = Math.floor(performance.now() / 180) % 2 === 0, beat = engine.beat();
+    $('padGrid').querySelectorAll<HTMLElement>('.pad').forEach(el => {
+      const i = +el.dataset.i!, on = engine.playing && st.active === i;
+      el.classList.toggle('on', on); el.classList.toggle('queued', st.queued === i && blink);
+      const bar = el.querySelector<HTMLElement>('.pbar')!;
+      bar.style.width = on && pos != null && pads[i] ? `${(pos / stepsOf(pads[i]!)) * 100}%` : '0';
+    });
+    if (beat !== shownBeat) { shownBeat = beat; const el = $('padGrid').querySelector<HTMLElement>('.pad.on'); if (el) { el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); } }
+    $('padStop').classList.toggle('blink', st.stopping && blink);
+    for (const k of SLICE_KEYS) $('slices').querySelector(`[data-n="${SLICE_KEYS.indexOf(k)}"]`)!.classList.toggle('key', held.has('k' + k));
+    for (const k in STUTTER_KEYS) $('stutters').querySelector(`[data-hold="t${k}"]`)!.classList.toggle('key', held.has('k' + k));
+    // the playing loop, cut into 8 slices
+    const p = engine.playing && st.active >= 0 ? pads[st.active] : pads[padSel], cv = $<HTMLCanvasElement>('padStrip');
+    const W = cv.parentElement!.clientWidth - 2, H = 54, g = fit(cv, W, H);
+    g.fillStyle = C.row; g.fillRect(0, 0, W, H);
+    if (!p) return;
+    const steps = stepsOf(p), sw = W / steps;
+    for (let i = 0; i < 8; i++) { if (i % 2) { g.fillStyle = C.black; g.fillRect((i * W) / 8, 0, W / 8, H); } }
+    p.ch.forEach((c, row) => {
+      g.fillStyle = COLORS[c.color]; const y = 3 + (row / p.ch.length) * (H - 6), h = Math.max(2, (H - 6) / p.ch.length - 1);
+      if (c.kind === 'drum') c.steps.forEach((v, i) => v && g.fillRect(i * sw, y, Math.max(1, sw - 0.5), h));
+      else c.notes.forEach(n => g.fillRect(n.s * sw, y, Math.max(1.5, n.l * sw - 0.5), h));
+    });
+    for (let i = 1; i < 8; i++) { g.fillStyle = C.bar; g.fillRect((i * W) / 8 - 0.5, 0, 1, H); }
+    if (pos != null && engine.playing) { g.fillStyle = C.text; g.fillRect(pos * sw - 1, 0, 2, H); }
+  }
+
+  // ---------- a smaller channel rack ----------
+  const setCompact = (on: boolean) => { $('app').classList.toggle('compact', on); $('compact').setAttribute('aria-pressed', String(on)); store.set('banadaw-compact', on ? '1' : '0'); };
+  setCompact(store.get('banadaw-compact') === '1');
+  $('compact').addEventListener('click', () => setCompact(!$('app').classList.contains('compact')));
+
   // ---------- the frame loop: playhead, position display and level meter ----------
   const meterCv = $<HTMLCanvasElement>('meter');
-  let shownPos = '', peakHold = 0;
+  let shownPos = '', peakHold = 0, knobsMoving = false;
   function frame() {
     const pos = engine.position();
-    if (pos != null || dirty || (flash && performance.now() - flash.t < 300)) {
+    // knobs with automation follow their line while the editor's loop plays
+    if (tab !== 'pads' && song.auto) {
+      if (pos != null) {
+        knobsMoving = true;
+        $('app').querySelectorAll<HTMLElement>('.knob.auto').forEach(el => {
+          const key = el.dataset.ak!, p = autoParam(song, key), pts = song.auto?.[key];
+          if (p && pts?.length) paintKnob(el, p.min + autoAt(pts, pos) * (p.max - p.min));
+        });
+      } else if (knobsMoving) { knobsMoving = false; refreshAutoMarks(); }
+    }
+    if (tab === 'auto' && (pos != null || ldrag)) paintLanes(pos);
+    if (tab === 'pads') padFrame(pos);
+    if (tab === 'notes' && (pos != null || dirty || (flash && performance.now() - flash.t < 300))) {
       // follow the playhead when the loop is wider than the screen
       if (pos != null && !drag) { const x = pos * cw; if (x > scroll.scrollLeft + scroll.clientWidth - 24 || x < scroll.scrollLeft) scroll.scrollLeft = Math.max(0, x - 24); }
       draw(pos); dirty = false;
@@ -979,6 +1415,87 @@ import Base from '../layouts/Base.astro';
   .bdaw .toast { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--banana); color: #3B3127; font-weight: 800; padding: 10px 16px; border-radius: var(--r-md); box-shadow: 0 8px 20px rgba(60, 40, 10, .25); z-index: 10; max-width: calc(100% - 32px); }
   :root[data-theme="banana"] .bdaw :is(.rk, .knob-row) { border-top: 2px solid #3A2A0E; border-right: 2px solid #3A2A0E; border-bottom: 2px solid #3A2A0E; box-shadow: 3px 3px 0 #3A2A0E; }
   :root[data-theme="banana"] .bdaw :is(.t-btn, .tog, .seg, select, input, .lcd) { border: 2px solid #3A2A0E; }
+
+  /* editor tabs */
+  .bdaw .ed-tabs { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 3px; gap: 2px; }
+  .bdaw .ed-tabs button { border: 0; background: none; border-radius: 99px; padding: 6px 13px; font-weight: 800; color: var(--ink-2); cursor: pointer; min-height: 32px; }
+  .bdaw .ed-tabs button[aria-selected="true"] { background: var(--banana); color: #3B3127; }
+  .bdaw:not([data-view="notes"]) :is(.notes-only, .syn) { display: none !important; }
+  .bdaw:not([data-view="auto"]) .auto-only { display: none !important; }
+  .bdaw[data-view="pads"] .not-pads { display: none !important; }
+  .bdaw .t-btn[aria-pressed="true"] { background: var(--banana); border-color: var(--banana); color: #3B3127; }
+  .bdaw .mini-tog { margin-left: 8px; font: 800 11.5px var(--text); color: var(--ink-2); background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 3px 9px; cursor: pointer; }
+  .bdaw .mini-tog[aria-pressed="true"] { background: var(--butter); color: var(--ink); border-color: var(--butter-d); }
+  .bdaw .rack-t { align-items: center; }
+  .bdaw .rack-t small { margin-left: auto; }
+  .bdaw.compact .rk-prev { display: none; }
+  .bdaw.compact .rk { grid-template-rows: auto; padding: 3px 8px 3px 6px; }
+  .bdaw.compact .rack-list { gap: 3px; }
+  .bdaw .knob.auto::after { content: ''; position: absolute; top: 1px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: #E86A92; box-shadow: 0 0 0 2px var(--card); }
+  .bdaw .knob.xs.auto::after { right: 0; top: 0; }
+
+  /* automation */
+  .bdaw .auto-view { height: clamp(440px, 64vh, 640px); display: flex; flex-direction: column; min-width: 0; }
+  .bdaw .av-top { display: grid; grid-template-columns: 250px minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  .bdaw .av-corner { background: var(--g-ruler); font-size: 11px; font-weight: 800; color: var(--ink-2); padding: 4px 12px; display: flex; align-items: center; }
+  .bdaw .av-lanes { flex: 1; overflow: auto; }
+  .bdaw .al { display: grid; grid-template-columns: 250px minmax(0, 1fr); border-bottom: 1px solid var(--line); border-left: 5px solid var(--c); }
+  .bdaw .al.muted { opacity: .55; }
+  .bdaw .al-h { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: "fold name name" "sel sel clear"; align-items: center; gap: 4px 6px; padding: 8px 10px; background: var(--paper-2); min-width: 0; }
+  .bdaw .al-fold { grid-area: fold; } .bdaw .al-n { grid-area: name; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .bdaw .al-h select { grid-area: sel; } .bdaw .al-clear { grid-area: clear; }
+  .bdaw .al-h b { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bdaw .al-h .sw { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .bdaw .al-h select { min-width: 0; min-height: 32px; padding: 4px 6px; font-size: 13px; }
+  .bdaw .al-fold { width: 26px; height: 26px; border: 0; background: none; cursor: pointer; color: var(--ink-2); font-size: 13px; padding: 0; }
+  .bdaw .al-clear { border: 1px solid var(--line); background: var(--card); border-radius: var(--r-sm); font-size: 12px; font-weight: 700; padding: 4px 8px; cursor: pointer; color: var(--ink-2); }
+  .bdaw .al-clear:disabled { opacity: .4; cursor: default; }
+  .bdaw .al.small .al-h { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.2fr); grid-template-areas: "fold name sel"; padding: 2px 8px; }
+  .bdaw .al.small .al-h select { min-height: 26px; padding: 1px 4px; font-size: 12px; }
+  .bdaw .al.small .al-clear { display: none; }
+  .bdaw .al-cw { min-width: 0; }
+  .bdaw .al-c { display: block; touch-action: none; }
+
+  /* pads */
+  .bdaw .pad-view { height: clamp(440px, 64vh, 640px); display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; padding: 16px; overflow: auto; background: var(--paper-2); }
+  .bdaw .pv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-content: start; }
+  .bdaw .pad { position: relative; aspect-ratio: 1.15; border-radius: var(--r-lg); border: 2px dashed var(--line); background: var(--card); color: var(--ink); text-align: left; padding: 12px; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; overflow: hidden; font: inherit; user-select: none; touch-action: manipulation; }
+  .bdaw .pad.full { border: 0; background: color-mix(in srgb, var(--c) 32%, var(--card)); box-shadow: var(--shadow); }
+  .bdaw .pad.sel { outline: 3px solid var(--butter-d); outline-offset: 2px; }
+  .bdaw .pad.on { background: var(--c); }
+  .bdaw .pad.queued { box-shadow: 0 0 0 4px var(--c); }
+  .bdaw .pad.pulse { animation: bd-pulse .22s ease-out; }
+  @keyframes bd-pulse { 0% { transform: scale(1.04); } 100% { transform: none; } }
+  .bdaw .pad .pk { position: absolute; top: 8px; left: 10px; font: 600 26px var(--display); opacity: .8; }
+  .bdaw .pad b { font: 600 16px/1.2 var(--display); overflow-wrap: anywhere; }
+  .bdaw .pad small { font-size: 12px; color: var(--ink-2); font-weight: 700; }
+  .bdaw .pad.on small { color: #3B3127; } .bdaw .pad.on { color: #3B3127; }
+  .bdaw .pad .sm { display: none; }
+  @media (max-width: 560px) { .bdaw .pad .lg { display: none; } .bdaw .pad .sm { display: inline; } .bdaw .pad .pk { font-size: 20px; } .bdaw .pad b { font-size: 14px; } }
+  .bdaw .pbar { position: absolute; left: 0; bottom: 0; height: 5px; background: #3B3127; opacity: .55; width: 0; }
+  .bdaw .pv-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .bdaw .pv-box { background: var(--card); border-radius: var(--r-lg); padding: 12px 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
+  .bdaw .pv-row { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .bdaw .pv-sel b { font: 600 18px var(--display); } .bdaw .pv-sel small { color: var(--ink-2); font-weight: 700; }
+  .bdaw .pv-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bdaw .pv-l small { color: var(--ink-2); font-weight: 600; }
+  .bdaw #padStrip { border-radius: 6px; display: block; }
+  .bdaw .pv-keys { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; }
+  .bdaw #stutters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bdaw .pk-btn { border: 1px solid var(--line); background: var(--paper); border-radius: var(--r-sm); padding: 6px 2px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; font: 700 12px var(--text); color: var(--ink-2); touch-action: none; user-select: none; min-height: 48px; }
+  .bdaw .pk-btn kbd { font: 600 16px var(--display); color: var(--ink); }
+  .bdaw .pk-btn.on, .bdaw .pk-btn.key { background: var(--banana); border-color: var(--banana); color: #3B3127; }
+  .bdaw .tog.rec[aria-pressed="true"] { background: #E2574C; color: #fff; border-color: #E2574C; }
+  .bdaw .tog.blink { background: var(--butter); }
+  .bdaw kbd { font: inherit; }
+  @media (max-width: 900px) {
+    .bdaw .pad-view { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .bdaw .av-top, .bdaw .al { grid-template-columns: minmax(0, 1fr); }
+    .bdaw .av-corner { display: none; }
+    .bdaw .auto-view { height: 66vh; }
+    .bdaw .ed-h { gap: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bdaw .pad.pulse { animation: none; } }
 
   /* the board */
   .bd-board { margin: 34px 0 10px; scroll-margin-top: 16px; }

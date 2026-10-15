@@ -1,0 +1,238 @@
+---
+import Base from '../../layouts/Base.astro';
+const K = (k: string) => k.split(' ').map(x => `<kbd>${x}</kbd>`).join(' + ');
+const shortcuts: [string, string, string][] = [
+  ['Everywhere', 'Space', 'Play or stop'],
+  ['Everywhere', 'M', 'Metronome on or off'],
+  ['Everywhere', 'Ctrl/Cmd Z', 'Undo (add Shift to redo)'],
+  ['Notes', 'A W S E D F T G Y H U J K', 'Play the selected sound like a piano'],
+  ['Notes', 'Alt/Option drag', 'Draw a box to select notes (add Shift to add to the selection)'],
+  ['Notes', 'Shift drag', 'Pull out a copy of a note, or of every selected note'],
+  ['Notes', 'Ctrl/Cmd A', 'Select every note in this channel'],
+  ['Notes', 'Ctrl/Cmd D', 'Duplicate the selection right after itself'],
+  ['Notes', '↑ ↓', 'Move the selection up or down the scale (Shift: a whole octave)'],
+  ['Notes', '← →', 'Move the selection earlier or later'],
+  ['Notes', 'Delete', 'Delete the selection'],
+  ['Notes', 'Esc', 'Let go of the selection'],
+  ['Pads', '1 … 9', 'Launch a pad'],
+  ['Pads', '0', 'Stop at the end of the bar'],
+  ['Pads', 'Q W E R T Y U I', 'Hold to repeat one of the 8 slices of the loop'],
+  ['Pads', 'Z X C', 'Hold to stutter: repeat the last beat, 1/8 or 1/16'],
+];
+---
+<Base wide section="banadaw" image="/og/banadaw.jpg" title="How BanaDAW works · every feature explained · All Things Banana"
+      description="The BanaDAW guide: the piano roll and drum roll, selecting and copying notes, every synth and drum knob, automation, sidechain, the pads for live performance, sharing and the board.">
+  <article class="guide">
+    <header class="g-head">
+      <a class="g-back" href="/banadaw/">← Back to BanaDAW</a>
+      <h1>How BanaDAW works</h1>
+      <p class="lede">BanaDAW is a loop studio. You build one loop of 1 to 8 bars with as many instruments as you like, shape it with knobs and automation, then perform several loops on the pads. Everything runs in your browser, and your loop is saved on this device as you go.</p>
+      <nav class="toc" aria-label="On this page">
+        <a href="#start">Quick start</a><a href="#toolbar">The toolbar</a><a href="#bunch">The bunch</a><a href="#notes">Notes</a><a href="#sounds">Sounds and knobs</a>
+        <a href="#automation">Automation</a><a href="#pads">Pads</a><a href="#sharing">Saving and sharing</a><a href="#keys">Shortcuts</a><a href="#club">The club sound</a>
+      </nav>
+    </header>
+
+    <section id="start" class="g-sec butter">
+      <h2>Quick start</h2>
+      <ol class="steps">
+        <li><b>Pick a starter.</b> Choose one from <em>Start from a bunch</em> under the studio, or press <em>Start from scratch</em> to empty every channel and keep the sounds.</li>
+        <li><b>Press Space.</b> The loop plays round and round. Everything you change is heard on the next pass.</li>
+        <li><b>Click a channel in the bunch</b> (the list on the left). Drums open the drum roll, everything else opens the piano roll.</li>
+        <li><b>Click the grid to add notes.</b> Drag them to move, drag their right edge to make them longer, click them again to remove them.</li>
+        <li><b>Turn the knobs</b> under the editor to change the sound. Double-click a knob to reset it.</li>
+      </ol>
+    </section>
+
+    <section id="toolbar" class="g-sec">
+      <h2>The toolbar</h2>
+      <dl class="defs">
+        <dt>Play, stop and the metronome</dt><dd>Play starts the loop from the top. The metronome (the little pyramid, or <kbd>M</kbd>) clicks on every beat, louder on the first beat of each bar. It is never in your WAV.</dd>
+        <dt>Position</dt><dd>Shows bar, beat and sixteenth while you play. The banana next to it bobs on every beat.</dd>
+        <dt>BPM</dt><dd>The tempo, from 60 to 200 beats a minute.</dd>
+        <dt>Loop</dt><dd>1, 2, 4 or 8 bars. Making the loop longer repeats what you have; making it shorter cuts the end off (undo brings it back).</dd>
+        <dt>Key and scale</dt><dd>Changing the key moves every melody with it. The scale decides which rows of the piano roll are highlighted and which notes Scale lock allows.</dd>
+        <dt>Swing</dt><dd>Pushes every other sixteenth a little late, for a lazier groove. Good on lo-fi and house; leave it at zero for techno.</dd>
+        <dt>Filter</dt><dd>The master filter. Turn it left to make everything darker and muffled, right to make it thin. Sweeping it is the classic way to build up to a drop.</dd>
+        <dt>Drive and Master</dt><dd>Drive adds warm saturation to the whole mix. Master is the overall volume. The meter next to them turns red if you're too loud.</dd>
+        <dt>Start from scratch, Loops</dt><dd>Start from scratch empties every channel but keeps your sounds. Loops loads a starter. Undo brings back what you had either way.</dd>
+        <dt>Post, Share link, WAV</dt><dd>See <a href="#sharing">Saving and sharing</a>.</dd>
+      </dl>
+    </section>
+
+    <section id="bunch" class="g-sec">
+      <h2>The bunch (your channels)</h2>
+      <p>Every instrument in the loop is a channel. Each row has:</p>
+      <ul>
+        <li><b>A banana</b> to mute the channel. A muted channel is “peeled”: the banana goes grey.</li>
+        <li><b>S</b> to solo it, so you only hear that channel (and anything else soloed).</li>
+        <li><b>A small knob</b> for its volume.</li>
+        <li><b>A preview</b> of what it plays. Click the name or the preview to edit it.</li>
+      </ul>
+      <p><b>+ Add channel</b> at the bottom adds any drum or synth. <b>Compact</b> makes the rows smaller when you have a lot of them. The channel panel under the editor lets you rename, change the instrument, duplicate or delete the selected channel.</p>
+    </section>
+
+    <section id="notes" class="g-sec mint">
+      <h2>Notes: the piano roll and drum roll</h2>
+      <h3>Drawing</h3>
+      <ul>
+        <li><b>Click</b> an empty spot to add a note. It's as long as <em>Length</em> says, and it starts on the grid set by <em>Snap</em>.</li>
+        <li><b>Drag</b> a note to move it. <b>Drag its right edge</b> to make it longer or shorter (clicking a note also sets Length to match it).</li>
+        <li><b>Click a note without dragging</b> to delete it. <b>Right-click</b> and drag to erase several.</li>
+        <li><b>Draw</b> can place a whole chord with one click: three or four notes built from your scale, a power chord or an octave.</li>
+        <li><b>Scale lock</b> keeps new and moved notes in the key. Turn it off for chromatic notes. <b>Ghosts</b> shows the other instruments' notes faintly, so you can line things up.</li>
+        <li>The <b>keys</b> on the left play when clicked. The letters <kbd>A</kbd> to <kbd>K</kbd> on your keyboard play too.</li>
+      </ul>
+      <h3>Selecting and copying</h3>
+      <ul>
+        <li><b><kbd>Alt</kbd>/<kbd>Option</kbd> + drag</b> draws a box. Every note it touches turns pink and is selected. Add <kbd>Shift</kbd> to add to what's already selected.</li>
+        <li><b>Drag any selected note</b> and the whole selection moves with it. Dragging the end of one resizes them all.</li>
+        <li><b><kbd>Shift</kbd> + drag</b> a note to pull out a copy and leave the original where it was. If the note is part of a selection, the whole selection is copied. This works on single notes too.</li>
+        <li>With notes selected: arrow keys move them, <kbd>Delete</kbd> removes them, <kbd>Ctrl/Cmd</kbd> + <kbd>D</kbd> duplicates them right after themselves, <kbd>Esc</kbd> lets go.</li>
+      </ul>
+      <h3>The drum roll</h3>
+      <p>Pick any drum channel and the editor shows every drum at once, one row each. Click squares to add or remove hits, drag to paint a run of them, right-click to erase.</p>
+      <h3>Ripeness (velocity)</h3>
+      <p>The strip under the grid sets how hard each note or hit plays. Drag up and down on it. Soft hits show green, the hardest ones brown, like a banana ripening. Mix soft and hard hi-hats and the groove comes alive.</p>
+    </section>
+
+    <section id="sounds" class="g-sec">
+      <h2>Sounds and knobs</h2>
+      <p>Every sound is made live in your browser from oscillators and noise, no samples. <b>Double-click any knob</b> to reset it. Drag with <kbd>Shift</kbd> held for fine moves.</p>
+      <div class="cols">
+        <div>
+          <h3>Synths</h3>
+          <ul class="tight">
+            <li><b>Rolling bass:</b> the driving, distorted off-beat bass of dark techno.</li>
+            <li><b>Reese bass:</b> two detuned saws that growl. Slides between overlapping notes.</li>
+            <li><b>Acid 303:</b> the squelchy line. Overlap two notes to slide; turn up Reso and Env.</li>
+            <li><b>808:</b> the long trap bass with glide.</li>
+            <li><b>Deep bass:</b> round and warm, for house and lo-fi.</li>
+            <li><b>Grit lead, Supersaw, Arp, Pluck:</b> leads from dirty to huge to bouncy.</li>
+            <li><b>Dark stab, Pad:</b> chords, short and long.</li>
+            <li><b>Electric piano, Bell:</b> keys.</li>
+            <li><b>Noise riser:</b> sweeps up for as long as the note lasts. Draw one long note before a drop.</li>
+            <li><b>Squeaky banana:</b> exactly what it sounds like.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Synth knobs</h3>
+          <ul class="tight">
+            <li><b>Cutoff:</b> how bright the sound is. Low is muffled, high is open.</li>
+            <li><b>Reso:</b> a whistling peak at the cutoff. High settings sound squelchy.</li>
+            <li><b>Env:</b> how far the filter opens at the start of each note, for pluck and bite.</li>
+            <li><b>Attack:</b> how slowly each note fades in.</li>
+            <li><b>Release:</b> how long it rings after the note ends.</li>
+            <li><b>Drive:</b> distortion, from warm to filthy.</li>
+            <li><b>Glide:</b> (mono sounds) how long a slide takes between overlapping notes.</li>
+          </ul>
+          <h3>Drum knobs</h3>
+          <p><b>Tune</b> raises or lowers the pitch, <b>Decay</b> makes it shorter or longer, <b>Tone</b> makes it brighter (on a kick: more click), and <b>Drive</b> distorts it. Twelve drums, from kick and clap to cowbell and an impact boom.</p>
+        </div>
+      </div>
+      <h3>The mix knobs</h3>
+      <p><b>Volume</b> and <b>Pan</b> (left and right), sends to the <b>Reverb</b> and to a ping-pong <b>Delay</b> timed to a dotted eighth, and <b>Sidechain</b>: the channel ducks every time the kick hits, then swells back. Put sidechain on basses, pads and chords for the pumping club sound.</p>
+    </section>
+
+    <section id="automation" class="g-sec lilac">
+      <h2>Automation</h2>
+      <p>Automation turns a knob for you as the loop plays: a filter that opens over four bars, a pan that swings, a reverb that swells at the end.</p>
+      <ol class="steps">
+        <li>Open the <b>Automation</b> tab. Every channel gets a lane, with the master at the top.</li>
+        <li>In a lane, <b>pick the knob</b> you want to automate from its menu. The dashed line shows where that knob is now.</li>
+        <li><b>Click the line</b> to add a point, then drag it. Click anywhere else in the lane to add a point there. Points snap to the grid; hold <kbd>Alt</kbd>/<kbd>Option</kbd> to place them freely.</li>
+        <li><b>Right-click or double-click</b> a point to remove it. <b>Clear</b> removes the whole line.</li>
+        <li>Pick another knob in the same lane and draw that too. You can automate as many knobs on as many channels as you like. Knobs with automation show a ● in the menu, a pink dot on the knob itself, and they turn on their own while you play.</li>
+      </ol>
+      <p><b>Condense all</b> (or the ▾ on each lane) shrinks lanes to a thin strip, so a big loop fits on screen.</p>
+    </section>
+
+    <section id="pads" class="g-sec peach">
+      <h2>Pads: perform your loops</h2>
+      <p>The pads turn BanaDAW into an instrument. Build 3 to 5 loops that work together (say an intro, a groove, a build and a drop), save each one to a pad, then play them live with your keyboard.</p>
+      <ol class="steps">
+        <li>Make a loop in the Notes tab, open <b>Pads</b> and <b>click an empty pad</b> to save it there. Go back, change the loop, save it to the next pad, and so on. Pads are saved on this device.</li>
+        <li>Press <kbd>1</kbd> to <kbd>9</kbd> to launch a pad. Launching while another plays waits for the next bar (or the next beat, or switches straight away: see <em>Launch on</em>), so the switch is always in time. A waiting pad blinks.</li>
+        <li><b>Hold</b> <kbd>Q</kbd> to <kbd>I</kbd> to repeat one of the 8 slices of the playing loop. Let go and the loop carries on where it would have been, like a DJ's cue juggling.</li>
+        <li><b>Hold</b> <kbd>Z</kbd>, <kbd>X</kbd> or <kbd>C</kbd> to stutter: repeat the last beat, eighth or sixteenth, the classic build-up roll.</li>
+        <li><kbd>0</kbd> stops at the end of the bar. The toolbar's master <b>Filter</b> still works, so sweep it while you play.</li>
+        <li><b>Same tempo</b> keeps every pad at the toolbar's BPM. Turn it off to play each loop at its own tempo.</li>
+        <li><b>Record</b> captures everything you play and downloads it when you stop.</li>
+      </ol>
+      <p>Each pad has buttons to replace it with the editor's loop, open it in the editor to change it, or empty it.</p>
+    </section>
+
+    <section id="sharing" class="g-sec">
+      <h2>Saving and sharing</h2>
+      <ul>
+        <li><b>Your loop saves itself</b> on this device after every change. Undo and redo go back about 150 steps.</li>
+        <li><b>Share link</b> copies a link with the whole loop inside it. Whoever opens it gets their own copy to remix.</li>
+        <li><b>WAV</b> downloads the loop played a few times round, ready for a phone, a video or another DAW.</li>
+        <li><b>Post to the board</b> puts your loop on the board under the studio, where everyone can play it, remix it and give it a banana. The best ones rise to the top of the week. You get a short link to your post. Names are public, so keep them friendly, and use Report if you see something that shouldn't be there.</li>
+      </ul>
+    </section>
+
+    <section id="keys" class="g-sec">
+      <h2>Keyboard shortcuts</h2>
+      <table class="keys">
+        <thead><tr><th scope="col">Where</th><th scope="col">Keys</th><th scope="col">What it does</th></tr></thead>
+        <tbody>{shortcuts.map(([w, k, d]) => <tr><td>{w}</td><td set:html={K(k)} /><td>{d}</td></tr>)}</tbody>
+      </table>
+    </section>
+
+    <section id="club" class="g-sec butter">
+      <h2>Getting the dark club sound</h2>
+      <p>Open the <b>Red Circle</b> starter to hear it, or build it yourself:</p>
+      <ol class="steps">
+        <li>BPM 126 to 130, a minor key. Kick on every beat with <b>Drive</b> up and <b>Decay</b> a bit long.</li>
+        <li>Clap on beats 2 and 4, an open hat on every off-beat, closed hats on the sixteenths in between at low ripeness.</li>
+        <li>A <b>Rolling bass</b> on the three sixteenths after each kick, never on the kick itself. Turn its <b>Sidechain</b> up to about half.</li>
+        <li>A <b>Grit lead</b> riff with short notes, a <b>Dark stab</b> chord now and then, and a quiet <b>Pad</b> with lots of sidechain.</li>
+        <li>Automate the master <b>Filter</b> up over the last bar and put a <b>Noise riser</b> there too. Then save it to a pad and do it all again louder.</li>
+      </ol>
+      <p class="g-cta"><a class="btn banana" href="/banadaw/">Open BanaDAW</a></p>
+    </section>
+  </article>
+</Base>
+
+<style>
+  .guide { max-width: 900px; margin: 0 auto; padding: 28px 0 48px; }
+  .g-back { font-weight: 700; text-decoration: none; color: var(--ink-2); }
+  .g-back:hover { text-decoration: underline; }
+  .g-head h1 { font-size: var(--t-hero); margin: 10px 0 8px; }
+  .lede { font-size: 19px; color: var(--ink-2); margin: 0; max-width: 68ch; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .toc a { text-decoration: none; font-weight: 700; font-size: 15px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); border-radius: 99px; padding: 6px 13px; color: var(--ink); }
+  .toc a:hover { box-shadow: inset 0 0 0 2px var(--butter-d); }
+  .g-sec { margin-top: 22px; background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 22px 26px; scroll-margin-top: 16px; }
+  .g-sec.butter { background: var(--butter); } .g-sec.mint { background: var(--mint); } .g-sec.lilac { background: var(--lilac); } .g-sec.peach { background: var(--peach); }
+  .g-sec h2 { margin: 0 0 10px; font-size: var(--t-2); }
+  .g-sec h3 { margin: 18px 0 6px; font: 600 19px var(--display); }
+  .g-sec p, .g-sec li, .g-sec dd { line-height: 1.6; }
+  .g-sec p { margin: 8px 0; }
+  .g-sec ul, .g-sec ol { margin: 6px 0; padding-left: 22px; display: grid; gap: 6px; }
+  .steps li::marker { font-weight: 800; }
+  .tight { gap: 3px !important; }
+  .defs { margin: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 10px 18px; }
+  .defs dt { font-weight: 800; }
+  .defs dd { margin: 0; color: var(--ink-2); }
+  .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 28px; }
+  :global(.guide kbd) { font: 800 13.5px var(--text); background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; white-space: nowrap; color: var(--ink); }
+  .keys { width: 100%; border-collapse: collapse; font-size: 15.5px; }
+  .keys th { text-align: left; font-size: 13px; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .keys td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .keys td:first-child { font-weight: 800; color: var(--ink-2); white-space: nowrap; }
+  .keys td:nth-child(2) { white-space: nowrap; }
+  .g-cta { margin-top: 14px; }
+  :global(:root[data-theme="banana"]) .g-sec { border: 2px solid #3A2A0E; box-shadow: 4px 4px 0 #3A2A0E; }
+  @media (max-width: 700px) {
+    .g-sec { padding: 18px; }
+    .defs { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .defs dd { margin-bottom: 10px; }
+    .cols { grid-template-columns: minmax(0, 1fr); }
+    .keys td:nth-child(2) { white-space: normal; }
+    .keys thead { display: none; }
+    .keys tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .keys td { border: 0; padding: 2px 0; }
+  }
+</style>

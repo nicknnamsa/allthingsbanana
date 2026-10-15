@@ -22,7 +22,52 @@ export type Song = {
   v: 2; name: string; bpm: number; swing: number; root: number; scale: ScaleId; bars: Bars;
   master: { vol: number; filter: number; drive: number };   // filter: -1 (dark) .. 0 (open) .. 1 (thin)
   ch: Channel[];
+  auto?: Record<string, AutoPts>;   // automation lanes, keyed "<channel id>:<knob>" or "m:<knob>"
 };
+
+// ---------- automation: a line of points across the loop that turns a knob for you ----------
+export type AutoPts = [number, number][];   // [step, value 0..1], in order
+export type AutoParam = { k: string; label: string; group: 'Sound' | 'Mix' | 'Master'; min: number; max: number };
+const MIX_AUTO: AutoParam[] = [
+  { k: 'vol', label: 'Volume', group: 'Mix', min: 0, max: 1 }, { k: 'pan', label: 'Pan', group: 'Mix', min: -1, max: 1 },
+  { k: 'rev', label: 'Reverb', group: 'Mix', min: 0, max: 1 }, { k: 'dly', label: 'Delay', group: 'Mix', min: 0, max: 1 }, { k: 'duck', label: 'Sidechain', group: 'Mix', min: 0, max: 1 },
+];
+export const MASTER_AUTO: AutoParam[] = [
+  { k: 'filter', label: 'Filter', group: 'Master', min: -1, max: 1 }, { k: 'drive', label: 'Drive', group: 'Master', min: 0, max: 1 }, { k: 'vol', label: 'Master volume', group: 'Master', min: 0, max: 1 },
+];
+// every knob a channel can automate
+export function autoParams(c: Channel): AutoParam[] {
+  const sound = c.kind === 'drum'
+    ? DRUM_KNOBS.map(({ k, label }) => ({ k, label, group: 'Sound' as const, min: 0, max: 1 }))
+    : SYNTH_KNOBS.filter(({ k }) => k !== 'glide' || SYNTHS[c.preset].mono).map(({ k, label }) => ({ k, label, group: 'Sound' as const, min: 0, max: 1 }));
+  return [...sound, ...MIX_AUTO];
+}
+export const autoKey = (owner: string, k: string) => `${owner}:${k}`;
+export function autoParam(song: Song, key: string): AutoParam | undefined {
+  const [owner, k] = key.split(':');
+  if (owner === 'm') return MASTER_AUTO.find(p => p.k === k);
+  const c = song.ch.find(x => x.id === owner);
+  return c ? autoParams(c).find(p => p.k === k) : undefined;
+}
+// the line's value (0..1) at a step: straight lines between points, flat before the first and after the last
+export function autoAt(pts: AutoPts, x: number) {
+  if (!pts.length) return 0;
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    const [x1, y1] = pts[i];
+    if (x <= x1) { const [x0, y0] = pts[i - 1]; return x1 === x0 ? y1 : y0 + ((y1 - y0) * (x - x0)) / (x1 - x0); }
+  }
+  return pts[pts.length - 1][1];
+}
+// what a knob is set to (as 0..1), so a new lane starts where the knob is
+export function knobValue(song: Song, key: string) {
+  const [owner, k] = key.split(':'), p = autoParam(song, key);
+  if (!p) return 0;
+  let v: number;
+  if (owner === 'm') v = (song.master as any)[k];
+  else { const c = song.ch.find(x => x.id === owner)!; v = k in c.mix ? (c.mix as any)[k] : (c.p as any)[k]; }
+  return (v - p.min) / (p.max - p.min);
+}
 
 // the site's pastels, a shade stronger so notes stand out on light and dark
 export const COLORS = ['#F5C93E', '#F2A57C', '#EE8FB0', '#B79CF0', '#7DB6E8', '#6FCDB8', '#8CC56A', '#D9B07A'];
@@ -130,6 +175,13 @@ export function setBars(song: Song, bars: Bars) {
       c.notes = [...keep, ...copies];
     }
   }
+  for (const key in song.auto ?? {}) {
+    const pts = song.auto![key];
+    const keep = pts.filter(([x]) => x <= now);
+    const copies: AutoPts = [];
+    for (let off = old; off < now; off += old) for (const [x, y] of pts) if (x + off <= now && x + off > off) copies.push([x + off, y]);
+    song.auto![key] = [...keep, ...copies].sort((a, b) => a[0] - b[0]);
+  }
   song.bars = bars;
 }
 
@@ -149,7 +201,8 @@ export async function encodeSong(song: Song) {
 }
 export function validSong(s: any): s is Song {
   return !!s && s.v === 2 && Array.isArray(s.ch) && BAR_CHOICES.includes(s.bars) && s.ch.every((c: any) =>
-    (c.kind === 'drum' && c.sound in DRUMS && Array.isArray(c.steps)) || (c.kind === 'synth' && c.preset in SYNTHS && Array.isArray(c.notes)));
+    (c.kind === 'drum' && c.sound in DRUMS && Array.isArray(c.steps)) || (c.kind === 'synth' && c.preset in SYNTHS && Array.isArray(c.notes)))
+    && (s.auto == null || (typeof s.auto === 'object' && Object.values(s.auto).every((p: any) => Array.isArray(p) && p.every((q: any) => Array.isArray(q) && q.length === 2))));
 }
 export async function decodeSong(code: string): Promise<Song | null> {
   try {

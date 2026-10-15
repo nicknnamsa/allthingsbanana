@@ -1,12 +1,12 @@
 // BanaDAW's sound. Every drum and synth is built from oscillators and noise with Web Audio, no samples.
 // The same graph and voices play live (AudioContext) and render the WAV export (OfflineAudioContext).
-import { type Song, type Channel, type DrumChannel, type SynthChannel, SYNTHS, stepsOf } from './song';
+import { type Song, type Channel, type DrumChannel, type SynthChannel, SYNTHS, stepsOf, autoAt, autoParam } from './song';
 
 type Ctx = BaseAudioContext;
 type Strip = { input: GainNode; fader: GainNode; pan: StereoPannerNode; duck: GainNode; rev: GainNode; dly: GainNode };
 type Graph = {
   key: string; strips: Map<string, Strip>; sum: GainNode; hp: BiquadFilterNode; lp: BiquadFilterNode; pre: GainNode; shaper: WaveShaperNode; post: GainNode;
-  out: GainNode; meter: AnalyserNode; dl: DelayNode; dr: DelayNode; noise: AudioBuffer;
+  out: GainNode; meter: AnalyserNode; dl: DelayNode; dr: DelayNode; noise: AudioBuffer; final: AudioNode;
 };
 
 const hz = (m: number) => 440 * 2 ** ((m - 69) / 12);
@@ -17,7 +17,7 @@ function curve(k: number) {
   if (!c) { c = new Float32Array(2048); for (let i = 0; i < c.length; i++) { const x = (i / (c.length - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } curves.set(k, c); }
   return c;
 }
-const keyOf = (song: Song) => song.ch.map(c => c.id).join('|');
+const keyOf = (songs: Song[]) => [...new Set(songs.flatMap(s => s.ch.map(c => c.id)))].sort().join('|');
 
 function impulse(ctx: Ctx, secs: number) {
   const len = Math.floor(ctx.sampleRate * secs), b = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -29,7 +29,7 @@ function impulse(ctx: Ctx, secs: number) {
 }
 
 // ---------- the mixer: a strip per channel, two sends, then the master chain ----------
-function buildGraph(ctx: Ctx, song: Song, raw = false): Graph {
+function buildGraph(ctx: Ctx, songs: Song[], raw = false): Graph {
   const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), pre = ctx.createGain(), shaper = ctx.createWaveShaper(), post = ctx.createGain();
   const glue = ctx.createDynamicsCompressor(), limit = ctx.createDynamicsCompressor(), out = ctx.createGain(), clip = ctx.createWaveShaper(), meter = ctx.createAnalyser();
   hp.type = 'highpass'; lp.type = 'lowpass'; shaper.oversample = '2x'; clip.curve = curve(1.1);
@@ -52,20 +52,22 @@ function buildGraph(ctx: Ctx, song: Song, raw = false): Graph {
   const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
   const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
   const strips = new Map<string, Strip>();
-  for (const c of song.ch) {
+  for (const c of songs.flatMap(x => x.ch)) {
+    if (strips.has(c.id)) continue;
     const input = ctx.createGain(), fader = ctx.createGain(), pan = ctx.createStereoPanner(), duck = ctx.createGain(), rev = ctx.createGain(), dly = ctx.createGain();
     input.connect(fader).connect(pan).connect(duck).connect(sum);
     duck.connect(rev).connect(revIn); duck.connect(dly).connect(dIn);
     strips.set(c.id, { input, fader, pan, duck, rev, dly });
   }
-  const g: Graph = { key: keyOf(song), strips, sum, hp, lp, pre, shaper, post, out, meter, dl, dr, noise };
-  applyMix(ctx, g, song, true);
+  const g: Graph = { key: keyOf(songs), strips, sum, hp, lp, pre, shaper, post, out, meter, dl, dr, noise, final: clip };
+  for (const s of songs) applyChannels(ctx, g, s, true);
+  applyMaster(ctx, g, songs[0].master, songs[0].bpm, true);
   return g;
 }
 
 const audible = (song: Song, c: Channel) => !c.mix.mute && (!song.ch.some(x => x.mix.solo) || c.mix.solo);
 
-function applyMix(ctx: Ctx, g: Graph, song: Song, now = false) {
+function applyChannels(ctx: Ctx, g: Graph, song: Song, now = false) {
   const t = ctx.currentTime, set = (p: AudioParam, v: number) => (now ? p.setValueAtTime(v, t) : p.setTargetAtTime(v, t, 0.02));
   for (const c of song.ch) {
     const s = g.strips.get(c.id);
@@ -75,7 +77,10 @@ function applyMix(ctx: Ctx, g: Graph, song: Song, now = false) {
     set(s.rev.gain, c.mix.rev * 0.8);
     set(s.dly.gain, c.mix.dly * 0.6);
   }
-  const m = song.master, f = m.filter;
+}
+function applyMaster(ctx: Ctx, g: Graph, m: Song['master'], bpm: number, now = false, at = ctx.currentTime) {
+  const t = at, set = (p: AudioParam, v: number) => (now ? p.setValueAtTime(v, t) : p.setTargetAtTime(v, t, 0.02));
+  const f = m.filter;
   set(g.lp.frequency, f < 0 ? 20000 * (180 / 20000) ** -f : 20000);
   set(g.hp.frequency, f > 0 ? 18 * (2600 / 18) ** f : 18);
   set(g.lp.Q, f < 0 ? 0.7 + -f * 3 : 0.7); set(g.hp.Q, f > 0 ? 0.7 + f * 3 : 0.7);
@@ -83,7 +88,7 @@ function applyMix(ctx: Ctx, g: Graph, song: Song, now = false) {
   g.shaper.curve = curve(1 + m.drive * 3);
   set(g.post.gain, 1 / (1 + m.drive * 1.6));
   set(g.out.gain, m.vol * m.vol * 1.25);
-  const d = (60 / song.bpm) * 0.75;   // dotted eighth, the delay everyone uses
+  const d = (60 / bpm) * 0.75;   // dotted eighth, the delay everyone uses
   set(g.dl.delayTime, d); set(g.dr.delayTime, d);
 }
 
@@ -209,7 +214,7 @@ function drum(ctx: Ctx, g: Graph, dest: AudioNode, c: DrumChannel, t: number, v:
 }
 
 // ---------- synths ----------
-type Voice = { legato: (m: number, at: number, end: number) => void; cut: (at: number) => void };
+type Voice = { legato: (m: number, at: number, end: number) => void; cut: (at: number) => void; filter: (cutoff: number, res: number, at: number) => void };
 function synth(ctx: Ctx, g: Graph, dest: AudioNode, c: SynthChannel, m: number, t: number, dur: number, v: number, bpm: number): Voice {
   const pt = SYNTHS[c.preset], p = c.p;
   const cut = 30 * 2 ** (p.cutoff * 9.3), Q = 0.5 + p.res * p.res * 20, envOct = p.env * 6 * (0.35 + 0.65 * v);
@@ -233,7 +238,11 @@ function synth(ctx: Ctx, g: Graph, dest: AudioNode, c: SynthChannel, m: number, 
       stopAt();
     },
     cut(at) { amp.gain.cancelScheduledValues(at); amp.gain.setTargetAtTime(0, at, 0.004); end = at; srcs.forEach(s => s.stop(at + 0.05)); },
+    filter(cutoff, res, at) {   // automation turning the filter while a note sounds
+      for (const f of flts) { f.frequency.setTargetAtTime(Math.min(18000, 30 * 2 ** (cutoff * 9.3)), at, 0.015); f.Q.setTargetAtTime(0.5 + res * res * 20, at, 0.015); }
+    },
   };
+  const flts: BiquadFilterNode[] = [];
   const f = hz(m);
 
   if (pt.special === 'fm' || pt.special === 'bell') {
@@ -284,7 +293,7 @@ function synth(ctx: Ctx, g: Graph, dest: AudioNode, c: SynthChannel, m: number, 
   const wide = pt.osc.some(o => (o.n ?? 1) > 1);
   const sides = wide ? [-0.7, 0.7] : [0];
   const chains = sides.map(pan => {
-    const flt = ctx.createBiquadFilter(); flt.type = 'lowpass'; flt.Q.value = Q;
+    const flt = ctx.createBiquadFilter(); flt.type = 'lowpass'; flt.Q.value = Q; flts.push(flt);
     const peak = Math.min(18000, cut * 2 ** envOct), floor = Math.min(18000, cut);
     flt.frequency.setValueAtTime(peak, t);
     if (envOct > 0.01) flt.frequency.setTargetAtTime(floor, t + atk * 0.5, Math.max(0.01, pt.fdec / 2.2));
@@ -315,101 +324,214 @@ function synth(ctx: Ctx, g: Graph, dest: AudioNode, c: SynthChannel, m: number, 
 // ---------- what plays on one step: shared by live playback and the WAV export ----------
 class Player {
   mono = new Map<string, { h: Voice; end: number }>();
-  constructor(public ctx: Ctx, public g: Graph, public song: Song) {}
+  live = new Map<string, { h: Voice; end: number }[]>();   // notes still sounding, so automation can reach them
+  constructor(public ctx: Ctx, public g: Graph, public song: Song, public master?: Song['master'], public bpm?: number) {}
+  // the channel as the automation has it at this step (knob values replaced by the line's)
+  private automate(step: number, t: number) {
+    const song = this.song, auto = song.auto, over = new Map<string, Record<string, number>>();
+    if (!auto) return over;
+    for (const key in auto) {
+      const pts = auto[key]; if (!pts?.length) continue;
+      const p = autoParam(song, key); if (!p) continue;
+      const [owner, k] = key.split(':'), v = p.min + autoAt(pts, step) * (p.max - p.min);
+      if (!over.has(owner)) over.set(owner, {});
+      over.get(owner)![k] = v;
+    }
+    const set = (q: AudioParam, v: number) => q.setTargetAtTime(v, t, 0.012);
+    for (const [owner, o] of over) {
+      if (owner === 'm') continue;
+      const c = song.ch.find(x => x.id === owner), s = this.g.strips.get(owner);
+      if (!c || !s) continue;
+      if ('vol' in o) set(s.fader.gain, audible(song, c) ? o.vol * o.vol : 0);
+      if ('pan' in o) set(s.pan.pan, o.pan);
+      if ('rev' in o) set(s.rev.gain, o.rev * 0.8);
+      if ('dly' in o) set(s.dly.gain, o.dly * 0.6);
+      if (c.kind === 'synth' && ('cutoff' in o || 'res' in o)) {
+        const list = (this.live.get(owner) || []).filter(x => x.end > t);
+        this.live.set(owner, list);
+        for (const x of list) x.h.filter(o.cutoff ?? c.p.cutoff, o.res ?? c.p.res, t);
+      }
+    }
+    const mo = over.get('m'), base = this.master ?? song.master;
+    if (mo) applyMaster(this.ctx, this.g, { ...base, ...mo }, this.bpm ?? song.bpm, false, t);
+    return over;
+  }
   step(step: number, t: number, stepDur: number) {
-    const song = this.song;
+    const song = this.song, over = this.automate(step, t);
     let kick = 0;
-    for (const c of song.ch) {
-      const s = this.g.strips.get(c.id);
-      if (!s || !audible(song, c)) continue;
+    for (const base of song.ch) {
+      const s = this.g.strips.get(base.id);
+      if (!s || !audible(song, base)) continue;
+      const o = over.get(base.id);
+      const c = (o ? { ...base, p: { ...base.p, ...Object.fromEntries(Object.entries(o).filter(([k]) => k in base.p)) } } : base) as Channel;
       if (c.kind === 'drum') {
         const v = c.steps[step] || 0;
         if (!v) continue;
         drum(this.ctx, this.g, s.input, c, t, v);
         if (c.sound === 'kick') kick = Math.max(kick, v);
       } else {
-        const pt = SYNTHS[c.preset];
+        const pt = SYNTHS[c.preset], bpm = this.bpm ?? song.bpm;
         for (const n of c.notes) {
           if (Math.floor(n.s) !== step) continue;
           const at = t + (n.s - step) * stepDur, end = at + n.l * stepDur * 0.97;
+          let h: Voice;
           if (pt.mono) {
             const prev = this.mono.get(c.id);
             if (prev && prev.end > at + 0.003) { prev.h.legato(n.m, at, end); prev.end = end; continue; }
             if (prev && prev.end + 0.3 > at) prev.h.cut(at);
-            this.mono.set(c.id, { h: synth(this.ctx, this.g, s.input, c, n.m, at, end - at, n.v, song.bpm), end });
-          } else synth(this.ctx, this.g, s.input, c, n.m, at, end - at, n.v, song.bpm);
+            h = synth(this.ctx, this.g, s.input, c, n.m, at, end - at, n.v, bpm);
+            this.mono.set(c.id, { h, end });
+          } else h = synth(this.ctx, this.g, s.input, c, n.m, at, end - at, n.v, bpm);
+          if (o && ('cutoff' in o || 'res' in o)) { const list = this.live.get(c.id) || []; list.push({ h, end: end + 0.5 }); this.live.set(c.id, list); }
         }
       }
     }
     // sidechain: everything with "duck" dips on the kick and swells back
     if (kick) for (const c of song.ch) {
-      if (!c.mix.duck) continue;
+      const duck = over.get(c.id)?.duck ?? c.mix.duck;
+      if (!duck) continue;
       const q = this.g.strips.get(c.id)?.duck.gain;
       if (!q) continue;
       q.cancelScheduledValues(t);
-      q.setTargetAtTime(1 - c.mix.duck * 0.92 * kick, t, 0.003);
-      q.setTargetAtTime(1, t + 0.03, (60 / song.bpm) * 0.13);
+      q.setTargetAtTime(1 - duck * 0.92 * kick, t, 0.003);
+      q.setTargetAtTime(1, t + 0.03, (60 / (this.bpm ?? song.bpm)) * 0.13);
     }
   }
 }
 const swingAt = (song: Song, step: number, stepDur: number) => (step % 2 ? song.swing * stepDur * 0.5 : 0);
 
-// ---------- the live player ----------
+// ---------- the live player: the studio's loop, or a bank of pads to perform with ----------
+type Repeat = { start: number; len: number; from: number; id: string };
+export type PadState = { active: number; queued: number | null; stopping: boolean };
 export class Engine {
   ctx: AudioContext | null = null;
-  song!: Song;
+  song!: Song;                    // the loop playing now
+  studio!: Song;                  // the loop in the editor (its tempo and master knobs drive the pads)
+  private bank: Song[] | null = null;
   private g: Graph | null = null;
   private player: Player | null = null;
   playing = false;
-  private step = 0; private next = 0; private timer: number | null = null;
-  private queue: { t: number; step: number }[] = [];
+  metronome = false;
+  quantize: 'bar' | 'beat' | 'now' = 'bar';
+  ownTempo = false;               // pads at their own tempo instead of the studio's
+  pad: PadState = { active: -1, queued: null, stopping: false };
+  private virt = 0; private next = 0; private timer: number | null = null;
+  private queue: { t: number; step: number; virt: number }[] = [];
+  private repeats: Repeat[] = [];
+  private pendingRepeats: Repeat[] = [];
   private buf: Float32Array<ArrayBuffer> | null = null;
+  private recDest: MediaStreamAudioDestinationNode | null = null;
+  private recorder: MediaRecorder | null = null;
 
+  private songs() { return this.bank ? [this.studio, ...this.bank.filter(Boolean)] : [this.song]; }
   private ensure() {
     if (!this.ctx) this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
     if (this.ctx.state === 'suspended') this.ctx.resume();
-    if (!this.g || this.g.key !== keyOf(this.song)) this.rebuild();
+    if (!this.g || this.g.key !== keyOf(this.songs())) this.rebuild();
   }
   private rebuild() {
     const old = this.g;
-    this.g = buildGraph(this.ctx!, this.song);
-    this.player = new Player(this.ctx!, this.g, this.song);
+    this.g = buildGraph(this.ctx!, this.songs());
+    if (this.recDest) this.g.final.connect(this.recDest);
+    this.player = new Player(this.ctx!, this.g, this.song, this.bank ? this.studio.master : undefined, this.bpm());
+    this.applyAll();
     if (old) { const q = old.out.gain; q.setTargetAtTime(0, this.ctx!.currentTime, 0.02); setTimeout(() => old.out.disconnect(), 300); }
   }
-  setSong(song: Song) {
-    this.song = song;
+  private bpm() { return this.bank && !this.ownTempo ? this.studio.bpm : this.song.bpm; }
+  private applyAll() {
     if (!this.ctx || !this.g) return;
-    if (this.g.key !== keyOf(song)) this.rebuild();
-    else { applyMix(this.ctx, this.g, song); this.player!.song = song; }
+    applyChannels(this.ctx, this.g, this.song);
+    applyMaster(this.ctx, this.g, this.bank ? this.studio.master : this.song.master, this.bpm());
+    if (this.player) { this.player.song = this.song; this.player.master = this.bank ? this.studio.master : undefined; this.player.bpm = this.bpm(); }
   }
+  // the editor's loop changed
+  setSong(song: Song) {
+    this.studio = song;
+    if (!this.bank) this.song = song;
+    if (!this.ctx || !this.g) return;
+    if (this.g.key !== keyOf(this.songs())) this.rebuild(); else this.applyAll();
+  }
+  // pads: perform with these loops instead of the editor's
+  setBank(bank: Song[] | null) {
+    this.bank = bank;
+    if (!bank) { this.stop(); this.song = this.studio; this.pad = { active: -1, queued: null, stopping: false }; }
+    else if (this.pad.active >= 0 && bank[this.pad.active]) this.song = bank[this.pad.active];
+    if (this.ctx && this.g && this.g.key !== keyOf(this.songs())) this.rebuild(); else this.applyAll();
+  }
+  launch(i: number) {
+    if (!this.bank?.[i]) return;
+    if (!this.playing) { this.song = this.bank[i]; this.pad = { active: i, queued: null, stopping: false }; this.play(); return; }
+    this.pad.queued = i; this.pad.stopping = false;
+    if (this.quantize === 'now') this.cutTo(i);
+  }
+  private cutTo(i: number) { this.song = this.bank![i]; this.pad = { active: i, queued: null, stopping: false }; this.virt = 0; this.repeats = []; this.applyAll(); }
+  stopAtBar() { if (this.playing) { this.pad.stopping = true; this.pad.queued = null; if (this.quantize === 'now') this.stop(); } }
+  // hold a slice or a stutter: the loop repeats a piece of itself until you let go
+  hold(id: string, kind: 'slice' | 'stutter', n: number) {
+    if (!this.playing) return;
+    this.pendingRepeats = this.pendingRepeats.filter(r => r.id !== id);
+    this.pendingRepeats.push({ id, start: kind === 'slice' ? n : -1, len: kind === 'slice' ? -1 : n, from: 0 });
+  }
+  release(id: string) { this.repeats = this.repeats.filter(r => r.id !== id); this.pendingRepeats = this.pendingRepeats.filter(r => r.id !== id); }
+
   play() {
     this.ensure();
-    this.step = 0; this.next = this.ctx!.currentTime + 0.05; this.queue = [];
+    this.virt = 0; this.next = this.ctx!.currentTime + 0.05; this.queue = []; this.repeats = []; this.pendingRepeats = [];
     this.playing = true;
     if (this.timer == null) this.timer = window.setInterval(() => this.schedule(), 20);
     this.schedule();
   }
-  stop() { this.playing = false; if (this.timer != null) clearInterval(this.timer); this.timer = null; this.queue = []; this.player?.mono.clear(); }
+  stop() {
+    this.playing = false; if (this.timer != null) clearInterval(this.timer); this.timer = null; this.queue = [];
+    this.player?.mono.clear(); this.repeats = []; this.pendingRepeats = []; this.pad.queued = null; this.pad.stopping = false;
+  }
   private schedule() {
     if (!this.ctx || !this.player || !this.playing) return;
-    const stepDur = 60 / this.song.bpm / 4, steps = stepsOf(this.song);
-    while (this.next < this.ctx.currentTime + 0.12) {
-      this.step %= steps;
-      const t = this.next + swingAt(this.song, this.step, stepDur);
-      this.player.step(this.step, t, stepDur);
-      this.queue.push({ t: this.next, step: this.step });
+    while (this.next < this.ctx.currentTime + 0.1) {
+      const v = this.virt, q = this.quantize === 'beat' ? 4 : 16;
+      if (this.bank && this.pad.stopping && v % 16 === 0 && v > 0) { this.stop(); return; }
+      if (this.bank && this.pad.queued != null && v % q === 0 && v > 0) this.cutTo(this.pad.queued);
+      const vv = this.virt, steps = stepsOf(this.song), stepDur = 60 / this.bpm() / 4;
+      // slices and stutters start on the next step
+      for (const r of this.pendingRepeats) {
+        const cur = this.repeats.length ? this.playStep(vv, steps) : vv % steps;
+        if (r.len < 0) { const len = steps / 8; r.start = r.start * len; r.len = len; } else r.start = Math.floor(cur / r.len) * r.len;
+        r.from = vv; this.repeats.push(r);
+      }
+      this.pendingRepeats = [];
+      const step = this.playStep(vv, steps);
+      const t = this.next + swingAt(this.song, step, stepDur);
+      this.player.step(step, t, stepDur);
+      if (this.metronome && vv % 4 === 0) this.click(this.next, vv % 16 === 0);
+      this.queue.push({ t: this.next, step, virt: vv });
       if (this.queue.length > 32) this.queue.shift();
       this.next += stepDur;
-      this.step++;
+      this.virt++;
     }
+  }
+  private playStep(v: number, steps: number) {
+    const r = this.repeats[this.repeats.length - 1];
+    return r ? (r.start + ((v - r.from) % r.len)) % steps : v % steps;
+  }
+  private click(t: number, accent: boolean) {
+    const ctx = this.ctx!, o = ctx.createOscillator(), e = ctx.createGain();
+    o.frequency.value = accent ? 1760 : 1175;
+    e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(accent ? 0.3 : 0.18, t + 0.002); e.gain.exponentialRampToValueAtTime(0.0005, t + 0.05);
+    o.connect(e).connect(ctx.destination); o.start(t); o.stop(t + 0.06);
   }
   // where the playhead is, in steps (with a fraction, so it moves smoothly)
   position(): number | null {
     if (!this.ctx || !this.playing) return null;
-    const now = this.ctx.currentTime - (this.ctx.outputLatency || 0), stepDur = 60 / this.song.bpm / 4;
+    const now = this.ctx.currentTime - (this.ctx.outputLatency || 0), stepDur = 60 / this.bpm() / 4;
     let last = null;
     for (const q of this.queue) if (q.t <= now) last = q;
     return last ? last.step + Math.min(1, (now - last.t) / stepDur) : null;
+  }
+  beat(): number | null {   // whole beats since play, for the pads' pulse
+    if (!this.ctx || !this.playing) return null;
+    const now = this.ctx.currentTime - (this.ctx.outputLatency || 0);
+    let last = null; for (const q of this.queue) if (q.t <= now) last = q;
+    return last ? Math.floor(last.virt / 4) : null;
   }
   // the output level, 0..1, for the meter
   level() {
@@ -428,6 +550,21 @@ export class Engine {
     if (c.kind === 'drum') drum(this.ctx!, this.g!, s.input, c, t, v);
     else synth(this.ctx!, this.g!, s.input, c, m, t, c.preset === 'riser' ? 1.2 : 0.3, v, this.song.bpm);
   }
+  // record whatever comes out of the speakers (for performances)
+  get recording() { return this.recorder?.state === 'recording'; }
+  startRecording() {
+    this.ensure();
+    if (typeof MediaRecorder === 'undefined') return false;
+    if (!this.recDest) { this.recDest = this.ctx!.createMediaStreamDestination(); this.g!.final.connect(this.recDest); }
+    const chunks: Blob[] = [];
+    this.recorder = new MediaRecorder(this.recDest.stream);
+    this.recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+    this.recorder.onstop = () => this.onRecorded?.(new Blob(chunks, { type: this.recorder?.mimeType || 'audio/webm' }));
+    this.recorder.start();
+    return true;
+  }
+  stopRecording() { if (this.recorder?.state === 'recording') this.recorder.stop(); }
+  onRecorded: ((b: Blob) => void) | null = null;
 }
 
 // ---------- export: the loop, a few times round, as a WAV file ----------
@@ -435,7 +572,7 @@ export async function renderWav(song: Song, loops = 4) {
   const stepDur = 60 / song.bpm / 4, steps = stepsOf(song);
   const total = steps * loops * stepDur + 3;
   const rate = 44100, ctx = new OfflineAudioContext(2, Math.ceil(total * rate), rate);
-  const g = buildGraph(ctx, song), player = new Player(ctx, g, song);
+  const g = buildGraph(ctx, [song]), player = new Player(ctx, g, song);
   let t = 0.05;
   for (let r = 0; r < loops; r++) for (let s = 0; s < steps; s++) { player.step(s, t + swingAt(song, s, stepDur), stepDur); t += stepDur; }
   return wav(await ctx.startRendering());
@@ -457,7 +594,7 @@ export async function measure(song: Song, raw = true) {
   const res: Record<string, { peak: number; rms: number }> = {};
   const run = async (s: Song) => {
     const stepDur = 60 / s.bpm / 4, steps = stepsOf(s), ctx = new OfflineAudioContext(2, Math.ceil((steps * stepDur + 1.5) * 44100), 44100);
-    const g = buildGraph(ctx, s, raw), p = new Player(ctx, g, s);
+    const g = buildGraph(ctx, [s], raw), p = new Player(ctx, g, s);
     for (let i = 0; i < steps; i++) p.step(i, 0.05 + i * stepDur + swingAt(s, i, stepDur), stepDur);
     const b = await ctx.startRendering(), d = b.getChannelData(0);
     let peak = 0, sq = 0; for (const x of d) { peak = Math.max(peak, Math.abs(x)); sq += x * x; }
