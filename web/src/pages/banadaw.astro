@@ -99,16 +99,16 @@ import Base from '../layouts/Base.astro';
               <div class="knobs" id="padKnobs"></div>
             </div>
             <div class="pv-box pv-row">
-              <label class="tb-f">Launch on <select id="padQ"><option value="bar">the next bar</option><option value="beat">the next beat</option><option value="now">straight away</option></select></label>
+              <label class="tb-f">Launch on <select id="padQ"><option value="beat" selected>the next beat</option><option value="bar">the next bar</option><option value="now">straight away</option></select></label>
               <button class="tog" id="padTempo" aria-pressed="true" title="Every pad plays at the BPM in the toolbar">Same tempo</button>
               <button class="tog" id="padStop" title="Stop at the end of the bar (0)">Stop <kbd>0</kbd></button>
               <button class="tog rec" id="padRec" aria-pressed="false">● Record</button>
             </div>
             <div class="pv-box">
-              <div class="pv-l"><b>Slices</b> <small>hold a key to repeat that part of the loop</small></div>
+              <div class="pv-l"><b>Slices</b> <small>tap to jump there, hold to loop it</small></div>
               <div class="strip-w"><canvas id="padStrip" aria-hidden="true"></canvas><i class="phead" id="pphead" hidden></i></div>
               <div class="pv-keys" id="slices"></div>
-              <div class="pv-l"><b>Stutter</b> <small>hold to repeat what's playing</small></div>
+              <div class="pv-l"><b>Stutter</b> <small>hold to repeat what's playing, let go to drop back in</small></div>
               <div class="pv-keys" id="stutters"></div>
             </div>
           </div>
@@ -467,11 +467,11 @@ import Base from '../layouts/Base.astro';
     if (k === 'm' && !mod && !e.altKey) { toggleMetro(); return; }
     // pads: 1-9 launch, 0 stops, Q-I hold slices, Z X C hold stutters
     if (tab === 'pads') {
-      if (k === 'arrowleft' || k === 'arrowright') { e.preventDefault(); padFx.filter = clamp(Math.round((padFx.filter + (k === 'arrowright' ? 0.05 : -0.05)) * 100) / 100, -1, 1); applyPadFx(); return; }
+      if (k === 'arrowleft' || k === 'arrowright') { e.preventDefault(); sweep = k === 'arrowright' ? 1 : -1; return; }
       if (e.repeat) { if ('123456789qwertyuizxc'.includes(k)) e.preventDefault(); return; }
       const d = /^Digit([0-9])$/.exec(e.code)?.[1];
       if (d === '0') { engine.stopAtBar(); return; }
-      if (d) { const i = +d - 1; if (pads[i]) { if (ready(i)) { padSel = i; engine.launch(i); playBtn(); drawPads(); } } else toast(`Pad ${d} is empty. Click it to save the editor's loop there.`); return; }
+      if (d) { const i = +d - 1; if (pads[i]) { if (ready(i)) { engine.launch(i); playBtn(); selectPad(i); } } else toast(`Pad ${d} is empty. Click it to save the editor's loop there.`); return; }
       if (SLICE_KEYS.includes(k) && !mod) { engine.hold('k' + k, 'slice', SLICE_KEYS.indexOf(k)); held.add('k' + k); return; }
       if (k in STUTTER_KEYS && !mod) { engine.hold('k' + k, 'stutter', STUTTER_KEYS[k][0]); held.add('k' + k); return; }
       return;
@@ -505,7 +505,11 @@ import Base from '../layouts/Base.astro';
     if (i >= 0 && !e.repeat && !mod && !e.altKey) { engine.preview(c, 12 * Math.floor(viewMid() / 12) + i, 0.8); flash = { m: 12 * Math.floor(viewMid() / 12) + i, t: performance.now() }; dirty = true; }
   });
   const held = new Set<string>();
-  addEventListener('keyup', e => { const id = 'k' + e.key.toLowerCase(); if (held.has(id)) { held.delete(id); engine.release(id); } });
+  addEventListener('keyup', e => {
+    const id = 'k' + e.key.toLowerCase(); if (held.has(id)) { held.delete(id); engine.release(id); }
+    if ((e.key === 'ArrowLeft' && sweep < 0) || (e.key === 'ArrowRight' && sweep > 0)) { sweep = 0; store.set('banadaw-padfx', JSON.stringify(padFx)); }
+  });
+  let sweep = 0, sweepT = 0;   // ← and → glide the pads' filter while held
   addEventListener('blur', () => { for (const id of held) engine.release(id); held.clear(); });
 
   $('share').addEventListener('click', async () => {
@@ -983,7 +987,7 @@ import Base from '../layouts/Base.astro';
   // ---------- tabs: Notes, Automation, Pads ----------
   const HELP = {
     auto: 'Pick a knob for any track, then click its line to add a point and drag points to shape it. Right-click or double-click a point to remove it. Hold Alt (Option) to place points between the grid lines.',
-    pads: 'Click an empty pad to save the editor’s loop there (it’s recorded, so it plays instantly). Keys 1 to 9 launch pads (press the playing one again to restart it), 0 stops at the end of the bar, hold Q to I to repeat a slice, hold Z, X or C to stutter, ← and → sweep the filter. Space starts and stops.',
+    pads: 'Click an empty pad to save the editor’s loop there (it’s recorded, so it plays instantly). Keys 1 to 9 launch pads (press the playing one again to restart it), 0 stops at the end of the bar, tap Q to I to jump to a slice (hold to loop it), hold Z, X or C to stutter, ← and → sweep the filter. Space starts and stops.',
   };
   function setTab(v: typeof tab) {
     if (v === tab) return;
@@ -1185,15 +1189,24 @@ import Base from '../layouts/Base.astro';
   const PAD_TINTS = ['#F5C93E', '#F2A57C', '#EE8FB0', '#B79CF0', '#7DB6E8', '#6FCDB8', '#8CC56A', '#D9B07A', '#F5C93E'];
   $('slices').innerHTML = [...SLICE_KEYS].map((k, i) => `<button class="pk-btn" data-hold="s${i}" data-kind="slice" data-n="${i}"><kbd>${k.toUpperCase()}</kbd><span>${i + 1}</span></button>`).join('');
   $('stutters').innerHTML = Object.entries(STUTTER_KEYS).map(([k, [n, label]]) => `<button class="pk-btn" data-hold="t${k}" data-kind="stutter" data-n="${n}"><kbd>${k.toUpperCase()}</kbd><span>${label}</span></button>`).join('');
-  function drawPads() {
-    padLook = ''; barEl = null;
-    $('padGrid').innerHTML = pads.map((p, i) => `<button class="pad${p ? ' full' : ''}${i === padSel ? ' sel' : ''}" data-i="${i}" style="--c:${PAD_TINTS[i]}" aria-label="Pad ${i + 1}: ${p ? esc(p.name) : 'empty'}">
-      <span class="pk">${i + 1}</span>${p ? `<b>${esc(p.name)}</b><small>${padBusy.has(i) ? 'Recording the loop…' : `${p.bpm} BPM · ${p.bars} ${p.bars === 1 ? 'bar' : 'bars'}`}</small>` : `<small><span class="lg">Empty: click to save the editor’s loop here</span><span class="sm">+ Save here</span></small>`}<i class="pbar"></i></button>`).join('');
+  function selectPad(i: number) {
+    if (i === padSel) return;
+    padSel = i; padLook = ''; stripKey = '';
+    $('padGrid').querySelectorAll<HTMLElement>('.pad').forEach(el => el.classList.toggle('sel', +el.dataset.i! === i));
+    padInfo();
+  }
+  function padInfo() {
     const p = pads[padSel];
     $('padSelName').textContent = `Pad ${padSel + 1}`;
     $('padSelMeta').textContent = p ? ` · ${p.name}` : ' · empty';
     $<HTMLButtonElement>('padOpen').disabled = !p; $<HTMLButtonElement>('padClear').disabled = !p;
     $('padSave').textContent = p ? 'Replace it with the editor’s loop' : 'Save the editor’s loop here';
+  }
+  function drawPads() {
+    padLook = ''; barEl = null;
+    $('padGrid').innerHTML = pads.map((p, i) => `<button class="pad${p ? ' full' : ''}${i === padSel ? ' sel' : ''}" data-i="${i}" style="--c:${PAD_TINTS[i]}" aria-label="Pad ${i + 1}: ${p ? esc(p.name) : 'empty'}">
+      <span class="pk">${i + 1}</span>${p ? `<b>${esc(p.name)}</b><small>${padBusy.has(i) ? 'Recording the loop…' : `${p.bpm} BPM · ${p.bars} ${p.bars === 1 ? 'bar' : 'bars'}`}</small>` : `<small><span class="lg">Empty: click to save the editor’s loop here</span><span class="sm">+ Save here</span></small>`}<i class="pbar"></i></button>`).join('');
+    padInfo();
   }
   function savePad(i: number) {
     const notes = song.ch.reduce((a, c) => a + (c.kind === 'drum' ? c.steps.filter(Boolean).length : c.notes.length), 0);
@@ -1205,9 +1218,10 @@ import Base from '../layouts/Base.astro';
   const ready = (i: number) => { if (padBufs[i]) return true; toast(`Pad ${i + 1} is still being recorded. One moment.`); return false; };
   $('padGrid').addEventListener('pointerdown', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('.pad'); if (!b) return;
-    const i = +b.dataset.i!; padSel = i;
-    if (!pads[i]) savePad(i); else if (ready(i)) { engine.launch(i); playBtn(); }
-    drawPads();
+    const i = +b.dataset.i!;
+    if (!pads[i]) { padSel = i; savePad(i); return; }
+    if (ready(i)) { engine.launch(i); playBtn(); }
+    selectPad(i);
   });
   $('padSave').addEventListener('click', () => { if (pads[padSel] && !confirm(`Replace pad ${padSel + 1} with the editor’s loop?`)) return; savePad(padSel); });
   $('padOpen').addEventListener('click', () => {
@@ -1223,7 +1237,7 @@ import Base from '../layouts/Base.astro';
   // the pads' own filter: sweep it while you play (← and → work too)
   let padFx: PadFx = { filter: 0, res: 0.2, vol: 0.85 };
   try { padFx = { ...padFx, ...JSON.parse(store.get('banadaw-padfx') || '{}') }; } catch {}
-  function applyPadFx() { engine.setPadFx(padFx); store.set('banadaw-padfx', JSON.stringify(padFx)); paintKnobs($('padKnobs')); }
+  function applyPadFx(save = true) { engine.setPadFx(padFx); if (save) store.set('banadaw-padfx', JSON.stringify(padFx)); paintKnobs($('padKnobs')); }
   $('padKnobs').innerHTML = [
     knobHTML('pad:filter', { label: 'Filter', get: () => padFx.filter, set: v => { padFx.filter = Math.abs(v) < 0.03 ? 0 : v; applyPadFx(); }, def: 0, min: -1, max: 1, bi: true, fmt: fmtFilter }),
     knobHTML('pad:res', { label: 'Resonance', get: () => padFx.res, set: v => { padFx.res = v; applyPadFx(); }, def: 0.2, fmt: pct }),
@@ -1257,6 +1271,8 @@ import Base from '../layouts/Base.astro';
   });
   let shownBeat: number | null = null, padLook = '', barEl: HTMLElement | null = null;
   function padFrame(pos: number | null) {
+    const now = performance.now(), dt = Math.min(0.05, (now - (sweepT || now)) / 1000); sweepT = now;
+    if (sweep) { const f = clamp(padFx.filter + sweep * dt * 0.9, -1, 1); padFx.filter = Math.abs(f) < 0.01 && Math.sign(f) !== Math.sign(sweep) ? 0 : f; applyPadFx(false); }
     const st = engine.pad, blink = Math.floor(performance.now() / 180) % 2 === 0, beat = engine.beat();
     // only touch the page when something changed (this runs every frame)
     const look = `${engine.playing}:${st.active}:${st.queued}:${blink}:${st.stopping}:${[...held].join()}:${padSel}`;
@@ -1537,8 +1553,10 @@ import Base from '../layouts/Base.astro';
   .bdaw .pad.sel { outline: 3px solid var(--butter-d); outline-offset: 2px; }
   .bdaw .pad.on { background: var(--c); }
   .bdaw .pad.queued { box-shadow: 0 0 0 4px var(--c); }
-  .bdaw .pad.pulse { animation: bd-pulse .22s ease-out; }
-  @keyframes bd-pulse { 0% { transform: scale(1.04); } 100% { transform: none; } }
+  .bdaw .pad.pulse { animation: bd-pulse .32s ease-out; }
+  .bdaw .pad { transition: background-color .12s; }
+  .bdaw .pad:active { filter: brightness(1.08); }
+  @keyframes bd-pulse { 0% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 55%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
   .bdaw .pad .pk { position: absolute; top: 8px; left: 10px; font: 600 26px var(--display); opacity: .8; }
   .bdaw .pad b { font: 600 16px/1.2 var(--display); overflow-wrap: anywhere; }
   .bdaw .pad small { font-size: 12px; color: var(--ink-2); font-weight: 700; }

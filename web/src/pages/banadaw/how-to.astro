@@ -16,9 +16,9 @@ const shortcuts: [string, string, string][] = [
   ['Notes', 'Esc', 'Let go of the selection'],
   ['Pads', '1 … 9', 'Launch a pad (press the playing one again to restart it)'],
   ['Pads', '0', 'Stop at the end of the bar'],
-  ['Pads', 'Q W E R T Y U I', 'Hold to repeat one of the 8 slices of the loop'],
+  ['Pads', 'Q W E R T Y U I', 'Tap to jump to one of the 8 slices, hold to loop it'],
   ['Pads', 'Z X C', 'Hold to stutter: repeat the last beat, 1/8 or 1/16'],
-  ['Pads', '← →', 'Sweep the pads’ filter dark or thin'],
+  ['Pads', '← →', 'Hold to sweep the pads’ filter dark or thin'],
 ];
 ---
 <Base wide section="banadaw" image="/og/banadaw.jpg" title="How BanaDAW works · every feature explained · All Things Banana"
@@ -153,12 +153,12 @@ const shortcuts: [string, string, string][] = [
       <p>The pads turn BanaDAW into an instrument. Build 3 to 5 loops that work together (say an intro, a groove, a build and a drop), save each one to a pad, then play them live with your keyboard.</p>
       <ol class="steps">
         <li>Make a loop in the Notes tab, open <b>Pads</b> and <b>click an empty pad</b> to save it there. Go back, change the loop, save it to the next pad, and so on. Saving records the loop as audio (it takes a second or two), so a pad plays instantly and barely uses your computer. Pads and their recordings are kept on this device.</li>
-        <li>Press <kbd>1</kbd> to <kbd>9</kbd> to launch a pad. Launching while another plays waits for the next bar (or the next beat, or switches straight away: see <em>Launch on</em>), so the switch is always in time. A waiting pad blinks.</li>
+        <li>Press <kbd>1</kbd> to <kbd>9</kbd> to launch a pad. Launching while another plays switches on the next beat (or the next bar, or straight away: see <em>Launch on</em>), and the new loop picks up at the same point in the bar, so the groove never stumbles. A waiting pad blinks.</li>
         <li><b>Press the playing pad again</b> and it starts over from the top straight away, like a sampler. Tap it two or three times for a quick stab.</li>
-        <li><b>Hold</b> <kbd>Q</kbd> to <kbd>I</kbd> to repeat one of the 8 slices of the playing loop. Let go and the loop carries on where it would have been, like a DJ's cue juggling.</li>
-        <li><b>Hold</b> <kbd>Z</kbd>, <kbd>X</kbd> or <kbd>C</kbd> to stutter: repeat the last beat, eighth or sixteenth, the classic build-up roll.</li>
+        <li><b>Tap</b> <kbd>Q</kbd> to <kbd>I</kbd> to jump straight to one of the 8 slices of the playing loop; it carries on from there. <b>Hold</b> one to keep looping that slice, like an MPC or a DJ's cue juggling.</li>
+        <li><b>Hold</b> <kbd>Z</kbd>, <kbd>X</kbd> or <kbd>C</kbd> to stutter: repeat a beat, an eighth or a sixteenth, the classic build-up roll. Let go and it drops back in exactly in time.</li>
         <li><kbd>0</kbd> stops at the end of the bar.</li>
-        <li>The pads have their own <b>Filter</b>: turn it left to make everything dark and muffled, right to make it thin, and add <b>Resonance</b> for a whistling sweep. <kbd>←</kbd> and <kbd>→</kbd> sweep it from the keyboard while you play. <b>Volume</b> sets how loud the pads are.</li>
+        <li>The pads have their own <b>Filter</b>: turn it left to make everything dark and muffled, right to make it thin, and add <b>Resonance</b> for a whistling sweep. Hold <kbd>←</kbd> or <kbd>→</kbd> to sweep it smoothly from the keyboard while you play. <b>Volume</b> sets how loud the pads are.</li>
         <li><b>Same tempo</b> plays every pad at the toolbar's BPM. Because pads are recordings, a pad sped up or slowed down also goes up or down in pitch, like a record or a sampler. Turn it off to play each loop at its own tempo. Changed a loop? Save it to its pad again to re-record it.</li>
         <li><b>Record</b> captures everything you play and downloads it when you stop.</li>
       </ol>

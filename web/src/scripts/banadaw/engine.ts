@@ -450,7 +450,7 @@ class Player {
 const swingAt = (song: Song, step: number, stepDur: number) => (step % 2 ? song.swing * stepDur * 0.5 : 0);
 
 // ---------- the live player: the studio's loop, or a bank of pads to perform with ----------
-type Repeat = { start: number; len: number; from: number; id: string };
+type Repeat = { start: number; len: number; from: number; id: string; kind: 'slice' | 'stutter' };
 export type PadState = { active: number; queued: number | null; stopping: boolean };
 export type PadSample = { song: Song; buf: AudioBuffer };   // a pad: the loop, recorded
 export type PadFx = { filter: number; res: number; vol: number };
@@ -463,16 +463,14 @@ export class Engine {
   private player: Player | null = null;
   playing = false;
   metronome = false;
-  quantize: 'bar' | 'beat' | 'now' = 'bar';
+  quantize: 'bar' | 'beat' | 'now' = 'beat';
   ownTempo = false;               // pads at their own tempo instead of the studio's
   pad: PadState = { active: -1, queued: null, stopping: false };
   private fx: PadFx = { filter: 0, res: 0, vol: 0.85 };
   private virt = 0; private next = 0; private timer: number | null = null;
   private queue: { t: number; step: number; virt: number }[] = [];
-  private restart = false;
   private repeats: Repeat[] = [];
-  private pendingRepeats: Repeat[] = [];
-  private src: { s: AudioBufferSourceNode; g: GainNode; pad: number; rate: number; buffer: AudioBuffer } | null = null;
+  private src: { s: AudioBufferSourceNode; g: GainNode; pad: number; rate: number; buffer: AudioBuffer; at: number } | null = null;
   private expect = -1;
   private buf: Float32Array<ArrayBuffer> | null = null;
   private recDest: MediaStreamAudioDestinationNode | null = null;
@@ -527,80 +525,120 @@ export class Engine {
     set(this.g.padLp.Q, f < -0.02 ? q : 0.7); set(this.g.padHp.Q, f > 0.02 ? q : 0.7);
     set(this.g.padIn.gain, this.fx.vol * this.fx.vol * 1.2);
   }
+  // ----- pads -----
+  // Time runs on one clock of sixteenths (virt). "anchor" is where the current pass of the loop started, so the pad's
+  // step is (virt - anchor) mod its length. Switching pads keeps the anchor (the groove stays in step); restarting and
+  // slices move it. Anything you press acts straight away (about 12 ms) instead of waiting behind scheduled audio.
+  private anchor = 0;
+  private fade = 0.012;
   launch(i: number) {
     if (!this.bank?.[i]) return;
-    if (!this.playing) { this.song = this.bank[i]!.song; this.pad = { active: i, queued: null, stopping: false }; this.play(); return; }
-    if (this.pad.active === i && this.pad.queued == null) { this.restart = true; this.pad.stopping = false; return; }   // like a sampler: hit it again, it starts again
-    this.pad.queued = i; this.pad.stopping = false;
-    if (this.quantize === 'now') this.cutTo(i);
+    if (!this.playing) { this.song = this.bank[i]!.song; this.pad = { active: i, queued: null, stopping: false }; this.anchor = 0; this.play(); return; }
+    this.pad.stopping = false;
+    if (this.pad.active === i && this.pad.queued == null) { this.jumpNow(() => { this.anchor = this.virt; this.repeats = []; }); return; }   // like a sampler: hit it again, it starts again
+    if (this.quantize === 'now') { this.jumpNow(() => this.switchTo(i)); return; }
+    this.pad.queued = i;
   }
-  private cutTo(i: number) { this.song = this.bank![i]!.song; this.pad = { active: i, queued: null, stopping: false }; this.virt = 0; this.repeats = []; this.expect = -1; }
+  private switchTo(i: number) {
+    this.song = this.bank![i]!.song; this.pad = { active: i, queued: null, stopping: false };
+    this.repeats = []; this.expect = -1; this.fade = 0.03;   // a longer crossfade between loops
+  }
   stopAtBar() { if (this.playing) { this.pad.stopping = true; this.pad.queued = null; if (this.quantize === 'now') this.stop(); } }
-  // hold a slice or a stutter: the loop repeats a piece of itself until you let go
+  // slices (tap to jump there and keep playing, hold to loop it) and stutters (hold to repeat what's playing)
   hold(id: string, kind: 'slice' | 'stutter', n: number) {
-    if (!this.playing) return;
-    this.pendingRepeats = this.pendingRepeats.filter(r => r.id !== id);
-    this.pendingRepeats.push({ id, start: kind === 'slice' ? n : -1, len: kind === 'slice' ? -1 : n, from: 0 });
+    if (!this.playing || !this.bank) return;
+    this.repeats = this.repeats.filter(r => r.id !== id);
+    if (kind === 'slice') {
+      this.jumpNow(() => {
+        const steps = stepsOf(this.song), len = steps / 8, start = n * len;
+        this.anchor = this.virt - start;
+        this.repeats.push({ id, start, len, from: this.virt, kind });
+      });
+    } else {
+      const steps = stepsOf(this.song), cur = this.playStep(this.virt, steps);
+      this.repeats.push({ id, start: cur, len: n, from: this.virt, kind });
+    }
   }
-  release(id: string) { this.repeats = this.repeats.filter(r => r.id !== id); this.pendingRepeats = this.pendingRepeats.filter(r => r.id !== id); }
+  release(id: string) {
+    const r = this.repeats.find(x => x.id === id); if (!r) return;
+    const steps = stepsOf(this.song), next = this.playStep(this.virt, steps);
+    this.repeats = this.repeats.filter(x => x !== r);
+    // a slice carries on from where it is; a stutter drops back into time, where the loop would have been
+    if (r.kind === 'slice' && !this.repeats.length) this.anchor = this.virt - next;
+  }
+  // act now: forget what was scheduled after ~12 ms from now, change course, schedule again
+  private jumpNow(change: () => void) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + 0.012;
+    const dropped = this.queue.findIndex(q => q.t >= t - 1e-4);
+    if (dropped >= 0) { this.virt = this.queue[dropped].virt; this.queue.length = dropped; }
+    if (this.src && this.src.at >= t - 1e-4) {   // a jump scheduled for the future: cancel it and keep the one playing
+      this.src.s.stop(); this.src.s.disconnect();
+      this.src = this.prevSrc;
+      if (this.src) { this.src.g.gain.cancelScheduledValues(this.ctx.currentTime); this.src.g.gain.setValueAtTime(1, this.ctx.currentTime); this.src.s.stop(this.ctx.currentTime + 3600); }
+    }
+    this.next = t;
+    change();
+    this.expect = -1;
+    this.schedule();
+  }
 
   play() {
     this.ensure();
-    this.virt = 0; this.next = this.ctx!.currentTime + 0.05; this.queue = []; this.repeats = []; this.pendingRepeats = []; this.expect = -1;
+    this.virt = 0; this.anchor = 0; this.next = this.ctx!.currentTime + 0.04; this.queue = []; this.repeats = []; this.expect = -1;
     this.playing = true;
-    if (this.timer == null) this.timer = window.setInterval(() => this.schedule(), 20);
+    if (this.timer == null) this.timer = window.setInterval(() => this.schedule(), this.bank ? 8 : 20);
     this.schedule();
   }
-  stop() {
+  stop(at?: number) {
     this.playing = false; if (this.timer != null) clearInterval(this.timer); this.timer = null; this.queue = [];
-    this.player?.mono.clear(); this.repeats = []; this.pendingRepeats = []; this.pad.queued = null; this.pad.stopping = false; this.restart = false;
-    if (this.src && this.ctx) { const t = this.ctx.currentTime; this.src.g.gain.setTargetAtTime(0, t, 0.01); this.src.s.stop(t + 0.08); this.src = null; }
+    this.player?.mono.clear(); this.repeats = []; this.pad.queued = null; this.pad.stopping = false;
+    if (this.src && this.ctx) { const t = Math.max(at ?? 0, this.ctx.currentTime); this.src.g.gain.setTargetAtTime(0, t, 0.012); this.src.s.stop(t + 0.1); this.src = null; }
   }
   private schedule() {
     if (!this.ctx || !this.player || !this.playing) return;
-    while (this.next < this.ctx.currentTime + 0.08) {
-      const v = this.virt, q = this.quantize === 'beat' ? 4 : 16;
-      if (this.bank && this.pad.stopping && v % 16 === 0 && v > 0) { this.stop(); return; }
-      if (this.bank && this.pad.queued != null && v % q === 0 && v > 0) this.cutTo(this.pad.queued);
-      if (this.restart) { this.restart = false; this.cutTo(this.pad.active); }
-      const vv = this.virt, steps = stepsOf(this.song), stepDur = 60 / this.bpm() / 4;
-      // slices and stutters start on the next step
-      for (const r of this.pendingRepeats) {
-        const cur = this.repeats.length ? this.playStep(vv, steps) : vv % steps;
-        if (r.len < 0) { const len = steps / 8; r.start = r.start * len; r.len = len; } else r.start = Math.floor(cur / r.len) * r.len;
-        r.from = vv; this.repeats.push(r);
+    // the pads only need to plan ahead for jumps (the recording plays on by itself), so they look ahead much less
+    const ahead = this.bank ? 0.03 : 0.08;
+    while (this.next < this.ctx.currentTime + ahead) {
+      const rel = this.virt - this.anchor, stepDur = 60 / this.bpm() / 4;
+      if (this.bank) {
+        if (this.pad.stopping && rel % 16 === 0 && this.queue.length) { this.stop(this.next); return; }
+        if (this.pad.queued != null && rel % (this.quantize === 'beat' ? 4 : 16) === 0 && this.queue.length) this.switchTo(this.pad.queued);
       }
-      this.pendingRepeats = [];
-      const step = this.playStep(vv, steps);
+      const steps = stepsOf(this.song), step = this.playStep(this.virt, steps);
       if (this.bank) { this.padStep(step, steps, stepDur); if (!this.playing) return; }
       else this.player.step(step, this.next + swingAt(this.song, step, stepDur), stepDur);
-      if (this.metronome && vv % 4 === 0) this.click(this.next, vv % 16 === 0);
-      this.queue.push({ t: this.next, step, virt: vv });
-      if (this.queue.length > 32) this.queue.shift();
+      if (this.metronome && rel % 4 === 0) this.click(this.next, rel % 16 === 0);
+      this.queue.push({ t: this.next, step, virt: this.virt });
+      if (this.queue.length > 48) this.queue.shift();
       this.next += stepDur;
       this.virt++;
     }
   }
   // pads: one recording plays on; we only start it again somewhere else when the music jumps
+  private prevSrc: Engine['src'] = null;
   private padStep(step: number, steps: number, stepDur: number) {
     const i = this.pad.active, pad = this.bank?.[i];
     if (!pad) { this.stop(); return; }
     const padStepSecs = 60 / pad.song.bpm / 4, rate = padStepSecs / stepDur, t = this.next;
     if (!this.src || this.src.pad !== i || step !== this.expect || this.src.buffer !== pad.buf) {
-      const ctx = this.ctx!, old = this.src;
-      if (old) { old.g.gain.setValueAtTime(1, t); old.g.gain.linearRampToValueAtTime(0, t + 0.006); old.s.stop(t + 0.02); }
+      const ctx = this.ctx!, old = this.src, fade = this.fade;
+      if (old) { old.g.gain.setValueAtTime(1, t); old.g.gain.linearRampToValueAtTime(0, t + fade); old.s.stop(t + fade + 0.02); }
       const s = ctx.createBufferSource(), g = ctx.createGain();
       s.buffer = pad.buf; s.loop = true; s.loopStart = 0; s.loopEnd = pad.buf.duration; s.playbackRate.value = rate;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 0.004);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + Math.min(0.008, fade));
       s.connect(g).connect(this.g!.padIn);
       s.start(t, (step * padStepSecs) % pad.buf.duration);
-      this.src = { s, g, pad: i, rate, buffer: pad.buf };
+      this.prevSrc = old;
+      this.src = { s, g, pad: i, rate, buffer: pad.buf, at: t };
+      this.fade = 0.012;
     } else if (Math.abs(this.src.rate - rate) > 1e-6) { this.src.s.playbackRate.setValueAtTime(rate, t); this.src.rate = rate; }
     this.expect = (step + 1) % steps;
   }
   private playStep(v: number, steps: number) {
     const r = this.repeats[this.repeats.length - 1];
-    return r ? (r.start + ((v - r.from) % r.len)) % steps : v % steps;
+    if (r) return (r.start + (((v - r.from) % r.len) + r.len) % r.len) % steps;
+    return (((v - this.anchor) % steps) + steps) % steps;
   }
   private click(t: number, accent: boolean) {
     const ctx = this.ctx!, o = ctx.createOscillator(), e = ctx.createGain();
@@ -620,7 +658,7 @@ export class Engine {
     if (!this.ctx || !this.playing) return null;
     const now = this.ctx.currentTime - (this.ctx.outputLatency || 0);
     let last = null; for (const q of this.queue) if (q.t <= now) last = q;
-    return last ? Math.floor(last.virt / 4) : null;
+    return last ? Math.floor((last.virt - this.anchor) / 4) : null;
   }
   // the output level, 0..1, for the meter
   level() {
