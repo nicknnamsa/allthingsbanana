@@ -94,6 +94,10 @@ import Base from '../layouts/Base.astro';
                 <button class="tog" id="padClear">Empty this pad</button>
               </div>
             </div>
+            <div class="pv-box pv-fx">
+              <div class="pv-l"><b>Filter</b> <small>turn left for dark, right for thin; ← and → sweep it</small></div>
+              <div class="knobs" id="padKnobs"></div>
+            </div>
             <div class="pv-box pv-row">
               <label class="tb-f">Launch on <select id="padQ"><option value="bar">the next bar</option><option value="beat">the next beat</option><option value="now">straight away</option></select></label>
               <button class="tog" id="padTempo" aria-pressed="true" title="Every pad plays at the BPM in the toolbar">Same tempo</button>
@@ -159,7 +163,8 @@ import Base from '../layouts/Base.astro';
 </Base>
 
 <script>
-  import { Engine, renderWav } from '../scripts/banadaw/engine';
+  import { Engine, renderWav, renderLoop, type PadFx } from '../scripts/banadaw/engine';
+  import { putPad, getPad, delPad, sigOf } from '../scripts/banadaw/padstore';
   import {
     type Song, type Channel, type Note, type Bars, type Chord, type DrumSound, type SynthPreset,
     STARTERS, SCALES, NOTE_NAMES, COLORS, DRUMS, SYNTHS, DRUM_KNOBS, SYNTH_KNOBS, BAR_CHOICES, CHORDS, STEPS_PER_BAR,
@@ -235,7 +240,7 @@ import Base from '../layouts/Base.astro';
   function refreshAutoMarks() {
     $('app').querySelectorAll<HTMLElement>('.knob[data-ak]').forEach(el => { el.classList.toggle('auto', isAuto(el.dataset.ak)); paintKnob(el); });
   }
-  const paintKnobs = (root: ParentNode) => root.querySelectorAll<HTMLElement>('.knob').forEach(paintKnob);
+  const paintKnobs = (root: ParentNode) => root.querySelectorAll<HTMLElement>('.knob').forEach(el => paintKnob(el));
   function setKnob(el: HTMLElement, v: number) {
     const k = knobs.get(el.dataset.k!)!;
     k.set(clamp(v, k.min ?? 0, k.max ?? 1)); paintKnob(el); engine.setSong(song);
@@ -440,7 +445,7 @@ import Base from '../layouts/Base.astro';
   // ---------- transport ----------
   const playBtn = () => { $('play').classList.toggle('on', engine.playing); $('play').setAttribute('aria-label', engine.playing ? 'Stop' : 'Play'); };
   const toggle = () => {
-    if (tab === 'pads') { if (engine.playing) engine.stop(); else { const i = pads[padSel] ? padSel : pads.findIndex(Boolean); if (i >= 0) engine.launch(i); else toast('Save a loop to a pad first.'); } playBtn(); return; }
+    if (tab === 'pads') { if (engine.playing) engine.stop(); else { const i = pads[padSel] ? padSel : pads.findIndex(Boolean); if (i < 0) toast('Save a loop to a pad first.'); else if (ready(i)) engine.launch(i); } playBtn(); return; }
     if (engine.playing) engine.stop(); else { engine.setSong(song); engine.play(); } playBtn();
   };
   // metronome: a click on every beat while you play (never in the WAV)
@@ -462,10 +467,11 @@ import Base from '../layouts/Base.astro';
     if (k === 'm' && !mod && !e.altKey) { toggleMetro(); return; }
     // pads: 1-9 launch, 0 stops, Q-I hold slices, Z X C hold stutters
     if (tab === 'pads') {
+      if (k === 'arrowleft' || k === 'arrowright') { e.preventDefault(); padFx.filter = clamp(Math.round((padFx.filter + (k === 'arrowright' ? 0.05 : -0.05)) * 100) / 100, -1, 1); applyPadFx(); return; }
       if (e.repeat) { if ('123456789qwertyuizxc'.includes(k)) e.preventDefault(); return; }
       const d = /^Digit([0-9])$/.exec(e.code)?.[1];
       if (d === '0') { engine.stopAtBar(); return; }
-      if (d) { const i = +d - 1; if (pads[i]) { padSel = i; engine.launch(i); playBtn(); drawPads(); } else toast(`Pad ${d} is empty. Click it to save the editor's loop there.`); return; }
+      if (d) { const i = +d - 1; if (pads[i]) { if (ready(i)) { padSel = i; engine.launch(i); playBtn(); drawPads(); } } else toast(`Pad ${d} is empty. Click it to save the editor's loop there.`); return; }
       if (SLICE_KEYS.includes(k) && !mod) { engine.hold('k' + k, 'slice', SLICE_KEYS.indexOf(k)); held.add('k' + k); return; }
       if (k in STUTTER_KEYS && !mod) { engine.hold('k' + k, 'stutter', STUTTER_KEYS[k][0]); held.add('k' + k); return; }
       return;
@@ -977,7 +983,7 @@ import Base from '../layouts/Base.astro';
   // ---------- tabs: Notes, Automation, Pads ----------
   const HELP = {
     auto: 'Pick a knob for any track, then click its line to add a point and drag points to shape it. Right-click or double-click a point to remove it. Hold Alt (Option) to place points between the grid lines.',
-    pads: 'Click an empty pad to save the editor’s loop there. Keys 1 to 9 launch pads (press the playing one again to restart it), 0 stops at the end of the bar, hold Q to I to repeat a slice, hold Z, X or C to stutter. Space starts and stops.',
+    pads: 'Click an empty pad to save the editor’s loop there (it’s recorded, so it plays instantly). Keys 1 to 9 launch pads (press the playing one again to restart it), 0 stops at the end of the bar, hold Q to I to repeat a slice, hold Z, X or C to stutter, ← and → sweep the filter. Space starts and stops.',
   };
   function setTab(v: typeof tab) {
     if (v === tab) return;
@@ -987,7 +993,7 @@ import Base from '../layouts/Base.astro';
     $('app').querySelectorAll<HTMLElement>('.ed-tabs [data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
     $('roll').hidden = v !== 'notes'; $('autoView').hidden = v !== 'auto'; $('padView').hidden = v !== 'pads';
     if (fromPads) { for (const id of held) engine.release(id); held.clear(); engine.setBank(null); playBtn(); }
-    if (v === 'pads') { engine.stop(); engine.setBank(pads.slice() as Song[]); playBtn(); drawPads(); }
+    if (v === 'pads') { engine.stop(); engine.setBank(bankFor()); playBtn(); drawPads(); prepareAll(); }
     if (v === 'auto') drawLanes();
     if (v === 'notes') layout(); else $('help').textContent = HELP[v];
   }
@@ -1149,13 +1155,40 @@ import Base from '../layouts/Base.astro';
   // ---------- pads: save loops to keys 1-9 and perform with them ----------
   let pads: (Song | null)[] = Array(9).fill(null), padSel = 0;
   try { const saved = JSON.parse(store.get('banadaw-pads') || 'null'); if (Array.isArray(saved)) pads = Array.from({ length: 9 }, (_, i) => (validSong(saved[i]) ? saved[i] : null)); } catch {}
-  const savePads = () => { stripKey = ''; store.set('banadaw-pads', JSON.stringify(pads)); if (tab === 'pads') engine.setBank(pads.slice() as Song[]); };
+  // each pad keeps its loop (to open in the editor) and a recording of it (to play, which is instant and light)
+  const padBufs: (AudioBuffer | null)[] = Array(9).fill(null), padBusy = new Set<number>();
+  const bankFor = () => pads.map((p, i) => (p && padBufs[i] ? { song: p, buf: padBufs[i]! } : null));
+  const savePads = () => { stripKey = ''; store.set('banadaw-pads', JSON.stringify(pads)); if (tab === 'pads') engine.setBank(bankFor()); };
+  async function record(i: number) {
+    const p = pads[i]; if (!p) return;
+    padBusy.add(i); if (tab === 'pads') drawPads();
+    const json = JSON.stringify(p);
+    try {
+      const buf = await renderLoop(p, engine.ctx?.sampleRate ?? 44100);
+      if (JSON.stringify(pads[i]) !== json) return;   // replaced while we were recording
+      padBufs[i] = buf; putPad(i, sigOf(json), buf);
+    } catch { toast(`Couldn’t record pad ${i + 1} in this browser.`); }
+    finally { padBusy.delete(i); if (tab === 'pads') { engine.setBank(bankFor()); drawPads(); } }
+  }
+  // recordings saved on this device come back; anything missing or out of date is recorded again
+  let prepared = false;
+  async function prepareAll() {
+    if (prepared) return; prepared = true;
+    for (let i = 0; i < 9; i++) {
+      const p = pads[i]; if (!p || padBufs[i] || padBusy.has(i)) continue;
+      const got = await getPad(i);
+      if (got && got.sig === sigOf(JSON.stringify(p))) { padBufs[i] = got.buf; continue; }
+      await record(i);
+    }
+    if (tab === 'pads') { engine.setBank(bankFor()); drawPads(); }
+  }
   const PAD_TINTS = ['#F5C93E', '#F2A57C', '#EE8FB0', '#B79CF0', '#7DB6E8', '#6FCDB8', '#8CC56A', '#D9B07A', '#F5C93E'];
   $('slices').innerHTML = [...SLICE_KEYS].map((k, i) => `<button class="pk-btn" data-hold="s${i}" data-kind="slice" data-n="${i}"><kbd>${k.toUpperCase()}</kbd><span>${i + 1}</span></button>`).join('');
   $('stutters').innerHTML = Object.entries(STUTTER_KEYS).map(([k, [n, label]]) => `<button class="pk-btn" data-hold="t${k}" data-kind="stutter" data-n="${n}"><kbd>${k.toUpperCase()}</kbd><span>${label}</span></button>`).join('');
   function drawPads() {
+    padLook = ''; barEl = null;
     $('padGrid').innerHTML = pads.map((p, i) => `<button class="pad${p ? ' full' : ''}${i === padSel ? ' sel' : ''}" data-i="${i}" style="--c:${PAD_TINTS[i]}" aria-label="Pad ${i + 1}: ${p ? esc(p.name) : 'empty'}">
-      <span class="pk">${i + 1}</span>${p ? `<b>${esc(p.name)}</b><small>${p.bpm} BPM · ${p.bars} ${p.bars === 1 ? 'bar' : 'bars'}</small>` : `<small><span class="lg">Empty: click to save the editor’s loop here</span><span class="sm">+ Save here</span></small>`}<i class="pbar"></i></button>`).join('');
+      <span class="pk">${i + 1}</span>${p ? `<b>${esc(p.name)}</b><small>${padBusy.has(i) ? 'Recording the loop…' : `${p.bpm} BPM · ${p.bars} ${p.bars === 1 ? 'bar' : 'bars'}`}</small>` : `<small><span class="lg">Empty: click to save the editor’s loop here</span><span class="sm">+ Save here</span></small>`}<i class="pbar"></i></button>`).join('');
     const p = pads[padSel];
     $('padSelName').textContent = `Pad ${padSel + 1}`;
     $('padSelMeta').textContent = p ? ` · ${p.name}` : ' · empty';
@@ -1165,13 +1198,15 @@ import Base from '../layouts/Base.astro';
   function savePad(i: number) {
     const notes = song.ch.reduce((a, c) => a + (c.kind === 'drum' ? c.steps.filter(Boolean).length : c.notes.length), 0);
     if (!notes) { toast('The editor’s loop is empty. Make something in the Notes tab first.'); return; }
-    pads[i] = JSON.parse(snapshot()); savePads(); drawPads();
-    toast(`Saved “${song.name}” to pad ${i + 1}. Press ${i + 1} to play it.`);
+    pads[i] = JSON.parse(snapshot()); padBufs[i] = null; savePads(); drawPads();
+    const name = song.name;
+    record(i).then(() => padBufs[i] && toast(`Saved “${name}” to pad ${i + 1}. Press ${i + 1} to play it.`));
   }
+  const ready = (i: number) => { if (padBufs[i]) return true; toast(`Pad ${i + 1} is still being recorded. One moment.`); return false; };
   $('padGrid').addEventListener('pointerdown', e => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('.pad'); if (!b) return;
     const i = +b.dataset.i!; padSel = i;
-    if (!pads[i]) savePad(i); else { engine.launch(i); playBtn(); }
+    if (!pads[i]) savePad(i); else if (ready(i)) { engine.launch(i); playBtn(); }
     drawPads();
   });
   $('padSave').addEventListener('click', () => { if (pads[padSel] && !confirm(`Replace pad ${padSel + 1} with the editor’s loop?`)) return; savePad(padSel); });
@@ -1183,10 +1218,20 @@ import Base from '../layouts/Base.astro';
   $('padClear').addEventListener('click', () => {
     if (!pads[padSel] || !confirm(`Empty pad ${padSel + 1}?`)) return;
     if (engine.pad.active === padSel) { engine.stop(); playBtn(); }
-    pads[padSel] = null; savePads(); drawPads();
+    pads[padSel] = null; padBufs[padSel] = null; delPad(padSel); savePads(); drawPads();
   });
+  // the pads' own filter: sweep it while you play (← and → work too)
+  let padFx: PadFx = { filter: 0, res: 0.2, vol: 0.85 };
+  try { padFx = { ...padFx, ...JSON.parse(store.get('banadaw-padfx') || '{}') }; } catch {}
+  function applyPadFx() { engine.setPadFx(padFx); store.set('banadaw-padfx', JSON.stringify(padFx)); paintKnobs($('padKnobs')); }
+  $('padKnobs').innerHTML = [
+    knobHTML('pad:filter', { label: 'Filter', get: () => padFx.filter, set: v => { padFx.filter = Math.abs(v) < 0.03 ? 0 : v; applyPadFx(); }, def: 0, min: -1, max: 1, bi: true, fmt: fmtFilter }),
+    knobHTML('pad:res', { label: 'Resonance', get: () => padFx.res, set: v => { padFx.res = v; applyPadFx(); }, def: 0.2, fmt: pct }),
+    knobHTML('pad:vol', { label: 'Volume', get: () => padFx.vol, set: v => { padFx.vol = v; applyPadFx(); }, def: 0.85, fmt: pct }),
+  ].join('');
+  engine.setPadFx(padFx); paintKnobs($('padKnobs'));
   $('padQ').addEventListener('change', e => (engine.quantize = (e.target as HTMLSelectElement).value as typeof engine.quantize));
-  $('padTempo').addEventListener('click', () => { engine.ownTempo = !engine.ownTempo; $('padTempo').setAttribute('aria-pressed', String(!engine.ownTempo)); engine.setBank(pads.slice() as Song[]); });
+  $('padTempo').addEventListener('click', () => { engine.ownTempo = !engine.ownTempo; $('padTempo').setAttribute('aria-pressed', String(!engine.ownTempo)); engine.setBank(bankFor()); });
   $('padStop').addEventListener('click', () => engine.stopAtBar());
   $('padRec').addEventListener('click', () => {
     if (engine.recording) { engine.stopRecording(); return; }
@@ -1210,19 +1255,27 @@ import Base from '../layouts/Base.astro';
     const up = () => { engine.release(id); b.classList.remove('on'); };
     b.addEventListener('pointerup', up, { once: true }); b.addEventListener('pointercancel', up, { once: true });
   });
-  let shownBeat: number | null = null;
+  let shownBeat: number | null = null, padLook = '', barEl: HTMLElement | null = null;
   function padFrame(pos: number | null) {
     const st = engine.pad, blink = Math.floor(performance.now() / 180) % 2 === 0, beat = engine.beat();
-    $('padGrid').querySelectorAll<HTMLElement>('.pad').forEach(el => {
-      const i = +el.dataset.i!, on = engine.playing && st.active === i;
-      el.classList.toggle('on', on); el.classList.toggle('queued', st.queued === i && blink);
-      const bar = el.querySelector<HTMLElement>('.pbar')!;
-      bar.style.width = on && pos != null && pads[i] ? `${(pos / stepsOf(pads[i]!)) * 100}%` : '0';
-    });
+    // only touch the page when something changed (this runs every frame)
+    const look = `${engine.playing}:${st.active}:${st.queued}:${blink}:${st.stopping}:${[...held].join()}:${padSel}`;
+    if (look !== padLook) {
+      padLook = look;
+      $('padGrid').querySelectorAll<HTMLElement>('.pad').forEach(el => {
+        const i = +el.dataset.i!;
+        el.classList.toggle('on', engine.playing && st.active === i); el.classList.toggle('queued', st.queued === i && blink);
+      });
+      $('padStop').classList.toggle('blink', st.stopping && blink);
+      for (const k of SLICE_KEYS) $('slices').querySelector(`[data-n="${SLICE_KEYS.indexOf(k)}"]`)!.classList.toggle('key', held.has('k' + k));
+      for (const k in STUTTER_KEYS) $('stutters').querySelector(`[data-hold="t${k}"]`)!.classList.toggle('key', held.has('k' + k));
+    }
+    // the progress bar under the playing pad (a transform, so no layout work)
+    const onEl = engine.playing && st.active >= 0 ? $('padGrid').querySelector<HTMLElement>(`.pad[data-i="${st.active}"] .pbar`) : null;
+    if (barEl && barEl !== onEl) barEl.style.transform = 'scaleX(0)';
+    barEl = onEl;
+    if (onEl && pos != null && pads[st.active]) onEl.style.transform = `scaleX(${(pos / stepsOf(pads[st.active]!)).toFixed(4)})`;
     if (beat !== shownBeat) { shownBeat = beat; const el = $('padGrid').querySelector<HTMLElement>('.pad.on'); if (el) { el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); } }
-    $('padStop').classList.toggle('blink', st.stopping && blink);
-    for (const k of SLICE_KEYS) $('slices').querySelector(`[data-n="${SLICE_KEYS.indexOf(k)}"]`)!.classList.toggle('key', held.has('k' + k));
-    for (const k in STUTTER_KEYS) $('stutters').querySelector(`[data-hold="t${k}"]`)!.classList.toggle('key', held.has('k' + k));
     // the playing loop, cut into 8 slices
     const pi = engine.playing && st.active >= 0 ? st.active : padSel, p = pads[pi], cv = $<HTMLCanvasElement>('padStrip');
     const W = cv.parentElement!.clientWidth - 2, H = 54;
@@ -1492,7 +1545,7 @@ import Base from '../layouts/Base.astro';
   .bdaw .pad.on small { color: #3B3127; } .bdaw .pad.on { color: #3B3127; }
   .bdaw .pad .sm { display: none; }
   @media (max-width: 560px) { .bdaw .pad .lg { display: none; } .bdaw .pad .sm { display: inline; } .bdaw .pad .pk { font-size: 20px; } .bdaw .pad b { font-size: 14px; } }
-  .bdaw .pbar { position: absolute; left: 0; bottom: 0; height: 5px; background: #3B3127; opacity: .55; width: 0; }
+  .bdaw .pbar { position: absolute; left: 0; bottom: 0; height: 5px; width: 100%; background: #3B3127; opacity: .55; transform: scaleX(0); transform-origin: left; will-change: transform; }
   .bdaw .pv-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .bdaw .pv-box { background: var(--card); border-radius: var(--r-lg); padding: 12px 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
   .bdaw .pv-row { flex-direction: row; flex-wrap: wrap; align-items: center; }
@@ -1500,6 +1553,7 @@ import Base from '../layouts/Base.astro';
   .bdaw .pv-acts { display: flex; flex-wrap: wrap; gap: 6px; }
   .bdaw .pv-l small { color: var(--ink-2); font-weight: 600; }
   .bdaw #padStrip { border-radius: 6px; display: block; }
+  .bdaw .pv-fx .knobs { gap: 8px 18px; }
   .bdaw .pv-keys { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; }
   .bdaw #stutters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .bdaw .pk-btn { border: 1px solid var(--line); background: var(--paper); border-radius: var(--r-sm); padding: 6px 2px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; font: 700 12px var(--text); color: var(--ink-2); touch-action: none; user-select: none; min-height: 48px; }

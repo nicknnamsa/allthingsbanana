@@ -8,6 +8,7 @@ type Graph = {
   key: string; strips: Map<string, Strip>; sum: GainNode; hp: BiquadFilterNode; lp: BiquadFilterNode; pre: GainNode; shaper: WaveShaperNode; post: GainNode;
   out: GainNode; meter: AnalyserNode; dl: DelayNode; dr: DelayNode; noise: AudioBuffer; final: AudioNode;
   shared: Map<string, { fs: BiquadFilterNode[]; dest: AudioNode }>; driveK?: number;
+  padIn: GainNode; padLp: BiquadFilterNode; padHp: BiquadFilterNode;
 };
 
 const hz = (m: number) => 440 * 2 ** ((m - 69) / 12);
@@ -40,6 +41,10 @@ function buildGraph(ctx: Ctx, songs: Song[], raw = false): Graph {
   if (raw) { glue.ratio.value = 1; limit.ratio.value = 1; limit.threshold.value = 0; clip.curve = null; }   // for measuring levels
   sum.connect(hp).connect(lp).connect(pre).connect(shaper).connect(post).connect(glue).connect(out).connect(limit).connect(clip);
   clip.connect(meter); clip.connect(ctx.destination);
+  // the pads play recordings, so they skip the mixing desk: their own filter, then the master volume and limiter
+  const padIn = ctx.createGain(), padHp = ctx.createBiquadFilter(), padLp = ctx.createBiquadFilter();
+  padHp.type = 'highpass'; padLp.type = 'lowpass'; padHp.frequency.value = 18; padLp.frequency.value = 20000;
+  padIn.connect(padHp).connect(padLp).connect(out);
   // reverb (filtered so it never muddies the low end) and a ping-pong delay, both back into the master
   const revIn = ctx.createGain(), revHp = ctx.createBiquadFilter(), verb = ctx.createConvolver();
   revHp.type = 'highpass'; revHp.frequency.value = 280; verb.buffer = impulse(ctx, 2.2);
@@ -60,7 +65,7 @@ function buildGraph(ctx: Ctx, songs: Song[], raw = false): Graph {
     duck.connect(rev).connect(revIn); duck.connect(dly).connect(dIn);
     strips.set(c.id, { input, fader, pan, duck, rev, dly });
   }
-  const g: Graph = { key: keyOf(songs), strips, sum, hp, lp, pre, shaper, post, out, meter, dl, dr, noise, final: clip, shared: new Map() };
+  const g: Graph = { key: keyOf(songs), strips, sum, hp, lp, pre, shaper, post, out, meter, dl, dr, noise, final: clip, shared: new Map(), padIn, padLp, padHp };
   for (const s of songs) applyChannels(ctx, g, s, true);
   applyMaster(ctx, g, songs[0].master, songs[0].bpm, true);
   return g;
@@ -447,11 +452,13 @@ const swingAt = (song: Song, step: number, stepDur: number) => (step % 2 ? song.
 // ---------- the live player: the studio's loop, or a bank of pads to perform with ----------
 type Repeat = { start: number; len: number; from: number; id: string };
 export type PadState = { active: number; queued: number | null; stopping: boolean };
+export type PadSample = { song: Song; buf: AudioBuffer };   // a pad: the loop, recorded
+export type PadFx = { filter: number; res: number; vol: number };
 export class Engine {
   ctx: AudioContext | null = null;
-  song!: Song;                    // the loop playing now
-  studio!: Song;                  // the loop in the editor (its tempo and master knobs drive the pads)
-  private bank: Song[] | null = null;
+  song!: Song;                    // the loop playing now (on the pads: the pad's loop)
+  studio!: Song;                  // the loop in the editor (its tempo drives the pads)
+  private bank: (PadSample | null)[] | null = null;
   private g: Graph | null = null;
   private player: Player | null = null;
   playing = false;
@@ -459,16 +466,19 @@ export class Engine {
   quantize: 'bar' | 'beat' | 'now' = 'bar';
   ownTempo = false;               // pads at their own tempo instead of the studio's
   pad: PadState = { active: -1, queued: null, stopping: false };
+  private fx: PadFx = { filter: 0, res: 0, vol: 0.85 };
   private virt = 0; private next = 0; private timer: number | null = null;
   private queue: { t: number; step: number; virt: number }[] = [];
   private restart = false;
   private repeats: Repeat[] = [];
   private pendingRepeats: Repeat[] = [];
+  private src: { s: AudioBufferSourceNode; g: GainNode; pad: number; rate: number; buffer: AudioBuffer } | null = null;
+  private expect = -1;
   private buf: Float32Array<ArrayBuffer> | null = null;
   private recDest: MediaStreamAudioDestinationNode | null = null;
   private recorder: MediaRecorder | null = null;
 
-  private songs() { return this.bank ? [this.studio, ...this.bank.filter(Boolean)] : [this.song]; }
+  private songs() { return this.bank ? [this.studio] : [this.song]; }
   private ensure() {
     if (!this.ctx) { this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' }); prepareMetal(this.ctx.sampleRate); }
     if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -478,16 +488,17 @@ export class Engine {
     const old = this.g;
     this.g = buildGraph(this.ctx!, this.songs());
     if (this.recDest) this.g.final.connect(this.recDest);
-    this.player = new Player(this.ctx!, this.g, this.song, this.bank ? this.studio.master : undefined, this.bpm());
-    this.applyAll();
+    this.player = new Player(this.ctx!, this.g, this.song);
+    this.applyAll(); this.applyFx(true);
     if (old) { const q = old.out.gain; q.setTargetAtTime(0, this.ctx!.currentTime, 0.02); setTimeout(() => old.out.disconnect(), 300); }
   }
   private bpm() { return this.bank && !this.ownTempo ? this.studio.bpm : this.song.bpm; }
   private applyAll() {
     if (!this.ctx || !this.g) return;
+    if (this.bank) { applyMaster(this.ctx, this.g, this.studio.master, this.studio.bpm); return; }
     applyChannels(this.ctx, this.g, this.song);
-    applyMaster(this.ctx, this.g, this.bank ? this.studio.master : this.song.master, this.bpm());
-    if (this.player) { this.player.song = this.song; this.player.master = this.bank ? this.studio.master : undefined; this.player.bpm = this.bpm(); }
+    applyMaster(this.ctx, this.g, this.song.master, this.bpm());
+    if (this.player) { this.player.song = this.song; this.player.master = undefined; this.player.bpm = this.bpm(); }
   }
   // the editor's loop changed
   setSong(song: Song) {
@@ -496,21 +507,34 @@ export class Engine {
     if (!this.ctx || !this.g) return;
     if (this.g.key !== keyOf(this.songs())) this.rebuild(); else this.applyAll();
   }
-  // pads: perform with these loops instead of the editor's
-  setBank(bank: Song[] | null) {
+  // pads: perform with these recordings instead of the editor's loop
+  setBank(bank: (PadSample | null)[] | null) {
+    const was = !!this.bank;
     this.bank = bank;
-    if (!bank) { this.stop(); this.song = this.studio; this.pad = { active: -1, queued: null, stopping: false }; }
-    else if (this.pad.active >= 0 && bank[this.pad.active]) this.song = bank[this.pad.active];
+    if (!bank) { if (was) this.stop(); this.song = this.studio; this.pad = { active: -1, queued: null, stopping: false }; }
+    else if (this.pad.active >= 0 && bank[this.pad.active]) this.song = bank[this.pad.active]!.song;
+    else if (this.pad.active >= 0) this.stop();
     if (this.ctx && this.g && this.g.key !== keyOf(this.songs())) this.rebuild(); else this.applyAll();
+  }
+  // the pads' own filter (-1 dark .. 0 open .. 1 thin), resonance and volume
+  setPadFx(fx: PadFx) { this.fx = { ...fx }; this.applyFx(); }
+  private applyFx(now = false) {
+    if (!this.ctx || !this.g) return;
+    const t = this.ctx.currentTime, f = this.fx.filter, set = (p: AudioParam, v: number) => (now ? p.setValueAtTime(v, t) : p.setTargetAtTime(v, t, 0.015));
+    set(this.g.padLp.frequency, f < 0 ? 20000 * (120 / 20000) ** -f : 20000);
+    set(this.g.padHp.frequency, f > 0 ? 18 * (3000 / 18) ** f : 18);
+    const q = 0.7 + this.fx.res * this.fx.res * 16;
+    set(this.g.padLp.Q, f < -0.02 ? q : 0.7); set(this.g.padHp.Q, f > 0.02 ? q : 0.7);
+    set(this.g.padIn.gain, this.fx.vol * this.fx.vol * 1.2);
   }
   launch(i: number) {
     if (!this.bank?.[i]) return;
-    if (!this.playing) { this.song = this.bank[i]; this.pad = { active: i, queued: null, stopping: false }; this.play(); return; }
+    if (!this.playing) { this.song = this.bank[i]!.song; this.pad = { active: i, queued: null, stopping: false }; this.play(); return; }
     if (this.pad.active === i && this.pad.queued == null) { this.restart = true; this.pad.stopping = false; return; }   // like a sampler: hit it again, it starts again
     this.pad.queued = i; this.pad.stopping = false;
     if (this.quantize === 'now') this.cutTo(i);
   }
-  private cutTo(i: number) { this.song = this.bank![i]; this.pad = { active: i, queued: null, stopping: false }; this.virt = 0; this.repeats = []; this.applyAll(); }
+  private cutTo(i: number) { this.song = this.bank![i]!.song; this.pad = { active: i, queued: null, stopping: false }; this.virt = 0; this.repeats = []; this.expect = -1; }
   stopAtBar() { if (this.playing) { this.pad.stopping = true; this.pad.queued = null; if (this.quantize === 'now') this.stop(); } }
   // hold a slice or a stutter: the loop repeats a piece of itself until you let go
   hold(id: string, kind: 'slice' | 'stutter', n: number) {
@@ -522,7 +546,7 @@ export class Engine {
 
   play() {
     this.ensure();
-    this.virt = 0; this.next = this.ctx!.currentTime + 0.05; this.queue = []; this.repeats = []; this.pendingRepeats = [];
+    this.virt = 0; this.next = this.ctx!.currentTime + 0.05; this.queue = []; this.repeats = []; this.pendingRepeats = []; this.expect = -1;
     this.playing = true;
     if (this.timer == null) this.timer = window.setInterval(() => this.schedule(), 20);
     this.schedule();
@@ -530,6 +554,7 @@ export class Engine {
   stop() {
     this.playing = false; if (this.timer != null) clearInterval(this.timer); this.timer = null; this.queue = [];
     this.player?.mono.clear(); this.repeats = []; this.pendingRepeats = []; this.pad.queued = null; this.pad.stopping = false; this.restart = false;
+    if (this.src && this.ctx) { const t = this.ctx.currentTime; this.src.g.gain.setTargetAtTime(0, t, 0.01); this.src.s.stop(t + 0.08); this.src = null; }
   }
   private schedule() {
     if (!this.ctx || !this.player || !this.playing) return;
@@ -537,7 +562,7 @@ export class Engine {
       const v = this.virt, q = this.quantize === 'beat' ? 4 : 16;
       if (this.bank && this.pad.stopping && v % 16 === 0 && v > 0) { this.stop(); return; }
       if (this.bank && this.pad.queued != null && v % q === 0 && v > 0) this.cutTo(this.pad.queued);
-      if (this.restart) { this.restart = false; this.cutTo(this.pad.active); this.player.mono.forEach(m => m.h.cut(this.next)); this.player.mono.clear(); }
+      if (this.restart) { this.restart = false; this.cutTo(this.pad.active); }
       const vv = this.virt, steps = stepsOf(this.song), stepDur = 60 / this.bpm() / 4;
       // slices and stutters start on the next step
       for (const r of this.pendingRepeats) {
@@ -547,14 +572,31 @@ export class Engine {
       }
       this.pendingRepeats = [];
       const step = this.playStep(vv, steps);
-      const t = this.next + swingAt(this.song, step, stepDur);
-      this.player.step(step, t, stepDur);
+      if (this.bank) { this.padStep(step, steps, stepDur); if (!this.playing) return; }
+      else this.player.step(step, this.next + swingAt(this.song, step, stepDur), stepDur);
       if (this.metronome && vv % 4 === 0) this.click(this.next, vv % 16 === 0);
       this.queue.push({ t: this.next, step, virt: vv });
       if (this.queue.length > 32) this.queue.shift();
       this.next += stepDur;
       this.virt++;
     }
+  }
+  // pads: one recording plays on; we only start it again somewhere else when the music jumps
+  private padStep(step: number, steps: number, stepDur: number) {
+    const i = this.pad.active, pad = this.bank?.[i];
+    if (!pad) { this.stop(); return; }
+    const padStepSecs = 60 / pad.song.bpm / 4, rate = padStepSecs / stepDur, t = this.next;
+    if (!this.src || this.src.pad !== i || step !== this.expect || this.src.buffer !== pad.buf) {
+      const ctx = this.ctx!, old = this.src;
+      if (old) { old.g.gain.setValueAtTime(1, t); old.g.gain.linearRampToValueAtTime(0, t + 0.006); old.s.stop(t + 0.02); }
+      const s = ctx.createBufferSource(), g = ctx.createGain();
+      s.buffer = pad.buf; s.loop = true; s.loopStart = 0; s.loopEnd = pad.buf.duration; s.playbackRate.value = rate;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 0.004);
+      s.connect(g).connect(this.g!.padIn);
+      s.start(t, (step * padStepSecs) % pad.buf.duration);
+      this.src = { s, g, pad: i, rate, buffer: pad.buf };
+    } else if (Math.abs(this.src.rate - rate) > 1e-6) { this.src.s.playbackRate.setValueAtTime(rate, t); this.src.rate = rate; }
+    this.expect = (step + 1) % steps;
   }
   private playStep(v: number, steps: number) {
     const r = this.repeats[this.repeats.length - 1];
@@ -612,6 +654,24 @@ export class Engine {
   }
   stopRecording() { if (this.recorder?.state === 'recording') this.recorder.stop(); }
   onRecorded: ((b: Blob) => void) | null = null;
+}
+
+// ---------- a pad's recording: the loop, rendered once ----------
+export async function renderLoop(song: Song, rate = 44100) {
+  await prepareMetal(rate);
+  const stepDur = 60 / song.bpm / 4, steps = stepsOf(song), len = Math.round(steps * stepDur * rate);
+  // play it once plus the reverb and delay tails, then fold the tail back onto the start so it loops seamlessly
+  const tail = Math.min(len, Math.round(2.5 * rate));
+  const ctx = new OfflineAudioContext(2, len + tail, rate), g = buildGraph(ctx, [song]), p = new Player(ctx, g, song);
+  for (let s = 0; s < steps; s++) p.step(s, s * stepDur + swingAt(song, s, stepDur), stepDur);
+  const full = await ctx.startRendering();
+  const out = new AudioBuffer({ length: len, numberOfChannels: 2, sampleRate: rate });
+  for (let ch = 0; ch < 2; ch++) {
+    const src = full.getChannelData(ch), dst = src.slice(0, len);
+    for (let i = 0; i < tail; i++) dst[i] = Math.max(-1, Math.min(1, dst[i] + src[len + i]));
+    out.copyToChannel(dst, ch);
+  }
+  return out;
 }
 
 // ---------- export: the loop, a few times round, as a WAV file ----------
